@@ -32,6 +32,8 @@ export function describeAudit(entry: AuditEntry): [MessageKey, Record<string, st
   const m = entry.metadata;
   const job = typeof m.jobType === 'string' ? ` (${m.jobType})` : '';
   switch (entry.action) {
+    case 'installation.created':
+      return ['auditInstallationCreated', {}];
     case 'person.created':
       return ['auditPersonCreated', { target }];
     case 'person.admin_changed':

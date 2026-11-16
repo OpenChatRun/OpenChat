@@ -32,6 +32,18 @@ export const nl: Messages = {
   newPassword: 'Nieuw wachtwoord',
   changePassword: 'Wachtwoord wijzigen',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: 'Stel je OpenChat in',
+  setupIntro: 'Maak het eerste beheerdersaccount. Deze pagina werkt één keer.',
+  setupCode: 'Installatiecode',
+  setupCodeHint: 'De code die je bij het deployen hebt gekozen. Het is de secret SETUP_CODE van je Worker in Cloudflare.',
+  setupCompany: 'Bedrijfsnaam',
+  setupYourName: 'Je naam',
+  setupPasswordHint: 'Minstens 10 tekens.',
+  setupSubmit: 'Mijn account maken',
+  setupUnconfiguredTitle: 'Deze installatie is nog niet ingesteld',
+  setupUnconfigured: 'Voeg om af te ronden een secret met de naam SETUP_CODE toe aan deze Worker in het Cloudflare-dashboard, onder Settings en dan Variables and Secrets. Laad deze pagina daarna opnieuw.',
+
   freeSoftware: 'OpenChat, vrije software onder de AGPL',
   freeSoftwareVersion: 'OpenChat {version}, vrije software onder de AGPL',
   sourceCode: 'Broncode',
@@ -259,6 +271,7 @@ export const nl: Messages = {
   auditWebsiteUpdated: '{actor} heeft website {target} gewijzigd',
   auditRelayDisconnected: '{actor} heeft push verbroken en de relay deze installatie laten wissen',
   auditRelayReconnected: '{actor} heeft push opnieuw verbonden',
+  auditInstallationCreated: '{actor} heeft deze installatie ingesteld',
   auditJobReplayed: '{actor} heeft een mislukte taak opnieuw uitgevoerd{job}',
   auditJobDismissed: '{actor} heeft een mislukte taak genegeerd{job}',
   auditContactErased: '{actor} heeft {target} gewist',

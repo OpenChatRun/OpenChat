@@ -5,6 +5,7 @@ import { getInstallation, openDatabase } from '@openchat/database';
 import { AppError, createLogger, newId, securityTxt, software, toProblem } from '@openchat/shared';
 import type { AppEnv } from './context';
 import { registerAuthRoutes } from './routes/auth';
+import { registerSetupRoutes } from './routes/setup';
 import { registerConversationRoutes } from './routes/conversations';
 import { registerRealtimeRoutes } from './routes/realtime';
 import { registerWidgetRoutes } from './routes/widget';
@@ -101,6 +102,7 @@ export function createApp() {
     c.header('x-content-type-options', 'nosniff');
   });
 
+  registerSetupRoutes(app);
   registerAuthRoutes(app);
   registerWorkspaceRoutes(app);
   registerPushRoutes(app);

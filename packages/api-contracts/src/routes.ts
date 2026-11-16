@@ -171,6 +171,50 @@ export const confirmPasswordResetRoute = createRoute({
   responses: { 204: { description: 'Password changed' }, default: problemResponse },
 });
 
+// ---------- First-time setup (ADR-0020) ----------
+
+export const SetupStatusSchema = z
+  .object({
+    status: z.enum(['ready', 'needed', 'unconfigured']).openapi({
+      description: '`ready` once the installation exists. `needed` while it waits for its first admin. `unconfigured` when it has no installation and no SETUP_CODE secret, so only `oc deploy` can set it up.',
+    }),
+  })
+  .openapi('SetupStatus');
+
+export const getSetupRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/setup',
+  tags: ['setup'],
+  security: [], // Deliberately public.
+  operationId: 'getSetup',
+  summary: 'Whether this installation still needs its first admin',
+  responses: { 200: { description: 'Setup status', ...json(SetupStatusSchema) }, default: problemResponse },
+});
+
+export const completeSetupRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/setup',
+  tags: ['setup'],
+  security: [], // Deliberately public. Guarded by the setup code, and gone once it has been used.
+  operationId: 'completeSetup',
+  summary: 'Create the installation and its first admin, once, with the setup code chosen at deploy. 404 afterwards',
+  request: {
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          setupCode: z.string().min(1).max(256),
+          name: SafeName.openapi({ description: 'The company. Names the installation and its first workspace.' }),
+          ownerName: SafeName,
+          email: Email,
+          password: z.string().min(10).max(1024),
+        }),
+      ),
+    },
+  },
+  responses: { 204: { description: 'Set up. Sign in with the email and password' }, default: problemResponse },
+});
+
 export const confirmEmailVerificationRoute = createRoute({
   method: 'post',
   path: '/api/v1/auth/email-verification/confirm',

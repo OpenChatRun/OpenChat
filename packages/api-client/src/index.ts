@@ -161,6 +161,8 @@ export function createClient(options: ClientOptions) {
     getHealth: () => get<HealthResponse>('/health'),
     getDiscovery: () => get<DiscoveryResponse>('/.well-known/openchat.json'),
 
+    getSetup: () => get<{ status: 'ready' | 'needed' | 'unconfigured' }>('/api/v1/setup'),
+    completeSetup: (input: { setupCode: string; name: string; ownerName: string; email: string; password: string }) => request<void>('POST', '/api/v1/setup', input),
     login: (input: LoginInput) => request<TokenPair>('POST', '/api/v1/auth/login', input),
     logout: () => request<void>('POST', '/api/v1/auth/logout'),
     requestPasswordReset: (email: string) => request<void>('POST', '/api/v1/auth/password-reset/request', { email }),

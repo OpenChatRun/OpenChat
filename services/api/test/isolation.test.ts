@@ -41,6 +41,8 @@ const CASES: Record<string, Case> = {
   getQueueHealth: { kind: 'operator' },
   getRealtimeHealth: { kind: 'operator' },
   getNotificationHealth: { kind: 'operator' },
+  getSetup: { kind: 'public', reason: 'Says only whether an installation exists yet' },
+  completeSetup: { kind: 'public', reason: 'Works only while there is no installation, and only with the setup code' },
   login: { kind: 'public', reason: 'Acts only on the submitted credentials' },
   refreshSession: { kind: 'public', reason: 'Acts only on the session of the presented token' },
   requestPasswordReset: { kind: 'public', reason: 'Answers the same for every address' },

@@ -596,6 +596,30 @@ After `oc relay erase`, grants still answered 201 for that workspace, because th
 
 Not tried on the phone: the fallback phrase when decryption fails, a time-out in the extension, and an internal note or assignment. The Swift check covers the refusals; the phrases are checked by a test.
 
+## The Deploy button (2026-11-15)
+
+From Cloudflare's documentation, read on 2026-11-15. **Not yet observed**, because the button needs the change on the public default branch:
+
+| Claim | Source |
+|---|---|
+| The repository must be public, on github.com or gitlab.com. An application in a subdirectory must be complete there, dependencies included | Deploy buttons |
+| D1, R2, KV, Queues and Durable Objects in the Wrangler configuration are created, and their IDs written into the copy | Deploy buttons |
+| Secrets to ask for are the names in `.dev.vars.example`, described under `cloudflare.bindings` in `package.json` | Deploy buttons |
+| `build` and `deploy` in `package.json` become the build's commands. Migrations belong in `deploy`, by binding name | Deploy buttons |
+| The build image has Node 24, and takes pnpm from `packageManager` through Corepack | Workers Builds, build image |
+| The token Workers Builds creates by default has no D1 or Queues permission. Whether the button's token does is **unknown** | Workers Builds, configuration |
+
+Observed, running `pnpm run deploy` from a computer against a throwaway `oc-preview-btn` whose database and bucket were made by hand, as the button would:
+
+| Check | Result |
+|---|---|
+| `wrangler secret list` for a Worker that does not exist | Fails with `Worker "<name>" not found.`, which the script takes to mean a first deploy |
+| First run | Six queues created, migrations applied, `wrangler deploy --secrets-file` set `AUTH_SIGNING_KEY` and `RELAY_SIGNING_KEY` with the first version |
+| Second run | Migrations, then a plain deploy with no secrets file, so the keys were kept |
+| Before a setup code | `GET /api/v1/setup` answered `unconfigured`, discovery 503 |
+| With `SETUP_CODE` set | `needed`. A wrong code 403, the right one 204, the same again 404, then `ready` |
+| Afterwards | Sign-in 200. Discovery named the company, the project relay, and one relay public key |
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
