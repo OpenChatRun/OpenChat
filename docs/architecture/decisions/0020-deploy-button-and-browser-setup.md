@@ -1,6 +1,6 @@
 # ADR-0020: A Deploy to Cloudflare button, with first-time setup in the browser
 
-**Status:** Proposed, 2026-11-15
+**Status:** Accepted, 2026-11-16, by the owner. Proposed 2026-11-15.
 
 ## Context
 
