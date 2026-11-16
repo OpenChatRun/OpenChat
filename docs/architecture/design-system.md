@@ -47,11 +47,13 @@ A website's own colour, set on the Workspaces page, replaces the primary colour 
 
 **Widget.** A round launcher that turns into a close arrow while the panel is open. The panel has a header in the website's colour, with who is online, messages on a tinted background, and a message box with icon buttons to attach and send.
 
-**App.** The same colours, avatars with initials in the conversation list, and rounded message bubbles with a tail on the sender's side.
+**App.** The same colours, in Tidio's arrangement: grouped white cards on the tinted surface, a segmented control for open, pending and resolved, filter chips with icons, and conversation rows with the time, tags, a priority flag and an unread count. A conversation has the person's avatar and presence in its header, status, priority and assignee as chips, the visitor's avatar beside their messages, and a message box with **Reply** and **Note** tabs and round icon buttons to attach and send. Someone with no installation starts at a three-page welcome, with illustrations, and a link to setting OpenChat up on Cloudflare at openchat.run.
+
+The app's avatars each take one of eight colours, chosen from the person's name so that it never changes: `#0a57f5`, `#4e5ba6`, `#6941c6`, `#0e7090`, `#c11574`, `#b54708`, `#067647` and `#3538cd`. White initials on each meet WCAG AA. Telling people apart at a glance matters more on a phone, where there is no room for a name beside every message. In dark mode, internal notes are a dark amber, `#4a3510` with `#fef3c7` text, rather than the light one.
 
 ## Shapes and type
 
 - Corners: 8 pixels on small controls, 12 on cards and fields, 20 on the widget panel. Message bubbles are 18, with 6 on the sender's lower corner.
-- Avatars show up to two initials. Someone with no name shows an outline of a person in the dashboard, and a question mark in the app.
+- Avatars show up to two initials. Someone with no name shows an outline of a person, in the dashboard and the app.
 - Type is the system font everywhere except openchat.run, which uses Geist.
-- Icons are line drawings on a 24-pixel grid, drawn for OpenChat, in [`apps/dashboard/src/icons.tsx`](../../apps/dashboard/src/icons.tsx).
+- Icons are line drawings on a 24-pixel grid, drawn for OpenChat, in [`apps/dashboard/src/icons.tsx`](../../apps/dashboard/src/icons.tsx). The app uses Apple's SF Symbols instead, which match iOS.
