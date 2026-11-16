@@ -20,6 +20,7 @@
     "dev:setup": "pnpm --filter @openchat/cli exec tsx src/dev-setup.ts",
     "dev:reset": "pnpm --filter @openchat/cli exec tsx src/dev-setup.ts --reset",
     "oc": "pnpm --filter @openchat/cli exec tsx src/index.ts",
+    "deploy": "pnpm --filter @openchat/cli exec tsx src/index.ts button-deploy",
     "db:generate": "pnpm --filter @openchat/database generate",
     "db:migrate:local": "pnpm --filter @openchat/api migrate:local",
     "contracts:generate": "pnpm --filter @openchat/api-contracts generate",
@@ -29,6 +30,21 @@
     "check:budget": "node tooling/scripts/check-budget.mjs",
     "check:secrets": "node tooling/scripts/check-secrets.mjs",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:contracts && pnpm check:migrations && pnpm check:licenses && pnpm check:budget && pnpm check:secrets"
+  },
+  "cloudflare": {
+    "label": "OpenChat",
+    "products": ["Workers", "D1", "R2", "Queues", "Durable Objects"],
+    "bindings": {
+      "SETUP_CODE": {
+        "description": "Choose a code of your own, such as three random words. After the deploy, the first page asks for it **once**, to prove the installation is yours before it creates your admin account."
+      },
+      "DB": { "description": "Conversations, contacts and accounts." },
+      "ATTACHMENTS": { "description": "Files sent in conversations." },
+      "RELAY_URL": { "description": "The OpenChat project's notification relay, for push to the iPhone app. It carries only encrypted notifications. Leave as it is." },
+      "RELAY_ID": { "description": "Leave as it is." },
+      "RELAY_BUNDLE_IDS": { "description": "Leave as it is." },
+      "OPENCHAT_VERSION": { "description": "Leave as it is." }
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

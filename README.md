@@ -43,6 +43,7 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 
 | You want to | Read |
 |---|---|
+| Try it in your own Cloudflare account, without a terminal | [Deploy with one click](docs/operations/one-click-deploy.md) |
 | Run it for your company | [Self-hosting guide](docs/operations/self-hosting.md) |
 | Use it: answer chats, administer it, add the widget | [User guide](docs/guide/README.md) |
 | Know what is not done yet | [Known issues](docs/known-issues.md) |

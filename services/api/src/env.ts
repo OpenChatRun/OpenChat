@@ -37,6 +37,11 @@ export interface Env {
   OPENCHAT_VERSION?: string;
   /** Where users can get this installation's source, as the AGPL asks. Without it, the project's at OPENCHAT_VERSION. */
   SOURCE_URL?: string;
+  /**
+   * Worker secret, chosen by the person who used the Deploy to Cloudflare button. While there is no installation, it
+   * lets them create the first admin in the browser. Without it that page does not exist. See ADR-0020.
+   */
+  SETUP_CODE?: string;
   JOBS_QUEUE: Queue;
   /** Worker secret, with its pair. Without both, no website can require Turnstile. */
   TURNSTILE_SECRET_KEY?: string;

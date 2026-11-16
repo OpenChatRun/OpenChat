@@ -2,6 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createButtonDeployer } from './button';
 import { createDeployer } from './deploy';
 import { renderConfig, type DeploymentState } from './render-config';
 import { releaseVersion } from './releases';
@@ -29,6 +30,9 @@ function usage(): never {
   pnpm oc restore --env <name> --confirm <name> --database <name>
                                     back to a database kept by an earlier restore
   pnpm oc render --env <name>
+  pnpm oc button-config             writes the root wrangler.jsonc, which the Deploy to Cloudflare button reads
+  pnpm oc button-deploy [--config <file>]
+                                    what that button runs: migrations, signing keys on the first run, the Worker
 
 RESEND_API_KEY and TURNSTILE_SECRET_KEY are read from the environment, so that they stay out of shell history.
 TURNSTILE_SECRET_KEY needs --turnstile-site-key. Websites can then require Turnstile for new visitors.
@@ -55,6 +59,20 @@ const userPath = (value: string | undefined) => (value === undefined ? undefined
 if (command === 'preflight') {
   const ready = createDeployer(root).preflight({ analytics: rest.includes('--analytics'), emailFrom: flag('email-from'), publicUrl: flag('public-url'), cloudflareEmail: rest.includes('--cloudflare-email') });
   process.exit(ready ? 0 : 1);
+}
+if (command === 'button-config') {
+  createButtonDeployer(root).writeConfig();
+  console.log('Wrote wrangler.jsonc');
+  process.exit(0);
+}
+if (command === 'button-deploy') {
+  await createButtonDeployer(root)
+    .deploy({ configPath: userPath(flag('config')) })
+    .catch((error: unknown) => {
+      console.error((error as Error).message);
+      process.exit(1);
+    });
+  process.exit(0);
 }
 if (!env) usage();
 

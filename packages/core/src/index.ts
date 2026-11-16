@@ -26,6 +26,7 @@ export interface BlobStore {
 }
 
 export * from './auth-flows';
+export * from './setup';
 export * from './workspaces';
 export * from './push';
 export * from './email-templates';

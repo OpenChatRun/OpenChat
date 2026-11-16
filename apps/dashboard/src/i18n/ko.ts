@@ -32,6 +32,18 @@ export const ko: Messages = {
   newPassword: '새 비밀번호',
   changePassword: '비밀번호 변경',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: 'OpenChat 설정',
+  setupIntro: '첫 번째 관리자 계정을 만듭니다. 이 페이지는 한 번만 사용할 수 있습니다.',
+  setupCode: '설정 코드',
+  setupCodeHint: '배포할 때 정한 코드입니다. Cloudflare에 있는 Worker의 SETUP_CODE 시크릿입니다.',
+  setupCompany: '회사 이름',
+  setupYourName: '내 이름',
+  setupPasswordHint: '10자 이상.',
+  setupSubmit: '내 계정 만들기',
+  setupUnconfiguredTitle: '이 설치는 아직 설정되지 않았습니다',
+  setupUnconfigured: '완료하려면 Cloudflare 대시보드의 Settings, Variables and Secrets에서 이 Worker에 SETUP_CODE라는 시크릿을 추가하세요. 그런 다음 이 페이지를 새로 고치세요.',
+
   freeSoftware: 'OpenChat, AGPL 자유 소프트웨어',
   freeSoftwareVersion: 'OpenChat {version}, AGPL 자유 소프트웨어',
   sourceCode: '소스 코드',
@@ -259,6 +271,7 @@ export const ko: Messages = {
   auditWebsiteUpdated: '{actor} 님이 웹사이트 {target}을(를) 변경했습니다',
   auditRelayDisconnected: '{actor} 님이 푸시 연결을 끊고 릴레이가 이 설치를 지우도록 했습니다',
   auditRelayReconnected: '{actor} 님이 푸시를 다시 연결했습니다',
+  auditInstallationCreated: '{actor} 님이 이 설치를 설정했습니다',
   auditJobReplayed: '{actor} 님이 실패한 작업을 다시 실행했습니다{job}',
   auditJobDismissed: '{actor} 님이 실패한 작업을 닫았습니다{job}',
   auditContactErased: '{actor} 님이 {target}을(를) 지웠습니다',

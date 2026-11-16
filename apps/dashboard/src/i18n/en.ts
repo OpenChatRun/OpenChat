@@ -36,6 +36,18 @@ export const en = {
   newPassword: 'New password',
   changePassword: 'Change password',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: 'Set up your OpenChat',
+  setupIntro: 'Create the first admin account. This page works once.',
+  setupCode: 'Setup code',
+  setupCodeHint: 'The code you chose when you deployed. It is the SETUP_CODE secret of your Worker in Cloudflare.',
+  setupCompany: 'Company name',
+  setupYourName: 'Your name',
+  setupPasswordHint: 'At least 10 characters.',
+  setupSubmit: 'Create my account',
+  setupUnconfiguredTitle: 'This installation is not set up yet',
+  setupUnconfigured: 'To finish, add a secret named SETUP_CODE to this Worker in the Cloudflare dashboard, under Settings, then Variables and Secrets. Then reload this page.',
+
   // The footer
   freeSoftware: 'OpenChat, free software under the AGPL',
   freeSoftwareVersion: 'OpenChat {version}, free software under the AGPL',
@@ -271,6 +283,7 @@ export const en = {
   auditWebsiteUpdated: '{actor} changed website {target}',
   auditRelayDisconnected: '{actor} disconnected push, and had the relay erase this installation',
   auditRelayReconnected: '{actor} reconnected push',
+  auditInstallationCreated: '{actor} set up this installation',
   auditJobReplayed: '{actor} replayed a failed job{job}',
   auditJobDismissed: '{actor} dismissed a failed job{job}',
   auditContactErased: '{actor} erased {target}',

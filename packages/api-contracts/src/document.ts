@@ -2,6 +2,8 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { ProblemSchema } from './common';
 import { AgentClientFrameSchema, AgentServerFrameSchema, VisitorClientFrameSchema, VisitorServerFrameSchema } from './realtime';
 import {
+  getSetupRoute,
+  completeSetupRoute,
   confirmEmailVerificationRoute,
   confirmPasswordResetRoute,
   createWebsiteRoute,
@@ -142,6 +144,8 @@ export const ALL_ROUTES = [
   requestPasswordResetRoute,
   confirmPasswordResetRoute,
   confirmEmailVerificationRoute,
+  getSetupRoute,
+  completeSetupRoute,
   getMeRoute,
   listPeopleRoute,
   createPersonRoute,

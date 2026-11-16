@@ -32,6 +32,18 @@ export const zhHant: Messages = {
   newPassword: '新密碼',
   changePassword: '變更密碼',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: '設定你的 OpenChat',
+  setupIntro: '建立第一個管理員帳號。此頁面只能使用一次。',
+  setupCode: '設定碼',
+  setupCodeHint: '你在部署時選擇的代碼，即 Cloudflare 中 Worker 的 SETUP_CODE 密鑰。',
+  setupCompany: '公司名稱',
+  setupYourName: '你的姓名',
+  setupPasswordHint: '至少 10 個字元。',
+  setupSubmit: '建立我的帳號',
+  setupUnconfiguredTitle: '此安裝尚未設定',
+  setupUnconfigured: '若要完成設定，請在 Cloudflare 控制台的 Settings、Variables and Secrets 中為此 Worker 新增名為 SETUP_CODE 的密鑰，然後重新載入此頁面。',
+
   freeSoftware: 'OpenChat，採用 AGPL 的自由軟體',
   freeSoftwareVersion: 'OpenChat {version}，採用 AGPL 的自由軟體',
   sourceCode: '原始碼',
@@ -259,6 +271,7 @@ export const zhHant: Messages = {
   auditWebsiteUpdated: '{actor} 變更了網站 {target}',
   auditRelayDisconnected: '{actor} 中斷了推播，並讓中繼清除此站台',
   auditRelayReconnected: '{actor} 重新連線了推播',
+  auditInstallationCreated: '{actor} 設定了此安裝',
   auditJobReplayed: '{actor} 重新執行了一項失敗的工作{job}',
   auditJobDismissed: '{actor} 略過了一項失敗的工作{job}',
   auditContactErased: '{actor} 清除了 {target}',

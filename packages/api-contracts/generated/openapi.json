@@ -2542,6 +2542,23 @@
           "accessTokenExpiresAt"
         ]
       },
+      "SetupStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "needed",
+              "unconfigured"
+            ],
+            "description": "`ready` once the installation exists. `needed` while it waits for its first admin. `unconfigured` when it has no installation and no SETUP_CODE secret, so only `oc deploy` can set it up."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "Me": {
         "type": "object",
         "properties": {
@@ -6676,6 +6693,108 @@
         "responses": {
           "204": {
             "description": "Verified"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup": {
+      "get": {
+        "tags": [
+          "setup"
+        ],
+        "security": [],
+        "operationId": "getSetup",
+        "summary": "Whether this installation still needs its first admin",
+        "responses": {
+          "200": {
+            "description": "Setup status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "security": [],
+        "operationId": "completeSetup",
+        "summary": "Create the installation and its first admin, once, with the setup code chosen at deploy. 404 afterwards",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "setupCode": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^\\P{Cc}*$/u",
+                    "description": "The company. Names the installation and its first workspace."
+                  },
+                  "ownerName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^\\P{Cc}*$/u"
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 320
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "setupCode",
+                  "name",
+                  "ownerName",
+                  "email",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Set up. Sign in with the email and password"
           },
           "default": {
             "description": "RFC 9457 problem details",

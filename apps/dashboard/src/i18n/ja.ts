@@ -32,6 +32,18 @@ export const ja: Messages = {
   newPassword: '新しいパスワード',
   changePassword: 'パスワードを変更',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: 'OpenChat をセットアップ',
+  setupIntro: '最初の管理者アカウントを作成します。このページは一度だけ使えます。',
+  setupCode: 'セットアップコード',
+  setupCodeHint: 'デプロイ時に決めたコードです。Cloudflare の Worker にあるシークレット SETUP_CODE です。',
+  setupCompany: '会社名',
+  setupYourName: 'あなたの名前',
+  setupPasswordHint: '10 文字以上。',
+  setupSubmit: 'アカウントを作成',
+  setupUnconfiguredTitle: 'このインストールはまだセットアップされていません',
+  setupUnconfigured: '完了するには、Cloudflare ダッシュボードの Settings、Variables and Secrets で、この Worker に SETUP_CODE という名前のシークレットを追加してください。その後、このページを再読み込みしてください。',
+
   freeSoftware: 'OpenChat、AGPL のフリーソフトウェア',
   freeSoftwareVersion: 'OpenChat {version}、AGPL のフリーソフトウェア',
   sourceCode: 'ソースコード',
@@ -259,6 +271,7 @@ export const ja: Messages = {
   auditWebsiteUpdated: '{actor} が Web サイト {target} を変更しました',
   auditRelayDisconnected: '{actor} がプッシュ通知の接続を解除し、リレーにこのインストールを消去させました',
   auditRelayReconnected: '{actor} がプッシュ通知を再接続しました',
+  auditInstallationCreated: '{actor} がこのインストールをセットアップしました',
   auditJobReplayed: '{actor} が失敗したジョブを再実行しました{job}',
   auditJobDismissed: '{actor} が失敗したジョブを閉じました{job}',
   auditContactErased: '{actor} が {target} を消去しました',

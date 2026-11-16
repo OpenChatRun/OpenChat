@@ -111,6 +111,7 @@ The iOS app, which is not in this repository, removes metadata, including locati
 | Socket tickets | Signed with the access token key | One key to rotate. Tickets carry `aud: 'realtime'`, last 30 seconds, and neither kind of token is accepted as the other |
 | `RELAY_SIGNING_KEY` (Ed25519) | Worker secret | Key ID; relay accepts registered keys |
 | `OPERATOR_TOKEN` | Worker secret, and `.openchat/<name>/operator-token` on the deploying computer | Opens `/health/*` only, which return counts and times, never content or IDs. To rotate, delete `operatorTokenSet` from `state.json` and run `oc deploy` |
+| `SETUP_CODE` | Worker secret, chosen by the person who used the [Deploy to Cloudflare button](../operations/one-click-deploy.md). Absent from an `oc deploy` installation | Lets its holder create the first admin, once, while no installation exists ([ADR-0020](decisions/0020-deploy-button-and-browser-setup.md)). Useless afterwards, so delete it rather than rotate it |
 | `DATA_ENCRYPTION_KEY` | Worker secret | `key_version` per row |
 | Workspace email credentials | D1, AES-GCM encrypted with the key above and bound to `workspace_id` as associated data | Re-encryption job |
 | APNs `.p8` | Relay Worker secret only | Apple key rotation, documented |

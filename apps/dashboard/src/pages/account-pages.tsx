@@ -28,7 +28,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Field(props: { label: string; type?: string; value: string; onChange: (value: string) => void; autoComplete: string; minLength?: number; maxLength?: number }) {
+function Field(props: { label: string; type?: string; value: string; onChange: (value: string) => void; autoComplete: string; minLength?: number; maxLength?: number; hint?: string }) {
   return (
     <label className="block text-sm font-medium">
       {props.label}
@@ -42,6 +42,7 @@ function Field(props: { label: string; type?: string; value: string; onChange: (
         {...(props.maxLength ? { maxLength: props.maxLength } : {})}
         onChange={(event) => props.onChange(event.target.value)}
       />
+      {props.hint && <span className="mt-1 block text-xs font-normal text-slate-600 dark:text-slate-400">{props.hint}</span>}
     </label>
   );
 }
@@ -84,6 +85,46 @@ export function SignInPage() {
         <button className="button w-full" disabled={busy}>{t('signIn')}</button>
       </form>
       <a className="block text-sm link" href="/forgot-password">{t('forgotPassword')}</a>
+    </Frame>
+  );
+}
+
+/** Once, for an installation made with the Deploy to Cloudflare button. Then it signs the new admin in. See ADR-0020. */
+export function SetupPage() {
+  const [setupCode, setSetupCode] = useState('');
+  const [name, setName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { busy, error, run } = useSubmit();
+  return (
+    <Frame title={t('setupTitle')}>
+      <p className="text-sm text-slate-600 dark:text-slate-400">{t('setupIntro')}</p>
+      <form
+        className="space-y-4"
+        onSubmit={run(async () => {
+          await api.completeSetup({ setupCode, name, ownerName, email, password });
+          const tokens = await api.login({ email, password, clientType: 'dashboard', clientLabel: 'Dashboard' });
+          session.signedIn(tokens.accessToken, tokens.accessTokenExpiresAt);
+        })}
+      >
+        <Field label={t('setupCode')} type="password" value={setupCode} onChange={setSetupCode} autoComplete="off" maxLength={256} hint={t('setupCodeHint')} />
+        <Field label={t('setupCompany')} value={name} onChange={setName} autoComplete="organization" maxLength={100} />
+        <Field label={t('setupYourName')} value={ownerName} onChange={setOwnerName} autoComplete="name" maxLength={100} />
+        <Field label={t('email')} type="email" value={email} onChange={setEmail} autoComplete="username" />
+        <Field label={t('password')} type="password" value={password} onChange={setPassword} autoComplete="new-password" minLength={10} maxLength={1024} hint={t('setupPasswordHint')} />
+        {error && <p className="error" role="alert">{error}</p>}
+        <button className="button w-full" disabled={busy}>{t('setupSubmit')}</button>
+      </form>
+    </Frame>
+  );
+}
+
+/** No installation, and no setup code to make one with. Says how to add the code. */
+export function SetupUnconfiguredPage() {
+  return (
+    <Frame title={t('setupUnconfiguredTitle')}>
+      <p className="notice" role="status">{t('setupUnconfigured')}</p>
     </Frame>
   );
 }

@@ -32,6 +32,18 @@ export const zhHans: Messages = {
   newPassword: '新密码',
   changePassword: '更改密码',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: '设置你的 OpenChat',
+  setupIntro: '创建第一个管理员账号。此页面只能使用一次。',
+  setupCode: '设置码',
+  setupCodeHint: '你在部署时选择的代码，即 Cloudflare 中 Worker 的 SETUP_CODE 密钥。',
+  setupCompany: '公司名称',
+  setupYourName: '你的姓名',
+  setupPasswordHint: '至少 10 个字符。',
+  setupSubmit: '创建我的账号',
+  setupUnconfiguredTitle: '此安装尚未设置',
+  setupUnconfigured: '要完成设置，请在 Cloudflare 控制台的 Settings、Variables and Secrets 中为此 Worker 添加名为 SETUP_CODE 的密钥，然后重新加载此页面。',
+
   freeSoftware: 'OpenChat，遵循 AGPL 的自由软件',
   freeSoftwareVersion: 'OpenChat {version}，遵循 AGPL 的自由软件',
   sourceCode: '源代码',
@@ -259,6 +271,7 @@ export const zhHans: Messages = {
   auditWebsiteUpdated: '{actor} 更改了网站 {target}',
   auditRelayDisconnected: '{actor} 断开了推送，并让中继清除了此实例',
   auditRelayReconnected: '{actor} 重新连接了推送',
+  auditInstallationCreated: '{actor} 设置了此安装',
   auditJobReplayed: '{actor} 重新运行了一个失败的任务{job}',
   auditJobDismissed: '{actor} 忽略了一个失败的任务{job}',
   auditContactErased: '{actor} 清除了 {target}',

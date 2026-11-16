@@ -32,6 +32,18 @@ export const pt: Messages = {
   newPassword: 'Nova senha',
   changePassword: 'Alterar senha',
 
+  // First-time setup, after the Deploy to Cloudflare button
+  setupTitle: 'Configure o seu OpenChat',
+  setupIntro: 'Crie a primeira conta de administrador. Esta página só funciona uma vez.',
+  setupCode: 'Código de configuração',
+  setupCodeHint: 'O código que você escolheu ao implantar. É o segredo SETUP_CODE do seu Worker na Cloudflare.',
+  setupCompany: 'Nome da empresa',
+  setupYourName: 'Seu nome',
+  setupPasswordHint: 'Pelo menos 10 caracteres.',
+  setupSubmit: 'Criar minha conta',
+  setupUnconfiguredTitle: 'Esta instalação ainda não foi configurada',
+  setupUnconfigured: 'Para concluir, adicione um segredo chamado SETUP_CODE a este Worker no painel da Cloudflare, em Settings e depois Variables and Secrets. Em seguida, recarregue esta página.',
+
   freeSoftware: 'OpenChat, software livre sob a AGPL',
   freeSoftwareVersion: 'OpenChat {version}, software livre sob a AGPL',
   sourceCode: 'Código-fonte',
@@ -259,6 +271,7 @@ export const pt: Messages = {
   auditWebsiteUpdated: '{actor} alterou o site {target}',
   auditRelayDisconnected: '{actor} desconectou as notificações push e fez o relay apagar esta instalação',
   auditRelayReconnected: '{actor} reconectou as notificações push',
+  auditInstallationCreated: '{actor} configurou esta instalação',
   auditJobReplayed: '{actor} repetiu uma tarefa com falha{job}',
   auditJobDismissed: '{actor} descartou uma tarefa com falha{job}',
   auditContactErased: '{actor} apagou {target}',

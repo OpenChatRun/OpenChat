@@ -1,7 +1,7 @@
 import { turnstileFor } from './turnstile';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { importSigningKey, importVerificationKeys, type SerializedKey, type SigningKey, type VerificationKeys } from '@openchat/auth';
-import type { AuthDeps, RateLimiter } from '@openchat/core';
+import type { AuthDeps, RateLimiter, SetupDeps } from '@openchat/core';
 import { getInstallation, openDatabase, type Principal } from '@openchat/database';
 import { AppError, readAbuseLimits, type JobEnvelope, type Logger } from '@openchat/shared';
 import type { Env } from './env';
@@ -37,6 +37,9 @@ function limiterFor(env: Env): RateLimiter {
     reset: (key) => env.AUTH_GUARD.getByName(key).reset(),
   };
 }
+
+/** Needs neither an installation nor the signing key, because setup is what a new deployment does first. */
+export const setupDeps = (env: Env): SetupDeps => ({ db: openDatabase(env.DB), limiter: limiterFor(env), limits: readAbuseLimits(env), setupCode: env.SETUP_CODE });
 
 export async function authDeps(env: Env): Promise<AuthDeps> {
   const db = openDatabase(env.DB);

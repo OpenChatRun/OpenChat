@@ -2,7 +2,7 @@
 
 Managed and independent configurations stay separate (spec rule 18). Only the configuration differs, and all code comes from the same tagged release.
 
-To set up your own from nothing, follow the [self-hosting guide](self-hosting.md). This document is the reference behind it.
+To set up your own from nothing, follow the [self-hosting guide](self-hosting.md). This document is the reference behind it. The [Deploy to Cloudflare button](one-click-deploy.md) is a second way in, which does not use `oc deploy` and is not covered here.
 
 ## Prerequisites
 

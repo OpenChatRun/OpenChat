@@ -1,0 +1,152 @@
+// The Deploy to Cloudflare button reads this file. See docs/operations/one-click-deploy.md.
+// Generated from services/api/wrangler.template.jsonc by `pnpm oc button-config`, and checked by a test, so
+// change the template and generate again. Local development and `pnpm oc deploy` do not use this file.
+{
+  "name": "oc-chat",
+  "main": "services/api/src/index.ts",
+  "compatibility_date": "2026-10-30",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "placement": {
+    "mode": "smart"
+  },
+  "assets": {
+    "directory": "services/api/.assets",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/health",
+      "/health/*",
+      "/.well-known/*",
+      "/__scheduled"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "oc-chat",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "packages/database/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENTS",
+      "bucket_name": "oc-chat-attachments"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WORKSPACE_HUB",
+        "class_name": "WorkspaceHub"
+      },
+      {
+        "name": "CONVERSATION_ROOM",
+        "class_name": "ConversationRoom"
+      },
+      {
+        "name": "AUTH_GUARD",
+        "class_name": "AuthGuard"
+      }
+    ],
+    "code_update_strategy": {
+      "mode": "deferred",
+      "max_delay": 3600
+    }
+  },
+  "exports": {
+    "WorkspaceHub": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "ConversationRoom": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "AuthGuard": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "NOTIFICATIONS_QUEUE",
+        "queue": "oc-chat-notifications"
+      },
+      {
+        "binding": "EMAIL_QUEUE",
+        "queue": "oc-chat-email"
+      },
+      {
+        "binding": "JOBS_QUEUE",
+        "queue": "oc-chat-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "oc-chat-notifications",
+        "max_batch_size": 25,
+        "max_batch_timeout": 1,
+        "max_retries": 8,
+        "max_concurrency": 20,
+        "dead_letter_queue": "oc-chat-notifications-dlq"
+      },
+      {
+        "queue": "oc-chat-email",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 8,
+        "max_concurrency": 5,
+        "dead_letter_queue": "oc-chat-email-dlq"
+      },
+      {
+        "queue": "oc-chat-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "max_concurrency": 10,
+        "dead_letter_queue": "oc-chat-jobs-dlq"
+      },
+      {
+        "queue": "oc-chat-notifications-dlq",
+        "max_batch_size": 25,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "max_concurrency": 1
+      },
+      {
+        "queue": "oc-chat-email-dlq",
+        "max_batch_size": 25,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "max_concurrency": 1
+      },
+      {
+        "queue": "oc-chat-jobs-dlq",
+        "max_batch_size": 25,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "max_concurrency": 1
+      }
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "vars": {
+    "RELAY_URL": "https://openchat-relay.orangolabs.com",
+    "RELAY_ID": "managed",
+    "RELAY_BUNDLE_IDS": "com.orangolabs.openchat",
+    "OPENCHAT_VERSION": "0.2.1"
+  }
+}
