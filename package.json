@@ -49,7 +49,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "@openchat/eslint-config": "workspace:*",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "prettier": "^3.0.0",
     "turbo": "^2.11.10",
     "typescript": "~6.0.3",
