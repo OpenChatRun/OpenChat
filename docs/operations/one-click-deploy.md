@@ -4,7 +4,7 @@ The quickest way to get your own OpenChat. Cloudflare copies this repository int
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/yatping/OpenChat)
 
-> **Not yet tried through Cloudflare's own button.** The deploy script and the setup page have been run on real Cloudflare from a computer, standing in for the button. If a step here does not match what you see, please [open an issue](https://github.com/yatping/OpenChat/issues), and use the [self-hosting guide](self-hosting.md) meanwhile.
+> **Tried through Cloudflare's own button on 2026-11-17**, from a fresh account to signing in as the admin. If a step here does not match what you see, please [open an issue](https://github.com/yatping/OpenChat/issues), and use the [self-hosting guide](self-hosting.md) meanwhile.
 
 If you want to upgrade, roll back, back up and restore from the command line, use the [self-hosting guide](self-hosting.md) instead. The two ways make the same installation, but the `oc` commands only know one they made themselves ([what you do not get](#what-you-do-not-get)).
 
@@ -19,10 +19,10 @@ If you want to upgrade, roll back, back up and restore from the command line, us
 
 ## Steps
 
-1. Press the button, and connect your Git account when Cloudflare asks.
-2. Cloudflare lists what it will create: a database, a file bucket, queues. The names can stay as they are.
+1. Press the button, choose your Cloudflare account if you have more than one, and connect your Git account when Cloudflare asks. Connecting can drop you on a different page; if it does, press the button again, and the account is remembered.
+2. Choose the Git account for your copy, and tick **Create private Git repository** unless you want the copy public. Cloudflare lists what it will create: a database, a file bucket, and six queues. The names can stay as they are. The project name names the Worker, and does not rename the others, which all start with `oc-chat`.
 3. **Choose a setup code** in the field named `SETUP_CODE`. Make something up, such as three random words. You will type it once more, in step 5. Leave the other values alone.
-4. Press **Create and deploy**, and wait for the build. It takes a few minutes: it builds the dashboard and widget, applies the database migrations, creates the signing keys, and deploys.
+4. Press **Deploy**, and wait for the build. It took under three minutes in the trial: it builds the dashboard and widget, applies the database migrations, creates the signing keys, and deploys. Until it finishes, the address answers `error code: 1042`.
 5. Open your Worker's address. The page asks for the setup code, your company's name, and your own name, email and password. This page works once. After it, you are signed in as the installation's admin.
 
 Then follow the [user guide](../guide/README.md) to add your website and the widget.
@@ -85,6 +85,20 @@ If you change the code, the AGPL asks that you offer your users the source you r
 | `oc recover`, the reset link without email | Nothing yet. Set up [email](#email), and keep a second admin |
 | `oc health` and `/health/*` | Add a long random `OPERATOR_TOKEN` secret yourself, then follow [monitoring](monitoring.md) |
 | Limits and `security.txt` set by flags | Add the variables to `vars` in `wrangler.jsonc` ([abuse limits](abuse-limits.md)) |
+
+## Removing it
+
+Delete the Worker's queue consumers first, or Cloudflare refuses to delete the Worker. With Wrangler, for each of the six queues, then the rest:
+
+```sh
+npx wrangler queues consumer remove oc-chat-jobs <worker name>   # and the other five
+npx wrangler delete --name <worker name>
+npx wrangler queues delete oc-chat-jobs                          # and the other five
+npx wrangler r2 bucket delete oc-chat-attachments                # once it is empty
+npx wrangler d1 delete oc-chat
+```
+
+Then delete your copy of the repository in GitHub or GitLab.
 
 ## How it works
 
