@@ -23,6 +23,9 @@ function isDatabaseOverload(error: Error): boolean {
   return /D1.*overloaded/i.test(error.message);
 }
 
+/** HTTPS only, for a year, on this host. Not includeSubDomains: the operator's other hosts are not ours to decide. */
+export const HSTS = 'max-age=31536000';
+
 export function createApp() {
   const app = new OpenAPIHono<AppEnv>({
     // A contract violation in a request is a client error with a stable shape.
@@ -100,6 +103,7 @@ export function createApp() {
     if (c.res.status === 101) return;
     c.header('cache-control', 'no-store');
     c.header('x-content-type-options', 'nosniff');
+    c.header('strict-transport-security', HSTS);
   });
 
   registerSetupRoutes(app);
