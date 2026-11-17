@@ -50,7 +50,7 @@ To report a new problem, [open an issue](https://github.com/yatping/OpenChat/iss
 
 ## Data and operations
 
-- **The Deploy to Cloudflare button has not been run through Cloudflare's own flow**, only rehearsed from a computer. An installation made that way has no `oc` commands, and no way to reset a password without email ([one-click deploy](operations/one-click-deploy.md#what-you-do-not-get)).
+- **An installation made with the Deploy to Cloudflare button has no `oc` commands**, and no way to reset a password without email ([one-click deploy](operations/one-click-deploy.md#what-you-do-not-get)).
 - **Nothing caps total stored data** for a website, and there is no daily limit on files ([security review](architecture/security-review-m1b.md#gaps-to-close-later)).
 - **A former colleague's name cannot be erased.** Accounts can be deactivated, and their messages keep their name.
 - **A restore does not bring back files**, which are not in a backup, and **a contact erased after the restore point comes back**, so erase them again. Other limits apply ([backup and restore](operations/backup-and-restore.md#what-a-restore-does-not-put-back)).
