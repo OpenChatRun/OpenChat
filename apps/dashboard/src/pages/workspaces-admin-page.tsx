@@ -5,6 +5,10 @@ import { api, errorMessage } from '../app-context';
 import { t, tn, tNode } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 
+/** The OpenChat project's own relay, whose terms an installation accepts by using it. Another relay has its own terms. */
+const MANAGED_RELAY_URL = 'https://openchat-relay.orangolabs.com';
+const RELAY_TERMS_URL = 'https://github.com/yatping/OpenChat/blob/main/docs/legal/relay-terms.md';
+
 const parseOrigins = (text: string) => text.split(/[\s,]+/).filter(Boolean);
 
 function Failure({ error }: { error: unknown }) {
@@ -305,6 +309,17 @@ function RelayPanel() {
           <p className="text-xs text-slate-600 dark:text-slate-400">
             {t('relayHolds')}
           </p>
+          {relay.relay?.url === MANAGED_RELAY_URL && (
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              {tNode('relayTerms', {
+                terms: (
+                  <a className="underline" href={RELAY_TERMS_URL} target="_blank" rel="noreferrer">
+                    {t('relayTermsLink')}
+                  </a>
+                ),
+              })}
+            </p>
+          )}
           <button
             className="button-quiet"
             disabled={disconnect.isPending}

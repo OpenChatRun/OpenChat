@@ -6,7 +6,7 @@ Effective: `[EFFECTIVE DATE]`
 
 ## Who we are
 
-Orango Labs Ltd, company number `[COMPANY NUMBER]`, registered at `[REGISTERED ADDRESS]` ("we"). Contact for anything in this policy: `[PRIVACY EMAIL]`. `[EU REPRESENTATIVE]` **[CHECK]**
+Orango Labs Ltd, company number `[COMPANY NUMBER]`, registered at `[REGISTERED ADDRESS]` ("we"). Contact for anything in this policy: privacy@openchat.run. `[EU REPRESENTATIVE]` **[CHECK]**
 
 We publish the OpenChat iOS app ("the app"), and run a notification relay ("the relay") at `openchat-relay.orangolabs.com`. The relay sends push notifications to the app for OpenChat installations that use it.
 
@@ -38,7 +38,7 @@ For the relay data in the table above, **your organisation is the controller** a
 
 We are the controller for:
 - security and operational logs, under our legitimate interest in running a secure service;
-- correspondence with organisations asking for relay access, under our legitimate interest in deciding who uses the relay.
+- privacy, security and support correspondence, under our legitimate interest in answering it and keeping a record of what we were asked.
 
 ## How long we keep it
 
@@ -67,10 +67,10 @@ Push tokens are encrypted at rest. Phone secrets are stored only as hashes. Ever
 
 ## Your rights
 
-Under UK and EU data protection law, you may ask to access, correct or erase your data, to restrict or object to its use, and to receive it in a portable form. To stop all notifications at once, turn notifications off for the app in iOS Settings, or sign out of the app. For anything else, contact your organisation, or us at `[PRIVACY EMAIL]`. We answer within one month.
+Under UK and EU data protection law, you may ask to access, correct or erase your data, to restrict or object to its use, and to receive it in a portable form. To stop all notifications at once, turn notifications off for the app in iOS Settings, or sign out of the app. For anything else, contact your organisation, or us at privacy@openchat.run. We answer within one month.
 
 You may also complain to the UK Information Commissioner's Office (ico.org.uk), or to the data protection authority where you live.
 
 ## Changes
 
-We will post changes here, and record the date above. For a significant change, we will tell organisations using the relay in advance.
+We will post changes here, and record the date above. For a significant change, we will announce it in the release notes in advance. The relay holds no contact details for organisations, so we cannot write to them.

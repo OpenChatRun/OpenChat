@@ -12,13 +12,16 @@ These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **of
 | [Records of processing](records-of-processing.md) | Orango Labs Ltd internally, under Article 30 | Draft |
 | [Subprocessors](subprocessors.md) | Published, and referenced by the agreement | Draft |
 
+## Contact
+
+privacy@openchat.run, security@openchat.run and support@openchat.run are routed by Cloudflare Email Routing to the Orango Labs Gmail inbox. Google is therefore a recipient of that correspondence.
+
 ## Placeholders to fill
 
 | Placeholder | Meaning |
 |---|---|
 | `[COMPANY NUMBER]` | Orango Labs Ltd's registration number |
 | `[REGISTERED ADDRESS]` | Registered office |
-| `[PRIVACY EMAIL]` | Where privacy and erasure requests go |
 | `[GOVERNING LAW]` | For example, England and Wales |
 | `[EU REPRESENTATIVE]` | An Article 27 representative, if the lawyer says one is needed |
 | `[ICO REGISTRATION]` | UK data protection fee registration number, if required |
@@ -26,7 +29,6 @@ These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **of
 | `[TRANSFER MECHANISM]` | The legal basis for transfers outside the UK and EEA, for each subprocessor |
 | `[LIABILITY CAP]` | The relay terms' cap on liability |
 | `[PERIOD]` | Retention of access and privacy correspondence |
-| `[EMAIL PROVIDER]` | Where `[PRIVACY EMAIL]` is hosted |
 
 ## Points for the lawyer
 
@@ -38,6 +40,10 @@ Each is marked **[CHECK]** where it appears.
 4. **D1 Time Travel.** Cloudflare keeps 30 days of point-in-time history for the relay's database. Erased rows can be restored from it until the 30 days pass. The drafts disclose this; confirm that the wording is adequate.
 5. **Encrypted notifications.** These drafts describe notifications as [ADR-0017](../architecture/decisions/0017-encrypted-notifications.md) designs them: message text encrypted for each phone, which the relay carries but cannot read, and no plain-text option. It shipped on 2026-11-11. Confirm whether ciphertext the processor cannot decrypt counts as personal data in its hands, and how to describe it.
 6. **Children.** The app is a business tool and not directed at children. Confirm whether an age statement is needed.
+7. **How operators accept the terms.** An installation is pointed at the managed relay by default, including through the Deploy to Cloudflare button, so it registers without anyone signing anything. Since 2026-11-17 the dashboard tells the admin, next to push notifications, that using the relay means accepting its terms, with a link. Confirm whether that is enough to form the contract and the Article 28 agreement, or whether registration needs an explicit click-through.
+8. **Who owns the code, and who runs the service.** Every commit in this repository is by its author personally, and the managed relay, the app and the website are run by Orango Labs Ltd. Confirm the licence or assignment from the author to the company that lets it run and publish them.
+9. **Notice of changes.** The relay holds no contact details for operators, so the drafts promise to announce subprocessor and policy changes on the website and in release notes, not by email. Confirm that this is adequate notice.
+10. **The safe harbour in [SECURITY.md](../../SECURITY.md#research-in-good-faith).** It promises not to pursue researchers who follow the policy. Confirm the wording, including what it means under the Computer Misuse Act 1990, and that it binds Orango Labs Ltd for the relay and the app.
 
 ## How the documents match the code
 

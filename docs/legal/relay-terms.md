@@ -35,7 +35,7 @@ The relay applies rate limits per installation and per recipient. We may change 
 
 ## 6. Leaving
 
-You may stop at any time. As an installation admin, in your dashboard choose **Workspaces**, **Push notifications**, **Disconnect and erase**. The relay then erases everything it holds about your installation straight away. If you cannot do that, email `[PRIVACY EMAIL]` and we will erase it for you. If we end your access, we erase your data within 30 days. **[CHECK]**
+You may stop at any time. As an installation admin, in your dashboard choose **Workspaces**, **Push notifications**, **Disconnect and erase**. The relay then erases everything it holds about your installation straight away. If you cannot do that, email privacy@openchat.run and we will erase it for you. If we end your access, we erase your data within 30 days. **[CHECK]**
 
 ## 7. Liability
 

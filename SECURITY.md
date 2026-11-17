@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report it privately, through GitHub: on this repository, **Security**, then **Report a vulnerability**, or go straight to <https://github.com/yatping/OpenChat/security/advisories/new>. Only the maintainers see it.
+Report it privately, through GitHub: on this repository, **Security**, then **Report a vulnerability**, or go straight to <https://github.com/yatping/OpenChat/security/advisories/new>. Only the maintainers see it. If you cannot use GitHub, email security@openchat.run.
 
 Do not open a public issue, pull request or discussion about it.
 

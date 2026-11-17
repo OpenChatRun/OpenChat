@@ -11,4 +11,4 @@ Last updated: `[EFFECTIVE DATE]`
 
 Apple is used because it is the only way to send a notification to an iPhone app.
 
-We will update this page, and email operators of connected installations, at least 30 days before adding or replacing a subprocessor.
+We will update this page, and announce the change in the release notes, at least 30 days before adding or replacing a subprocessor. The relay holds no contact details for operators, so we cannot email them. **[CHECK]** whether publishing is enough notice under Article 28(2).
