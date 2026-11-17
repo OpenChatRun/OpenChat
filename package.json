@@ -50,7 +50,7 @@
     "@eslint/js": "^10.0.0",
     "@openchat/eslint-config": "workspace:*",
     "eslint": "^10.15.0",
-    "prettier": "^3.0.0",
+    "prettier": "^3.10.1",
     "turbo": "^2.11.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
