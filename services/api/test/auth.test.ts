@@ -98,6 +98,7 @@ describe('login', () => {
     for (const response of [await login(), await login(email, 'wrong password!')]) {
       expect(response.headers.get('cache-control')).toBe('no-store');
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(response.headers.get('strict-transport-security')).toBe('max-age=31536000');
     }
     const { accessToken } = await mobileLogin();
     expect((await me(accessToken)).headers.get('cache-control')).toBe('no-store');

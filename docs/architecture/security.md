@@ -123,6 +123,7 @@ CI runs secret scanning. `.dev.vars.example` contains placeholders only, and `.d
 ## Web and API
 
 - Strict CSP on the dashboard, from `apps/dashboard/public/_headers`, with no third-party scripts or inline code.
+- `Strict-Transport-Security: max-age=31536000` on the dashboard and every `/api/*` answer, so a browser that has visited once never tries plain HTTP on a custom domain. Not `includeSubDomains`, since other hosts under the operator's domain are theirs to decide. `workers.dev` is HTTPS-only already.
 - The dashboard keeps its access token in memory. Refreshes are serialised by one promise per tab and a Web Lock across tabs, because a repeated refresh revokes the session. Tokens in emailed links are removed from the address bar on load.
 - CORS allowed only on `/api/v1/widget/*`. These routes use bearer tokens and no cookies, so the response headers reflect the caller, and each route refuses an origin its website does not allow. The dashboard is same-origin and needs none.
 - All input validated with Zod. Request bodies have explicit limits.
