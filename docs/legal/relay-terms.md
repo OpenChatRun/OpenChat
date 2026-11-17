@@ -1,10 +1,10 @@
 # Terms of use: OpenChat managed relay
 
-> **DRAFT for legal review. Not in force.** Placeholders are in `[BRACKETS]`. Points for the lawyer are marked **[CHECK]**.
+> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
 
-Effective: `[EFFECTIVE DATE]`
+Effective: 17 November 2026
 
-These terms are between Orango Labs Ltd, company number `[COMPANY NUMBER]`, registered at `[REGISTERED ADDRESS]` ("we"), and the organisation that operates an OpenChat installation and connects it to the relay at `openchat-relay.orangolabs.com` ("you").
+These terms are between Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT ("we"), and the organisation that operates an OpenChat installation and connects it to the relay at `openchat-relay.orangolabs.com` ("you").
 
 ## 1. The service
 
@@ -14,7 +14,7 @@ The relay is offered free of charge, as is, with no service level. Notifications
 
 ## 2. Access
 
-Any installation that proves control of its domain may register, within the limits we publish. We may refuse or end access at our discretion. Where we can, we will give notice and a reason. **[CHECK]**
+Any installation that proves control of its domain may register, within the limits we publish. We may refuse or end access at our discretion. Where we can, we will give notice and a reason.
 
 ## 3. Your responsibilities
 
@@ -35,16 +35,16 @@ The relay applies rate limits per installation and per recipient. We may change 
 
 ## 6. Leaving
 
-You may stop at any time. As an installation admin, in your dashboard choose **Workspaces**, **Push notifications**, **Disconnect and erase**. The relay then erases everything it holds about your installation straight away. If you cannot do that, email privacy@openchat.run and we will erase it for you. If we end your access, we erase your data within 30 days. **[CHECK]**
+You may stop at any time. As an installation admin, in your dashboard choose **Workspaces**, **Push notifications**, **Disconnect and erase**. The relay then erases everything it holds about your installation straight away. If you cannot do that, email privacy@openchat.run and we will erase it for you. If we end your access, we erase your data within 30 days.
 
 ## 7. Liability
 
-To the extent the law allows, we are not liable for indirect or consequential loss, or for notifications that are lost or delayed. Our total liability under these terms is limited to `[LIABILITY CAP]`. Nothing here limits liability that cannot be limited by law. **[CHECK]**
+To the extent the law allows, we are not liable for indirect or consequential loss, or for notifications that are lost or delayed. Our total liability under these terms is limited to the greater of £100 and the amounts you paid us for the relay in the 12 months before the claim. The relay is free, so in practice £100. Nothing here limits liability that cannot be limited by law.
 
 ## 8. Changes
 
-We may change these terms, with at least 30 days' notice of a material change, by email to the contact you gave when requesting access. If you do not agree, you may disconnect before the change takes effect.
+We may change these terms, with at least 30 days' notice of a material change, by publishing them here and announcing them in the release notes. The relay holds no contact details for you. If you do not agree, you may disconnect before the change takes effect.
 
 ## 9. Law
 
-These terms are governed by the law of `[GOVERNING LAW]`, and its courts have exclusive jurisdiction.
+These terms are governed by the law of England and Wales, and its courts have exclusive jurisdiction.

@@ -13,7 +13,7 @@ Two things leave your account:
 | Your email provider (Cloudflare Email Sending, or Resend) | A visitor's address and a fixed follow-up text, with no message content. Colleagues' addresses for account emails | Follow-up emails, and new account and password links |
 | A notification relay, and Apple | The installation's address and workspace names, an ID for each phone, and encrypted notifications that the relay cannot read | Only if push is set up. The relay forwards each one to Apple for that phone |
 
-The project runs one relay, for the official app. Its privacy policy and terms are drafts awaiting legal review ([drafts](../legal/README.md)). Your company can run its own relay instead.
+The project runs one relay, for the official app. Its [privacy policy](../legal/privacy-policy.md) and [terms](../legal/relay-terms.md) are run by Orango Labs Ltd. Your company can run its own relay instead.
 
 ## What is stored
 

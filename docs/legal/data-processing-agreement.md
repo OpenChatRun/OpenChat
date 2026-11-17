@@ -1,8 +1,8 @@
 # Data processing agreement: OpenChat managed relay
 
-> **DRAFT for legal review. Not in force.** Placeholders are in `[BRACKETS]`. Points for the lawyer are marked **[CHECK]**.
+> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
 
-This agreement forms part of the [relay terms](relay-terms.md). It is between the organisation operating an OpenChat installation (the "controller") and Orango Labs Ltd, company number `[COMPANY NUMBER]`, registered at `[REGISTERED ADDRESS]` (the "processor"). It meets Article 28 of the UK GDPR and the EU GDPR. **[CHECK]**
+This agreement forms part of the [relay terms](relay-terms.md). It is between the organisation operating an OpenChat installation (the "controller") and Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT (the "processor"). It meets Article 28 of the UK GDPR and the EU GDPR.
 
 ## 1. Subject, duration, nature and purpose
 
@@ -21,7 +21,7 @@ This agreement forms part of the [relay terms](relay-terms.md). It is between th
 | The same, through their activity | Per notification: an ID, the event type, a conversation ID, and the delivery outcome |
 | Team members, and the visitors and contacts they talk to | Encrypted notifications: the workspace name, sender name and up to 150 characters of message text, encrypted by the controller's installation for each phone. The processor cannot decrypt them, never stores them, and passes them only to Apple |
 
-No special category data is intended, though the controller cannot rule it out in message text. No readable message content: the processor holds no key that can decrypt a notification. The relay's request formats are closed, and it refuses unknown fields. **[CHECK]** whether encrypted data the processor cannot decrypt is personal data in its hands.
+No special category data is intended, though the controller cannot rule it out in message text. No readable message content: the processor holds no key that can decrypt a notification. The relay's request formats are closed, and it refuses unknown fields. whether encrypted data the processor cannot decrypt is personal data in its hands.
 
 ## 3. The processor's obligations
 
@@ -38,7 +38,7 @@ The processor will:
 
 ## 4. International transfers
 
-The processor and its subprocessors may process the data outside the UK and EEA, including in the United States. Such transfers rely on `[TRANSFER MECHANISM]`. **[CHECK]**
+The processor and its subprocessors may process the data outside the UK and EEA, including in the United States. Such transfers rely on the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc. and Apple Inc. are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback.
 
 ## 5. Security measures
 
@@ -48,16 +48,16 @@ The processor and its subprocessors may process the data outside the UK and EEA,
 - Every query scoped to one installation. No installation can read another's data.
 - Rate limits per installation and per recipient.
 - Notifications encrypted end to end, from the installation to each phone, with HPKE (RFC 9180). Keys are made on the phone and never reach the processor. Ciphertext is padded to a fixed size and is never stored or logged.
-- Access to the deployment limited to the processor's authorised operators, with multi-factor authentication. **[CHECK]**
+- Access to the deployment limited to the processor's authorised operators, with multi-factor authentication.
 - Notification records deleted after 30 days. Devices with no subscription deleted after 7 days.
 
 ## 6. Subprocessors
 
-The controller authorises the subprocessors listed in [Subprocessors](subprocessors.md). The processor will give at least 30 days' notice of a new subprocessor, by updating that list and emailing the controller's contact. The controller may object on reasonable data protection grounds. If the objection cannot be resolved, the controller may disconnect. The processor imposes data protection obligations on each subprocessor equivalent to these, and remains liable for them. **[CHECK]**
+The controller authorises the subprocessors listed in [Subprocessors](subprocessors.md). The processor will give at least 30 days' notice of a new subprocessor, by updating that list and announcing it in the release notes, since the processor holds no contact details for the controller. The controller may object on reasonable data protection grounds. If the objection cannot be resolved, the controller may disconnect. The processor imposes data protection obligations on each subprocessor equivalent to these, and remains liable for them.
 
 ## 7. Personal data breaches
 
-The processor will notify the controller without undue delay, and in any case within 48 hours, of becoming aware of a breach affecting the controller's data. It will give the information it has about the breach, its likely effects, and the measures taken. **[CHECK]**
+The processor will notify the controller without undue delay, and in any case within 48 hours, of becoming aware of a breach affecting the controller's data. It will give the information it has about the breach, its likely effects, and the measures taken.
 
 ## 8. Data subjects' requests
 
@@ -69,11 +69,11 @@ The processor will notify the controller without undue delay, and in any case wi
 
 ## 9. Deletion at the end
 
-The controller ends processing with **Disconnect and erase** in its dashboard. The relay then deletes, at once, the installation, its key, workspaces, subscriptions and notification records, and every device left with no subscription. The processor can do the same on request, with its relay operator tooling. Deleted data remains in the hosting provider's point-in-time recovery history for up to 30 days, and is then gone. The processor keeps no other copy. **[CHECK]**
+The controller ends processing with **Disconnect and erase** in its dashboard. The relay then deletes, at once, the installation, its key, workspaces, subscriptions and notification records, and every device left with no subscription. The processor can do the same on request, with its relay operator tooling. Deleted data remains in the hosting provider's point-in-time recovery history for up to 30 days, and is then gone. The processor keeps no other copy.
 
 ## 10. Audits
 
-The processor will answer reasonable written questions about its compliance. The relay's source code is public, so the controller can inspect what it does. Any on-site audit needs 30 days' notice, takes place in business hours, and is at the controller's cost. **[CHECK]**
+The processor will answer reasonable written questions about its compliance. The relay's source code is public, so the controller can inspect what it does. Any on-site audit needs 30 days' notice, takes place in business hours, and is at the controller's cost.
 
 ## 11. Precedence
 

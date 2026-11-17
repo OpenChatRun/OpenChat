@@ -4,7 +4,7 @@
  */
 
 /** Where vulnerabilities in OpenChat's own code are reported. */
-export const PROJECT_SECURITY_URL = 'https://github.com/yatping/OpenChat/security';
+export const PROJECT_SECURITY_URL = 'https://github.com/OrangoLabsLtd/OpenChat/security';
 
 /** How far ahead `Expires` is. It is written on each request, so it never lapses while the operator's settings stand. */
 export const SECURITY_TXT_DAYS = 30;

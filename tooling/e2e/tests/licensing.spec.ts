@@ -7,7 +7,7 @@ test('the sign-in page and the dashboard offer the source and the notices', asyn
   await page.context().setExtraHTTPHeaders({ 'cf-connecting-ip': nextIp() });
   await page.goto('/');
   const footer = page.getByRole('contentinfo');
-  await expect(footer.getByRole('link', { name: 'Source code' })).toHaveAttribute('href', /^https:\/\/github\.com\/yatping\/OpenChat/);
+  await expect(footer.getByRole('link', { name: 'Source code' })).toHaveAttribute('href', /^https:\/\/github\.com\/OrangoLabsLtd\/OpenChat/);
   await expect(footer.getByRole('link', { name: 'Third-party licences' })).toHaveAttribute('href', '/third-party-licenses.txt');
   await signIn(page, OWNER);
   await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Source code' })).toBeVisible();

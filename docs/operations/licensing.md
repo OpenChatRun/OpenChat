@@ -2,7 +2,7 @@
 
 How OpenChat's licences are kept: what each component is under, what CI checks, the notices that ship with the bundles, and the source offer the AGPL asks of an installation. The reasons for the split are in [ADR-0011](../architecture/decisions/0011-license-boundaries.md).
 
-This is not legal advice. The open points at the end are for the owner's legal review.
+This is not legal advice. The decisions at the end are Orango Labs Ltd's.
 
 ## Components
 
@@ -64,7 +64,7 @@ The AGPL's section 13 asks that a modified server offer its source to everyone w
 - The discovery document, `/.well-known/openchat.json`, has a `software` field, with `version`, `license` and `source`. See [API conventions](../api/conventions.md#discovery-and-compatibility).
 - The dashboard's footer, on the sign-in page and every page after it, shows the version and links to that source and to the notices.
 
-By default, `source` is the project's repository at the deployed release, such as `https://github.com/yatping/OpenChat/tree/v0.3.0`. That is the right source only for an unchanged release. `oc deploy` passes the release version to the Worker as `OPENCHAT_VERSION`. A Worker deployed some other way publishes no version, and links to the repository.
+By default, `source` is the project's repository at the deployed release, such as `https://github.com/OrangoLabsLtd/OpenChat/tree/v0.3.0`. That is the right source only for an unchanged release. `oc deploy` passes the release version to the Worker as `OPENCHAT_VERSION`. A Worker deployed some other way publishes no version, and links to the repository.
 
 **If you change the code,** publish your version somewhere your users can reach, and point the offer at it:
 
@@ -78,11 +78,12 @@ The relay is AGPL too, but has no users who browse it: installations call it. Th
 
 **Security.** The discovery document now tells anyone which release an installation runs, which helps an attacker choose a known vulnerability. The source offer needs the version to be honest, and installations upgrade on their own schedule, so the version is published. [SECURITY.md](../../SECURITY.md) asks operators to upgrade when a release carries a security fix.
 
-## For the owner's legal review
+## Decisions
 
-- **Visitors.** People chatting through the widget also use the AGPL server over a network. The offer is in the dashboard and the discovery document, not in the widget, because a link inside a customer's website is a product decision. Decide whether that is enough.
+- **Who holds the copyright.** Orango Labs Ltd, which owns the repository (`OrangoLabsLtd/OpenChat` since 2026-11-17). Contributors keep the copyright in their own contributions and license them under the DCO.
+- **Visitors.** People chatting through the widget also use the AGPL server over a network. Section 13 binds only someone who runs a *modified* copy, so an installation running a release unchanged needs nothing more. Orango Labs gives the offer anyway, in the dashboard and the discovery document. An operator who changes the server must offer its own source to everyone who uses it, visitors included, and may add a link to the widget's host page for that. The widget itself shows no link, since it sits in the customer's website.
 - **The app and the App Store.** The app is Apache-2.0 so that it can be on the App Store (ADR-0011). It shows its notices, and the server's source offer, on its About screen.
-- **The DCO without a CLA.** Accepted in ADR-0011, with its consequence: no relicensing without every contributor's consent.
+- **The DCO without a CLA.** Accepted in ADR-0011, with its consequence: no relicensing without every contributor's consent. Until 2026-11-17 every commit came from the founder of Orango Labs Ltd, or from Dependabot.
 
 ## Limits
 

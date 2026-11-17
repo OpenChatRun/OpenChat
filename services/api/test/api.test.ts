@@ -48,7 +48,7 @@ describe('HTTP', () => {
       relay: null,
       auth: { signup: 'invite_only' },
       // Deployed without oc deploy, so no version: the source offer falls back to the repository.
-      software: { name: 'OpenChat', version: null, license: 'AGPL-3.0-or-later', source: 'https://github.com/yatping/OpenChat' },
+      software: { name: 'OpenChat', version: null, license: 'AGPL-3.0-or-later', source: 'https://github.com/OrangoLabsLtd/OpenChat' },
     });
     expect(await client.getHealth()).toEqual({ status: 'ok' });
   });

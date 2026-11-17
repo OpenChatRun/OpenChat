@@ -5,7 +5,7 @@
  */
 import { isHttpsUrl } from './security-txt';
 
-export const PROJECT_REPOSITORY_URL = 'https://github.com/yatping/OpenChat';
+export const PROJECT_REPOSITORY_URL = 'https://github.com/OrangoLabsLtd/OpenChat';
 export const SERVER_LICENSE = 'AGPL-3.0-or-later';
 
 const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
