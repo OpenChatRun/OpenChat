@@ -65,7 +65,7 @@ The processor will notify the controller without undue delay, and in any case wi
 |---|---|
 | Erasure of one person | The controller removes the member, or revokes their sessions, in OpenChat. The installation then tells the relay to delete that member's subscriptions |
 | Erasure of one phone | The person signs out of the app. That removes the phone's subscriptions, and the phone's record is deleted after 7 days |
-| Access | The controller holds the pseudonymous ID and can ask the processor at `[PRIVACY EMAIL]` for what the relay holds about it |
+| Access | The controller holds the pseudonymous ID and can ask the processor at privacy@openchat.run for what the relay holds about it |
 
 ## 9. Deletion at the end
 

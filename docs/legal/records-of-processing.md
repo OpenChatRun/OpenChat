@@ -2,7 +2,7 @@
 
 > **DRAFT for legal review.** Kept under Article 30 of the UK GDPR and the EU GDPR. It is internal, but it may be published. Placeholders are in `[BRACKETS]`.
 
-Organisation: Orango Labs Ltd, `[REGISTERED ADDRESS]`. Contact: `[PRIVACY EMAIL]`. `[EU REPRESENTATIVE]`. `[ICO REGISTRATION]`. No data protection officer appointed. **[CHECK]**
+Organisation: Orango Labs Ltd, `[REGISTERED ADDRESS]`. Contact: privacy@openchat.run. `[EU REPRESENTATIVE]`. `[ICO REGISTRATION]`. No data protection officer appointed. **[CHECK]**
 
 Last reviewed: `[EFFECTIVE DATE]`
 
@@ -10,7 +10,7 @@ Last reviewed: `[EFFECTIVE DATE]`
 
 | | Managed notification relay |
 |---|---|
-| Controllers | Each organisation operating an OpenChat installation admitted to the relay. The list is the relay's `installations` table, and `pnpm ocp relay stats` gives the count |
+| Controllers | Each organisation operating an OpenChat installation connected to the relay. The list is the relay's `installations` table, and `pnpm ocp relay stats` gives the count |
 | Categories of processing | Storing device registrations and subscriptions; delivering notifications through Apple's push service; recording delivery outcomes; erasing on request |
 | Data | See [data processing agreement](data-processing-agreement.md#2-data-subjects-and-data) |
 | Transfers | Cloudflare (global network, including the United States), Apple (United States). Mechanism: `[TRANSFER MECHANISM]` |
@@ -21,8 +21,8 @@ Last reviewed: `[EFFECTIVE DATE]`
 | Activity | Purpose and basis | Data subjects | Data | Recipients | Retention |
 |---|---|---|---|---|---|
 | Relay security and operations logs | Keeping the relay secure and working. Legitimate interests | Team members using the app; installation operators | Request metadata, which may include IP addresses; installation IDs; error codes. No content or tokens | Cloudflare | 7 days |
-| Relay access requests | Deciding which installations may use the relay. Legitimate interests | People who ask for access | Name or handle, contact details, installation ID, anything they write | GitHub, if requested through an issue **[CHECK]** | Until access ends, plus `[PERIOD]` |
-| Privacy and erasure requests | Meeting legal obligations | People making requests | Contact details, request content | `[EMAIL PROVIDER]` | `[PERIOD]` after the request is closed |
+| Privacy, security and support correspondence | Answering requests sent to privacy@, security@ and support@openchat.run, and keeping a record of them. Legitimate interests | People who write to us | Name, email address, anything they write | Cloudflare (Email Routing), Google (the Gmail inbox they are forwarded to) **[CHECK]** | `[PERIOD]` |
+| Privacy and erasure requests | Meeting legal obligations | People making requests | Contact details, request content | Cloudflare (Email Routing), Google (Gmail) | `[PERIOD]` after the request is closed |
 
 ## Not processed by Orango Labs Ltd
 
