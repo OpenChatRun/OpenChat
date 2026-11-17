@@ -157,7 +157,7 @@ describe('discovery', () => {
 
   it('names the release and offers its source, or the source the operator set', async () => {
     const atRelease = (await (await call('GET', '/.well-known/openchat.json', { env: { ...withRelay, OPENCHAT_VERSION: '0.3.0' } })).json()) as { software: unknown };
-    expect(atRelease.software).toEqual({ name: 'OpenChat', version: '0.3.0', license: 'AGPL-3.0-or-later', source: 'https://github.com/yatping/OpenChat/tree/v0.3.0' });
+    expect(atRelease.software).toEqual({ name: 'OpenChat', version: '0.3.0', license: 'AGPL-3.0-or-later', source: 'https://github.com/OrangoLabsLtd/OpenChat/tree/v0.3.0' });
     const own = (await (await call('GET', '/.well-known/openchat.json', { env: { ...withRelay, OPENCHAT_VERSION: '0.3.0', SOURCE_URL: 'https://git.example.com/our-openchat' } })).json()) as { software: { source: string } };
     expect(own.software.source).toBe('https://git.example.com/our-openchat');
   });

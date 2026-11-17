@@ -7,7 +7,7 @@ import { LANGUAGES } from '../i18n/locales';
 
 /** The OpenChat project's own relay, whose terms an installation accepts by using it. Another relay has its own terms. */
 const MANAGED_RELAY_URL = 'https://openchat-relay.orangolabs.com';
-const RELAY_TERMS_URL = 'https://github.com/yatping/OpenChat/blob/main/docs/legal/relay-terms.md';
+const RELAY_TERMS_URL = 'https://github.com/OrangoLabsLtd/OpenChat/blob/main/docs/legal/relay-terms.md';
 
 const parseOrigins = (text: string) => text.split(/[\s,]+/).filter(Boolean);
 

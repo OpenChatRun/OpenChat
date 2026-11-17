@@ -159,7 +159,7 @@ pnpm oc deploy --env production --relay-url https://openchat-relay.orangolabs.co
   --relay-id managed --relay-bundle-ids com.orangolabs.openchat
 ```
 
-The relay is in open mode: any installation that proves control of its domain can register, within the [limits](../notification-relay/protocol.md#rate-limits). Its [terms](../legal/relay-terms.md) and privacy policy are drafts awaiting legal review. `--no-relay` takes it out again; disconnect in the dashboard first, so that the relay erases its records.
+The relay is in open mode: any installation that proves control of its domain can register, within the [limits](../notification-relay/protocol.md#rate-limits). Using it means accepting its [terms](../legal/relay-terms.md). `--no-relay` takes it out again; disconnect in the dashboard first, so that the relay erases its records.
 
 ## Operations
 

@@ -1,12 +1,12 @@
 # Privacy policy: OpenChat app and managed relay
 
-> **DRAFT for legal review. Not in force.** Placeholders are in `[BRACKETS]`. Points for the lawyer are marked **[CHECK]**.
+> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
 
-Effective: `[EFFECTIVE DATE]`
+Effective: 17 November 2026
 
 ## Who we are
 
-Orango Labs Ltd, company number `[COMPANY NUMBER]`, registered at `[REGISTERED ADDRESS]` ("we"). Contact for anything in this policy: privacy@openchat.run. `[EU REPRESENTATIVE]` **[CHECK]**
+Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT ("we"). Contact for anything in this policy: privacy@openchat.run. We have not appointed a representative in the EU under Article 27 of the EU GDPR, relying on the exemption in Article 27(2) for occasional processing that is unlikely to result in a risk to people's rights.
 
 We publish the OpenChat iOS app ("the app"), and run a notification relay ("the relay") at `openchat-relay.orangolabs.com`. The relay sends push notifications to the app for OpenChat installations that use it.
 
@@ -28,13 +28,13 @@ Only what is needed to deliver a push notification to your phone reaches the rel
 | Your organisation's installation ID, web address and public key, plus an ID for each workspace | Your organisation's OpenChat | To check that requests really come from it |
 | For each notification: its ID, the event type (such as "new message"), a conversation ID, and whether it was delivered | Your organisation's OpenChat, and Apple | To deliver it once, and to see delivery problems |
 | For each notification: the encrypted notification for each of your phones, which we cannot read | Your organisation's OpenChat | To pass it to Apple. We never store or log it |
-| Request metadata, which may include an IP address | Our hosting provider's logs | To keep the relay secure and running **[CHECK]** |
+| Request metadata, which may include an IP address | Our hosting provider's logs | To keep the relay secure and running |
 
 Your phone decrypts the notification and shows the workspace name, the sender, and the start of the message. If it cannot, it shows a fixed phrase such as "New message". To hide message text on your lock screen, use **Show Previews** in iOS Settings > Notifications.
 
 ## Our role, and the legal basis
 
-For the relay data in the table above, **your organisation is the controller** and we process it on its behalf, under a data processing agreement. Questions about why it is used, or requests to see or erase it, are best sent to your organisation. We will help it answer them. **[CHECK]**
+For the relay data in the table above, **your organisation is the controller** and we process it on its behalf, under a data processing agreement. Questions about why it is used, or requests to see or erase it, are best sent to your organisation. We will help it answer them.
 
 We are the controller for:
 - security and operational logs, under our legitimate interest in running a secure service;
@@ -47,17 +47,17 @@ We are the controller for:
 | Notification records | 30 days |
 | Your phone's record | Until you sign out of every workspace and do not sign in again for 7 days, until Apple tells us the token is no longer valid, or until your organisation stops using the relay |
 | Your organisation's installation and workspace records | Until it disconnects from the relay or asks us to erase them |
-| Hosting provider logs | 7 days **[CHECK]** |
+| Hosting provider logs | 7 days |
 | Short-lived counters against abuse | 10 minutes |
 
-When your organisation disconnects from the relay, we erase its records, and every phone record left without a subscription, straight away. Our database host keeps point-in-time recovery history for 30 days, so erased records are fully gone 30 days after erasure. **[CHECK]**
+When your organisation disconnects from the relay, we erase its records, and every phone record left without a subscription, straight away. Our database host keeps point-in-time recovery history for 30 days, so erased records are fully gone 30 days after erasure.
 
 ## Who else handles it
 
 - **Cloudflare, Inc.** hosts the relay, its database and its logs.
 - **Apple Inc.** delivers the notifications to your phone.
 
-The current list is in [Subprocessors](subprocessors.md). Both operate outside the UK and EU, including in the United States. Transfers rely on `[TRANSFER MECHANISM]`. **[CHECK]**
+The current list is in [Subprocessors](subprocessors.md). Both operate outside the UK and EU, including in the United States. Transfers rely on the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc. and Apple Inc. are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback.
 
 We do not sell data, show advertising, or use analytics or crash reporting in the app.
 
@@ -70,6 +70,10 @@ Push tokens are encrypted at rest. Phone secrets are stored only as hashes. Ever
 Under UK and EU data protection law, you may ask to access, correct or erase your data, to restrict or object to its use, and to receive it in a portable form. To stop all notifications at once, turn notifications off for the app in iOS Settings, or sign out of the app. For anything else, contact your organisation, or us at privacy@openchat.run. We answer within one month.
 
 You may also complain to the UK Information Commissioner's Office (ico.org.uk), or to the data protection authority where you live.
+
+## Children
+
+The app and the relay are business tools for an organisation's team. They are not meant for anyone under 16, and we do not knowingly process their data.
 
 ## Changes
 
