@@ -6876,6 +6876,17 @@
             "required": false,
             "name": "limit",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 254,
+              "description": "Only people whose name or email contains this, ignoring case for Latin letters."
+            },
+            "required": false,
+            "description": "Only people whose name or email contains this, ignoring case for Latin letters.",
+            "name": "q",
+            "in": "query"
           }
         ],
         "responses": {

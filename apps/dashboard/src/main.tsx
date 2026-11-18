@@ -6,9 +6,11 @@ import { LANGUAGE_PREFERENCE, startLocale, t } from './i18n';
 import { ForgotPasswordPage, ResetPasswordPage, SetupPage, SetupUnconfiguredPage, SignInPage } from './pages/account-pages';
 import { WorkspaceApp } from './pages/workspace-pages';
 import { takeTokenFromUrl } from './session';
+import { applyTheme } from './theme-picker';
 import './styles.css';
 
 startLocale(preference.get(LANGUAGE_PREFERENCE), navigator.languages ?? [navigator.language]);
+applyTheme();
 
 const path = window.location.pathname;
 // Taken once at load, before anything renders, so that the token leaves the address bar at once.

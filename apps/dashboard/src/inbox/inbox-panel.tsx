@@ -226,7 +226,7 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
           {t('noConversations')}
         </div>
       )}
-      <ul className="flex-1 space-y-0.5 overflow-y-auto p-2">
+      <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
         {rows.map((row) => {
           const unread = unreadCount(row);
           return (
@@ -497,14 +497,7 @@ function ContactRights({ workspaceId, contactId, label, onErased }: { workspaceI
   const [notes, setNotes] = useState(false);
   const exported = useMutation({
     mutationFn: () => api.exportContact(workspaceId, contactId, notes),
-    onSuccess: (data) => {
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `contact-${contactId}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    },
+    onSuccess: (data) => saveBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `contact-${contactId}.json`),
   });
   const erased = useMutation({
     mutationFn: () => api.eraseContact(workspaceId, contactId),
@@ -647,8 +640,8 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
   const data = conversation.data;
   const conflict = update.error instanceof ApiError && update.error.status === 409;
   return (
-    <div className="flex min-w-0 flex-1 flex-col lg:flex-row">
-    <section aria-label={t('conversation')} className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+    <section aria-label={t('conversation')} className="flex min-h-0 min-w-0 flex-1 flex-col">
       <button className="button-quiet m-3 mb-0 self-start md:hidden" onClick={props.onBack}>
         <Icon name="back" className="size-4" />
         {t('backToList')}
@@ -684,7 +677,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
       {messages.error ? <p className="error m-3" role="alert">{errorMessage(messages.error)}</p> : null}
       <div
         ref={scroller}
-        className="max-h-[60vh] min-h-64 flex-1 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950"
+        className="max-h-[60vh] min-h-64 flex-1 overflow-y-auto bg-slate-50 p-4 lg:max-h-none lg:min-h-40 dark:bg-slate-950"
         onScroll={(event) => {
           const element = event.currentTarget;
           atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
@@ -700,7 +693,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
       <Composer key={conversationId} workspaceId={workspaceId} conversationId={conversationId} drafts={drafts} realtime={realtime} />
     </section>
     {data && (
-      <aside className="space-y-4 border-t border-slate-200 bg-slate-50/60 p-4 lg:w-72 lg:shrink-0 lg:border-t-0 lg:border-l dark:border-slate-800 dark:bg-slate-900/40">
+      <aside className="space-y-4 border-t border-slate-200 bg-slate-50/60 p-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l dark:border-slate-800 dark:bg-slate-900/40">
         <ContactCard key={data.contactId} workspaceId={workspaceId} contactId={data.contactId} onErased={props.onBack} />
         <TagPicker workspaceId={workspaceId} conversation={data} />
       </aside>
@@ -721,7 +714,8 @@ export function InboxPanel({ membership, members }: { membership: Membership; me
     <div className="space-y-3">
       <ConnectionNotice status={status} />
       {online.length > 0 && <p className="text-xs text-slate-600 dark:text-slate-400">{t('alsoOnline', { names: online.map((m) => m.name).join(', ') })}</p>}
-      <div className="flex min-h-[min(720px,calc(100dvh-11rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900">
+      {/* Wide enough for three columns, the inbox fills the window and each column scrolls on its own. The header and padding above it are about 7.5rem. */}
+      <div className="flex min-h-[min(720px,calc(100dvh-11rem))] overflow-hidden rounded-2xl lg:h-[calc(100dvh-7.5rem)] lg:min-h-[30rem] border border-slate-200 bg-white shadow-sm shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900">
         <ConversationList workspaceId={workspaceId} memberId={membership.memberId} selected={selected} onSelect={setSelected} visitorsOnline={visitorsOnline} hidden={selected !== null} />
         {selected ? (
           <Thread

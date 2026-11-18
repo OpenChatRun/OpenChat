@@ -93,6 +93,8 @@ export async function staleAttachments(database: Database, olderThanMs: number, 
   return results;
 }
 
-export async function deleteUnclaimedAttachment(database: Database, id: string): Promise<void> {
-  await rawHandle(database).prepare(`DELETE FROM attachments WHERE id = ?1 AND message_id IS NULL`).bind(id).run();
+/** One statement for the whole sweep. A file a message claimed in the meantime keeps its row. */
+export async function deleteUnclaimedAttachments(database: Database, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await rawHandle(database).prepare(`DELETE FROM attachments WHERE id IN (SELECT value FROM json_each(?1)) AND message_id IS NULL`).bind(JSON.stringify(ids)).run();
 }

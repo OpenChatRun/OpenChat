@@ -214,8 +214,13 @@ export function adminRepository(database: Database, ctx: AdminContext) {
   return {
     get,
 
-    async list(input: { cursor?: string | undefined; limit: number }): Promise<{ data: PersonRow[]; nextCursor: string | null }> {
-      const { results } = await d1.prepare(`${PERSON_SELECT} WHERE u.id > ?1 ORDER BY u.id LIMIT ?2`).bind(input.cursor ?? '', input.limit + 1).all<RawPerson>();
+    /** `q` matches part of a name or email. instr, unlike LIKE, gives no meaning to % or _ in what an admin types. */
+    async list(input: { cursor?: string | undefined; limit: number; q?: string | undefined }): Promise<{ data: PersonRow[]; nextCursor: string | null }> {
+      const q = input.q?.toLowerCase() || null;
+      const { results } = await d1
+        .prepare(`${PERSON_SELECT} WHERE u.id > ?1 AND (?3 IS NULL OR instr(lower(u.name), ?3) > 0 OR instr(lower(u.email), ?3) > 0) ORDER BY u.id LIMIT ?2`)
+        .bind(input.cursor ?? '', input.limit + 1, q)
+        .all<RawPerson>();
       const data = results.slice(0, input.limit).map(toPerson);
       return { data, nextCursor: results.length > input.limit ? (data.at(-1)?.id ?? null) : null };
     },

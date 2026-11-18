@@ -27,6 +27,13 @@ const openPeople = async (page: Page) => {
   await expect(page.getByRole('region', { name: 'People' })).toBeVisible();
 };
 const card = (page: Page, name: string) => page.getByRole('listitem', { name, exact: true });
+/** A row opens to show its workspaces and access. */
+const open = async (page: Page, name: string) => {
+  const person = card(page, name);
+  const toggle = person.locator('button[aria-expanded]');
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  return person;
+};
 
 test.describe('People', () => {
   test.beforeEach(({ page }) => {
@@ -56,7 +63,7 @@ test.describe('People', () => {
     const question = await conversationAnsweredByAgent(reply);
     await signIn(page, OWNER);
     await openPeople(page);
-    const person = card(page, AGENT.name);
+    const person = await open(page, AGENT.name);
     await person.getByRole('button', { name: 'Remove', exact: true }).click();
     await expect(person.getByLabel(`Role for ${AGENT.name} in E2E`)).toBeHidden();
 
@@ -71,6 +78,7 @@ test.describe('People', () => {
     await expect(page.getByText(`${AGENT.name} (Removed)`).first()).toBeVisible();
 
     await openPeople(page);
+    await open(page, AGENT.name);
     await person.getByRole('button', { name: 'Add to workspace' }).click();
     await expect(person.getByLabel(`Role for ${AGENT.name} in E2E`)).toHaveValue('agent');
   });
@@ -92,10 +100,25 @@ test.describe('People', () => {
     // Not in the list of workspaces this admin can open.
     await expect(page.getByLabel('Workspace', { exact: true }).getByRole('option', { name })).toHaveCount(0);
     await openPeople(page);
-    const me = card(page, OWNER.name);
+    const me = await open(page, OWNER.name);
     await me.getByLabel(`Workspace to add ${OWNER.name} to`).selectOption({ label: name });
     await me.getByRole('button', { name: 'Add to workspace' }).click();
     await expect(page.getByLabel('Workspace', { exact: true }).getByRole('option', { name })).toHaveCount(1);
+  });
+
+  test('an admin finds people by name or email, and filters to admins', async ({ page }) => {
+    await signIn(page, OWNER);
+    await openPeople(page);
+    const region = page.getByRole('region', { name: 'People' });
+    await region.getByLabel('Search by name or email').fill(AGENT.email.toUpperCase());
+    await expect(card(page, AGENT.name)).toBeVisible();
+    await expect(card(page, OWNER.name)).toBeHidden();
+    await region.getByLabel('Search by name or email').fill('nobody-by-this-name');
+    await expect(region.getByText('Nobody matches.')).toBeVisible();
+    await region.getByLabel('Search by name or email').fill('');
+    await region.getByRole('button', { name: /^Admins/ }).click();
+    await expect(card(page, OWNER.name)).toBeVisible();
+    await expect(card(page, AGENT.name)).toBeHidden();
   });
 
   test('an agent has no admin pages, and sees members and websites without any controls', async ({ page }) => {
@@ -113,9 +136,9 @@ test.describe('People', () => {
   test('a deactivated account cannot sign in until it is reactivated', async ({ page, browser }) => {
     await signIn(page, OWNER);
     await openPeople(page);
-    const person = card(page, AGENT.name);
+    const person = await open(page, AGENT.name);
     await person.getByRole('button', { name: 'Deactivate account' }).click();
-    await expect(person.getByText(`${AGENT.name} (Removed)`)).toBeVisible();
+    await expect(person.getByText('Deactivated', { exact: true })).toBeVisible();
 
     const attempt = await fetch(`${BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
@@ -125,7 +148,7 @@ test.describe('People', () => {
     expect(attempt.status).toBe(401);
 
     await person.getByRole('button', { name: 'Reactivate account' }).click();
-    await expect(person.getByText(`${AGENT.name} (Removed)`)).toBeHidden();
+    await expect(person.getByText('Deactivated', { exact: true })).toBeHidden();
     const context = await browser.newContext();
     const agent = await context.newPage();
     await signIn(agent, AGENT);

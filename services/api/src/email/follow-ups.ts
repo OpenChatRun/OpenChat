@@ -27,12 +27,17 @@ const SWEEP_LIMIT = 200;
 
 type FollowUpPayload = { ruleId: string; conversationId: string; triggerKey: string };
 
-/** Clearing after queueing means a crash between them queues twice, which the claim below absorbs. */
+/**
+ * Clearing after queueing means a crash between them queues twice, which the claim below absorbs. Batched, because
+ * this runs every minute: a queue batch holds at most 100 messages, and the clearing is one D1 batch.
+ */
 export async function sweepFollowUps(env: Env, db: Database): Promise<void> {
-  for (const due of await dueFollowUpConversations(db, SWEEP_LIMIT)) {
-    if (emailConfigured(env)) await env.JOBS_QUEUE.send(envelope(EVALUATE_JOB, `${EVALUATE_JOB}:${due.id}:${due.dueAt}`, due.workspaceId, { conversationId: due.id }));
-    await clearFollowUpDue(db, due.workspaceId, due.id, due.dueAt);
+  const due = await dueFollowUpConversations(db, SWEEP_LIMIT);
+  if (emailConfigured(env)) {
+    const jobs = due.map((row) => ({ body: envelope(EVALUATE_JOB, `${EVALUATE_JOB}:${row.id}:${row.dueAt}`, row.workspaceId, { conversationId: row.id }) }));
+    for (let i = 0; i < jobs.length; i += 100) await env.JOBS_QUEUE.sendBatch(jobs.slice(i, i + 100));
   }
+  await clearFollowUpDue(db, due);
 }
 
 async function handleEvaluate(job: JobEnvelope, env: Env): Promise<void> {

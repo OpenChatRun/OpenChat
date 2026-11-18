@@ -6,7 +6,7 @@
 import { toMessage } from '@openchat/core';
 import {
   conversationForDispatch,
-  deleteUnclaimedAttachment,
+  deleteUnclaimedAttachments,
   staleAttachments,
   markOutboxDispatched,
   messageForDispatch,
@@ -151,10 +151,12 @@ async function deleteStoredFiles(env: Env, prefix: string): Promise<void> {
 
 /** Storage first: if the row went first and this died, nothing would ever find the file again. */
 async function sweepAttachments(env: Env, db: Database): Promise<void> {
-  for (const file of await staleAttachments(db, ORPHAN_AGE_MS, ORPHAN_LIMIT)) {
-    await env.ATTACHMENTS.delete(file.storageKey);
-    await deleteUnclaimedAttachment(db, file.id);
-  }
+  // Files first, then rows, as before: a failure leaves a row pointing at nothing, which the next sweep clears,
+  // rather than a file nothing points at. R2 takes up to 1,000 keys in one call, and the limit is below that.
+  const files = await staleAttachments(db, ORPHAN_AGE_MS, ORPHAN_LIMIT);
+  if (files.length === 0) return;
+  await env.ATTACHMENTS.delete(files.map((file) => file.storageKey));
+  await deleteUnclaimedAttachments(db, files.map((file) => file.id));
 }
 
 export async function sweepOutbox(env: Env, scheduledTime: number): Promise<void> {

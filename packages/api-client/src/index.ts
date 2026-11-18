@@ -170,7 +170,7 @@ export function createClient(options: ClientOptions) {
     getMe: () => get<Me>('/api/v1/me'),
 
     listMembers: (workspaceId: string, cursor?: string) => get<MemberPage>(`${workspace(workspaceId)}/members?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
-    listPeople: (input: { cursor?: string; limit?: number } = {}) => get<People>(`/api/v1/admin/people${query(input)}`),
+    listPeople: (input: { cursor?: string | undefined; limit?: number; q?: string } = {}) => get<People>(`/api/v1/admin/people${query(input)}`),
     createPerson: (input: PersonInput) => request<Person>('POST', '/api/v1/admin/people', input),
     updatePerson: (userId: string, input: { isInstallationAdmin: boolean }) => request<Person>('PATCH', person(userId), input),
     deactivatePerson: (userId: string) => request<Person>('POST', `${person(userId)}/deactivate`),

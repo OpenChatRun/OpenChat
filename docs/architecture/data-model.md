@@ -168,6 +168,7 @@ Whatever the setting, every installation also deletes, hourly:
 | Message content capped at 16 KB, JSON columns at 16 KB | Well under the 2 MB row limit |
 | Retry only on transient errors, and only for idempotent statements, at most twice with jitter | Retrying under overload makes it worse. Surface 503 with `Retry-After` |
 | `next_automation_at`, `outbox` scans use partial indexes | Keeps sweeps cheap as tables grow |
+| Every foreign key has an index that starts with its columns, checked by `pnpm check:migrations` | SQLite looks up child rows on every parent delete and cascade. Without the index, each deleted conversation, tag or website scans the whole child table |
 
 ### Read replication
 

@@ -144,6 +144,19 @@ describe('what an admin can see', () => {
     expect(all.find((p) => p.id === 'user_boss')).toMatchObject({ isInstallationAdmin: true, memberships: [] });
   });
 
+  it('finds people by part of a name or email, in any case, and pages the matches', async () => {
+    const ids = async (query: string) => ((await (await call('GET', `${PEOPLE}?${query}`, tokens.boss)).json()) as { data: Person[] }).data.map((p) => p.id).sort();
+    expect(await ids('q=OWN')).toEqual(['user_owner']);
+    expect(await ids('q=%40example')).toEqual(['user_agent', 'user_boss', 'user_outsider', 'user_owner']);
+    // Wildcards are only characters here.
+    expect(await ids('q=%25')).toEqual([]);
+    expect(await ids('q=_')).toEqual([]);
+    const first = (await (await call('GET', `${PEOPLE}?q=o&limit=1`, tokens.boss)).json()) as { data: Person[]; nextCursor: string };
+    expect(first.data).toHaveLength(1);
+    expect(first.nextCursor).toBeTruthy();
+    expect(await call('GET', `${PEOPLE}?q=${'x'.repeat(255)}`, tokens.boss)).toHaveProperty('status', 400);
+  });
+
   it('has no way into a workspace without joining it, and joining is audited', async () => {
     const { path } = await conversationWithReply();
     expect((await call('GET', '/api/v1/workspaces/work_1', tokens.boss)).status).toBe(404);
