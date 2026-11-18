@@ -107,6 +107,8 @@ export const authTokens = sqliteTable(
   },
   (t) => [
     index('auth_tokens_expiry_idx').on(t.expiresAt),
+    // Foreign-key lookups: a cascade from the parent scans the whole table without these.
+    index('auth_tokens_user_idx').on(t.userId),
     check('auth_tokens_purpose_ck', sql`${t.purpose} IN ('password_reset','email_verification')`),
   ],
 );
@@ -182,6 +184,7 @@ export const invitations = sqliteTable(
       foreignColumns: [workspaceMembers.workspaceId, workspaceMembers.id],
     }).onDelete('cascade'),
     check('invitations_role_ck', sql`${t.role} IN ('admin','supervisor','agent')`),
+    index('invitations_inviter_idx').on(t.workspaceId, t.invitedByMemberId),
   ],
 );
 
@@ -236,6 +239,7 @@ export const contacts = sqliteTable(
     index('contacts_list_idx').on(t.workspaceId, sql`${t.lastSeenAt} DESC`, sql`${t.id} DESC`),
     // For the retention sweep, across workspaces.
     index('contacts_stale_idx').on(t.lastSeenAt),
+    index('contacts_merged_idx').on(t.workspaceId, t.mergedIntoContactId).where(sql`${t.mergedIntoContactId} IS NOT NULL`),
   ],
 );
 
@@ -265,6 +269,7 @@ export const visitors = sqliteTable(
     }).onDelete('cascade'),
     index('visitors_contact_idx').on(t.workspaceId, t.contactId),
     index('visitors_stale_idx').on(t.lastSeenAt),
+    index('visitors_website_idx').on(t.workspaceId, t.websiteId),
   ],
 );
 
@@ -329,6 +334,7 @@ export const conversations = sqliteTable(
     index('conversations_automation_idx').on(t.nextAutomationAt).where(sql`${t.nextAutomationAt} IS NOT NULL`),
     index('conversations_unanswered_idx').on(t.nextUnansweredAlertAt).where(sql`${t.nextUnansweredAlertAt} IS NOT NULL`),
     index('conversations_updated_idx').on(t.workspaceId, t.updatedAt, t.id),
+    index('conversations_website_idx').on(t.workspaceId, t.websiteId),
     check('conversations_status_ck', sql`${t.status} IN ('open','pending','resolved','archived')`),
     check('conversations_priority_ck', sql`${t.priority} IN ('low','normal','high','urgent')`),
   ],
@@ -451,6 +457,8 @@ export const attachments = sqliteTable(
       foreignColumns: [messages.workspaceId, messages.id],
     }),
     index('attachments_message_idx').on(t.workspaceId, t.messageId),
+    // Every deleted conversation (retention, erasure) cascades here.
+    index('attachments_conversation_idx').on(t.workspaceId, t.conversationId),
     index('attachments_orphan_idx').on(t.createdAt).where(sql`${t.messageId} IS NULL`),
     check('attachments_size_ck', sql`${t.size} > 0`),
     check('attachments_status_ck', sql`${t.status} IN ('pending','ready','rejected')`),
@@ -482,6 +490,7 @@ export const conversationTags = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.workspaceId, t.conversationId, t.tagId] }),
+    index('conversation_tags_tag_idx').on(t.workspaceId, t.tagId),
     foreignKey({
       name: 'conversation_tags_conversation_fk',
       columns: [t.workspaceId, t.conversationId],
@@ -505,6 +514,7 @@ export const contactTags = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.workspaceId, t.contactId, t.tagId] }),
+    index('contact_tags_tag_idx').on(t.workspaceId, t.tagId),
     foreignKey({
       name: 'contact_tags_contact_fk',
       columns: [t.workspaceId, t.contactId],
@@ -673,6 +683,7 @@ export const automationRuns = sqliteTable(
   },
   (t) => [
     unique('automation_runs_dedupe_uq').on(t.workspaceId, t.ruleId, t.conversationId, t.triggerKey),
+    index('automation_runs_conversation_idx').on(t.workspaceId, t.conversationId),
     foreignKey({
       name: 'automation_runs_rule_fk',
       columns: [t.workspaceId, t.ruleId],

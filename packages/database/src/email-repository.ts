@@ -169,12 +169,12 @@ export async function dueFollowUpConversations(database: Database, limit: number
   return results;
 }
 
-/** Only the time it read, so that a message since then keeps the time it set. */
-export async function clearFollowUpDue(database: Database, workspaceId: string, conversationId: string, dueAt: number): Promise<void> {
-  await rawHandle(database)
-    .prepare(`UPDATE conversations SET next_automation_at = NULL WHERE workspace_id = ?1 AND id = ?2 AND next_automation_at = ?3`)
-    .bind(workspaceId, conversationId, dueAt)
-    .run();
+/** Only the time it read, so that a message since then keeps the time it set. One batch, so one round trip. */
+export async function clearFollowUpDue(database: Database, due: { workspaceId: string; id: string; dueAt: number }[]): Promise<void> {
+  if (due.length === 0) return;
+  const d1 = rawHandle(database);
+  const statement = d1.prepare(`UPDATE conversations SET next_automation_at = NULL WHERE workspace_id = ?1 AND id = ?2 AND next_automation_at = ?3`);
+  await d1.batch(due.map((row) => statement.bind(row.workspaceId, row.id, row.dueAt)));
 }
 
 /** A rule with a longer wait comes back later, unless a message has started a new quiet period. */
