@@ -18,6 +18,43 @@ The button appears in the bottom right corner. It is small, at about 2 KB, and t
 
 Allow your installation's address for `script-src` and `connect-src`. If the website requires Turnstile, also allow `https://challenges.cloudflare.com` for `script-src` and `frame-src`. A `nonce` on the script tag is passed on to the panel, and no `style-src` change is needed.
 
+### Website builders and shops
+
+Each of these pastes the snippet on every page. Afterwards, add every address the site answers on to the **allowed origins**, such as both `https://www.company.com` and `https://company.com`.
+
+| Platform | Where the snippet goes |
+|---|---|
+| WordPress | A header-and-footer code plugin, in the footer, or the theme's `footer.php` just before `</body>`. A child theme keeps the change through theme updates |
+| Shopify | **Online Store** → **Themes** → **⋯** → **Edit code** → `layout/theme.liquid`, just before `</body>`. Allow both the `*.myshopify.com` address and your own domain |
+| Wix | **Settings** → **Custom code** → **Add custom code**, on all pages, in **Body - end**. Wix allows this only on some plans |
+| Squarespace | **Settings** → **Developer tools** → **Code injection** → **Footer**. Squarespace allows this only on some plans |
+| Webflow | **Site settings** → **Custom code** → **Footer code**, then publish |
+| Google Tag Manager | A **Custom HTML** tag on **All Pages**, written as below |
+
+In Google Tag Manager, give the key in `OpenChatConfig`, because Tag Manager may not keep `data-` attributes:
+
+```html
+<script>window.OpenChatConfig = { websiteKey: 'wk_...' };</script>
+<script src="https://chat.company.com/widget/widget.js" async></script>
+```
+
+Open the site afterwards and check that the button appears. If it does not, the browser's console names the reason, which is usually an address missing from the allowed origins.
+
+### Single-page apps
+
+React, Vue, Angular, Svelte and similar apps need the snippet once, not on each route. Put it in the page that loads the app, such as `index.html`, just before `</body>`. The button lives outside the app's own elements, so changing route does not remove it, and loading the script a second time does nothing.
+
+In Next.js, add it once in the root layout:
+
+```tsx
+import Script from 'next/script';
+
+// In app/layout.tsx, inside <body>:
+<Script src="https://chat.company.com/widget/widget.js" data-website-key="wk_..." strategy="afterInteractive" />
+```
+
+To change the language when a visitor switches it in your app, reload the page with the new `data-locale`. The widget reads its options once.
+
 ## Options
 
 On the script tag, or in `window.OpenChatConfig` before it:
@@ -29,6 +66,70 @@ On the script tag, or in `window.OpenChatConfig` before it:
 | `data-consent="pending"` | `consent: 'pending'` | Stores nothing that outlives the browser tab until the page calls `window.OpenChat.grantConsent()`. For sites that ask for consent first |
 
 The page can also call `window.OpenChat.open()` and `window.OpenChat.close()`, for example from a "Chat with us" link.
+
+## In a mobile app
+
+There is no native SDK. An app shows the widget in a web view, from a chat page on your own website. The widget only loads on an address in the allowed origins, so a page bundled inside the app, which has no web address, cannot load it.
+
+**1. Put a chat page on your site**, such as `https://www.company.com/chat`, and make sure the site's address is in the allowed origins. The page opens the chat as soon as it loads. On a phone, the open chat fills the screen.
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chat</title>
+</head>
+<body>
+  <p>Tap the button to chat with us.</p>
+  <script src="https://chat.company.com/widget/widget.js" data-website-key="wk_..." async onload="OpenChat.open()"></script>
+</body>
+</html>
+```
+
+Set `lang`, or `data-locale`, to the app's language. A page that adds the language to its address, such as `/chat?lang=fr`, can put it in `data-locale` before loading the script.
+
+**2. Open that page in the app.** The simplest way is the system's in-app browser, `SFSafariViewController` on iOS or Custom Tabs on Android, which needs no other setup. A web view fits the app more closely, and needs the settings below.
+
+| App | How to show it |
+|---|---|
+| iOS, Swift | A `WKWebView` with the default data store, so the visitor's conversation is kept between launches. To let visitors attach photos, add `NSPhotoLibraryUsageDescription`, and `NSCameraUsageDescription` if they may take one, to `Info.plist` |
+| Android, Kotlin | A `WebView` with `settings.javaScriptEnabled = true` and `settings.domStorageEnabled = true`, without which the conversation is lost. Attaching files needs a `WebChromeClient` that handles `onShowFileChooser` |
+| React Native | `<WebView source={{ uri: 'https://www.company.com/chat' }} domStorageEnabled javaScriptEnabled />` from `react-native-webview`. It handles attaching files itself |
+| Flutter | `webview_flutter`, with `setJavaScriptMode(JavaScriptMode.unrestricted)`. On Android, attaching files needs `setOnShowFileSelector` on the Android controller |
+
+For example, in Swift:
+
+```swift
+import SwiftUI
+import WebKit
+
+struct ChatView: UIViewRepresentable {
+    func makeUIView(context: Context) -> WKWebView {
+        let view = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        view.load(URLRequest(url: URL(string: "https://www.company.com/chat")!))
+        return view
+    }
+    func updateUIView(_ view: WKWebView, context: Context) {}
+}
+```
+
+And in Kotlin:
+
+```kotlin
+val view = WebView(context).apply {
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = true
+    loadUrl("https://www.company.com/chat")
+}
+```
+
+**What to know:**
+
+- The app's own back or close button closes the chat. The widget's close arrow only shrinks the chat to its button, on the chat page.
+- Each app keeps its own conversation, separate from the visitor's browser. Clearing the app's data, or reinstalling it, starts a new one.
+- The app is not told about new replies. A visitor sees them while the chat page is open, and when they open it again.
 
 ## Languages
 
