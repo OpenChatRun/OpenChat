@@ -1129,7 +1129,11 @@ export const listPeopleRoute = createRoute({
   path: '/api/v1/admin/people',
   operationId: 'listPeople',
   summary: 'List every account on the installation. Anyone but an installation admin gets 404.',
-  request: { query: PaginationQuery },
+  request: {
+    query: PaginationQuery.extend({
+      q: z.string().trim().max(254).optional().describe('Only people whose name or email contains this, ignoring case for Latin letters.'),
+    }),
+  },
   responses: { 200: { description: 'People', ...json(page(PersonSchema)) }, default: problemResponse },
 });
 

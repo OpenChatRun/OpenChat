@@ -1,6 +1,6 @@
 import type { Person } from '@openchat/api-client';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { api, errorMessage } from '../app-context';
 import { Initials } from '../icons';
 import { intlLocale, t, tn } from '../i18n';
@@ -27,14 +27,35 @@ function Failure({ error }: { error: unknown }) {
 }
 
 /** For installation admins. The API answers 404 to anyone else, so hiding this page is only a convenience. */
+const SEARCH_DELAY_MS = 250;
+
+/** The value, once it has stopped changing for a moment, so that typing a name sends one request, not one a letter. */
+function useSettled(value: string): string {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [value]);
+  return settled;
+}
+
 export function PeoplePage({ myId }: { myId: string | undefined }) {
-  const people = useQuery({ queryKey: ['people'], queryFn: () => api.listPeople({ limit: 100 }) });
-  const workspaces = useQuery({ queryKey: ['admin-workspaces'], queryFn: () => api.listAdminWorkspaces({ limit: 100 }) });
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [open, setOpen] = useState<string | null>(null);
+  // The server narrows the list, so that someone beyond the first page can be found. The same search runs here as
+  // well, at once and ignoring accents, on what has already arrived.
+  const q = useSettled(search.trim());
+  const people = useInfiniteQuery({
+    queryKey: ['people', q],
+    queryFn: ({ pageParam }) => api.listPeople({ cursor: pageParam, limit: 100, ...(q ? { q } : {}) }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    placeholderData: keepPreviousData,
+  });
+  const workspaces = useQuery({ queryKey: ['admin-workspaces'], queryFn: () => api.listAdminWorkspaces({ limit: 100 }) });
 
-  const all = people.data?.data;
+  const all = useMemo(() => people.data?.pages.flatMap((page) => page.data), [people.data]);
   const sorted = useMemo(() => {
     const collator = new Intl.Collator(intlLocale(), { sensitivity: 'base' });
     // Yourself first, then active people before deactivated ones, each by name.
@@ -86,7 +107,12 @@ export function PeoplePage({ myId }: { myId: string | undefined }) {
           ))}
         </ul>
       )}
-      {(people.data?.nextCursor || workspaces.data?.nextCursor) && <p className="notice">{t('firstHundred')}</p>}
+      {people.hasNextPage && (
+        <button type="button" className="button-quiet" disabled={people.isFetchingNextPage} onClick={() => void people.fetchNextPage()}>
+          {t('loadMore')}
+        </button>
+      )}
+      {workspaces.data?.nextCursor && <p className="notice">{t('firstHundred')}</p>}
     </section>
   );
 }

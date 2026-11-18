@@ -10,6 +10,10 @@ Being an admin lets you change settings, not read conversations. To read a works
 
 This needs email. Without it, run `pnpm oc recover --env <name> --email <address>` on the computer you deploy from, which prints a reset link to pass on yourself.
 
+**Find someone.** Search by part of a name or email, and use **All**, **Admins** and **Deactivated** to narrow the list. You come first. Click a person to see their workspaces and what you can change. A long list shows 100 at a time, with **Load more** below.
+
+Making someone an admin, and removing your own admin role, ask you to confirm.
+
 For each person you can:
 
 | Action | What it does |

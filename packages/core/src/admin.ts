@@ -48,7 +48,7 @@ function changed(result: PersonChange) {
   }
 }
 
-export const listPeople = (db: Database, ctx: AdminContext, input: { cursor?: string | undefined; limit: number }) => adminRepository(db, ctx).list(input);
+export const listPeople = (db: Database, ctx: AdminContext, input: { cursor?: string | undefined; limit: number; q?: string | undefined }) => adminRepository(db, ctx).list(input);
 export const listAdminWorkspaces = (db: Database, ctx: AdminContext, input: { cursor?: string | undefined; limit: number }) => adminRepository(db, ctx).listWorkspaces(input);
 export const setInstallationAdmin = async (db: Database, ctx: AdminContext, userId: string, isAdmin: boolean) => changed(await adminRepository(db, ctx).setAdmin(userId, isAdmin));
 export const deactivatePerson = async (db: Database, ctx: AdminContext, userId: string) => changed(await adminRepository(db, ctx).deactivate(userId));
