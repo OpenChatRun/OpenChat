@@ -36,6 +36,27 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 }
 
+/*
+ * Dark mode is black and neutral grey, not navy: the same utilities, with the scale swapped underneath them.
+ * Blue stays only where it means something, on buttons, links and the selected item.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-slate-50: #fafafa;
+    --color-slate-100: #f4f4f5;
+    --color-slate-200: #e4e4e7;
+    --color-slate-300: #d4d4d8;
+    --color-slate-400: #a1a1aa;
+    --color-slate-500: #71717a;
+    --color-slate-600: #52525b;
+    --color-slate-700: #3f3f46;
+    --color-slate-800: #27272a;
+    --color-slate-900: #121214;
+    --color-slate-950: #000000;
+    --color-navy-deep: #0a0a0b;
+  }
+}
+
 @layer base {
   :root {
     color-scheme: light dark;

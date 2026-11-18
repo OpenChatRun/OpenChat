@@ -362,7 +362,6 @@ test('reads correctly on a page in another encoding, including what people write
   await expect(agent.getByRole('list', { name: 'Messages' })).toContainText('Caf\u00e9 \u4f60\u597d');
   await agent.getByLabel('Reply').pressSequentially('Yes');
   await expect(panel(page).getByText('Typing\u2026')).toBeVisible();
-  await expect(panel(page).getByRole('button', { name: 'Close chat' }).first()).toHaveText('\u00d7');
   await context.close();
   await agent.context().close();
 });

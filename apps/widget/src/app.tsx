@@ -72,12 +72,21 @@ function Attachment({ file, controller }: { file: ChatMessage['attachments'][num
   );
 }
 
-function Message({ message, state, onRetry, controller }: { message: ChatMessage; state: string | null; onRetry: () => void; controller: Controller }) {
+const kindOf = (message: ChatMessage) => (message.system ? 'system' : message.mine ? 'mine' : 'theirs');
+
+/** `first` starts a run of messages from one sender, which shows who sent them. */
+function Message({ message, first, state, onRetry, controller }: { message: ChatMessage; first: boolean; state: string | null; onRetry: () => void; controller: Controller }) {
   const { S } = useContext(Language);
-  const kind = message.system ? 'system' : message.mine ? 'mine' : 'theirs';
+  const kind = kindOf(message);
+  const who = message.senderName ?? S.team;
   return (
-    <div class={`oc-msg ${kind} ${message.status}`}>
-      {kind === 'theirs' && <p class="oc-who">{message.senderName ?? S.team}</p>}
+    <div class={`oc-msg ${kind} ${message.status}${first ? ' first' : ''}`}>
+      {kind === 'theirs' && first && (
+        <>
+          <span class="oc-ava" aria-hidden="true">{Array.from(who.trim())[0] ?? ''}</span>
+          <p class="oc-who">{who}</p>
+        </>
+      )}
       {message.content && <div class="oc-bubble" dir="auto">{message.content}</div>}
       {message.pendingFile && <div class="oc-file oc-state" dir="auto">{message.pendingFile}</div>}
       {message.attachments.map((file) => <Attachment key={file.id} file={file} controller={controller} />)}
@@ -274,12 +283,12 @@ export function App({
       }}
     >
       <header class="oc-head">
-        <span class="oc-face" aria-hidden="true">
+        <span class={presence === S.online ? 'oc-face on' : 'oc-face'} aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 3C6.9 3 3 6.5 3 10.9c0 2.3 1.1 4.4 2.9 5.9L5 21l4.6-2.3c.8.2 1.6.3 2.4.3 5.1 0 9-3.5 9-8.1S17.1 3 12 3z" /></svg>
         </span>
         <div>
           <h2>{S.title}</h2>
-          <p role="status" class={presence === S.online ? 'on' : undefined}>{presence}</p>
+          <p role="status">{presence}</p>
         </div>
         <button
           type="button"
@@ -290,7 +299,7 @@ export function App({
             button.focus();
           }}
         >
-          ×
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.7 9.3a1 1 0 0 1 1.4 0L12 13.2l3.9-3.9a1 1 0 1 1 1.4 1.4l-4.6 4.6a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4z" /></svg>
         </button>
       </header>
       <div
@@ -310,13 +319,18 @@ export function App({
           </div>
         )}
         {welcome && (
-          <div class="oc-msg theirs">
+          <div class="oc-msg theirs first">
+            <span class="oc-ava" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3C6.9 3 3 6.5 3 10.9c0 2.3 1.1 4.4 2.9 5.9L5 21l4.6-2.3c.8.2 1.6.3 2.4.3 5.1 0 9-3.5 9-8.1S17.1 3 12 3z" /></svg>
+            </span>
             <div class="oc-bubble" dir="auto">{welcome}</div>
           </div>
         )}
-        {state.messages.map((message) => (
-          <Message key={message.key} message={message} state={stateOf(message)} onRetry={() => void controller.retry(message.key)} controller={controller} />
-        ))}
+        {state.messages.map((message, index) => {
+          const before = state.messages[index - 1];
+          const first = !before || kindOf(before) !== kindOf(message) || before.senderName !== message.senderName;
+          return <Message key={message.key} message={message} first={first} state={stateOf(message)} onRetry={() => void controller.retry(message.key)} controller={controller} />;
+        })}
       </div>
       <div class="oc-challenge" ref={(element) => { if (element && challengeHost.parentElement !== element) element.appendChild(challengeHost); }} />
       <div class="oc-typing" aria-live="polite">{state.typing ? S.typing(state.typing.displayName) : ''}</div>
