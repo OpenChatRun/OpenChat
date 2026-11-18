@@ -24,6 +24,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 ## The widget
 
 - **One conversation per visitor.** The widget shows one, though the API allows more.
+- **No native SDK for mobile apps.** An app shows the widget from a chat page on the company's site, in a web view, and is not told about new replies ([widget guide](guide/widget.md#in-a-mobile-app)).
 - **"We are online" counts open dashboards and app screens only.** An agent who answers from a notification shows as away until the app is open, and an open widget does not see the change until it loads again ([realtime](architecture/realtime.md)).
 - **"Before the first message" email is enforced only by the widget**, not by the API.
 - **Translations have not been reviewed by native speakers** in the widget, the dashboard or the app ([widget](architecture/widget.md#languages), [dashboard](architecture/dashboard.md#languages)). Right-to-left languages, such as Arabic and Hebrew, are not supported.

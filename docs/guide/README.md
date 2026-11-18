@@ -10,7 +10,7 @@ This guide is for the people who use it. To set up an installation, see the [sel
 |---|---|
 | Answering customers | [The inbox](inbox.md), on the web and on iPhone |
 | Running the installation for your company | [Administration](admin.md) |
-| Putting the chat button on a website | [The website widget](widget.md) |
+| Putting the chat button on a website or in a mobile app | [The website widget](widget.md) |
 | Responsible for privacy, or answering a person's request about their data | [Privacy and data](privacy.md) |
 
 Before relying on OpenChat, read the [known issues](../known-issues.md).
