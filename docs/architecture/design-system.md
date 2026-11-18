@@ -33,7 +33,7 @@ Every pair of text and background in this table meets WCAG AA, 4.5:1, in the the
 | Danger | `#b42318` | `#fda29b` | Errors, and erasing |
 | Online | `#12b76a` | `#32d583` | The dot on an avatar of someone online |
 
-Dark mode is black and neutral grey, not navy. Blue stays only where it means something: buttons, links, the selected item, and the website's colour in the widget. The dashboard follows the device's setting.
+Dark mode is black and neutral grey, not navy. Blue stays only where it means something: buttons, links, the selected item, and the website's colour in the widget. The dashboard follows the device's setting, unless someone picks Light or Dark in its header, which that browser remembers. The widget and the app always follow the device.
 
 Internal notes stay amber in every surface, so that nobody mistakes one for a reply.
 

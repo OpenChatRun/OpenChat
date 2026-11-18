@@ -38,10 +38,36 @@
 
 /*
  * Dark mode is black and neutral grey, not navy: the same utilities, with the scale swapped underneath them.
+ * It follows the device unless someone picks a theme, which sets data-theme on the root (theme-picker.tsx).
  * Blue stays only where it means something, on buttons, links and the selected item.
  */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #121214;
+  --color-slate-950: #000000;
+  --color-navy-deep: #0a0a0b;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --color-slate-50: #fafafa;
     --color-slate-100: #f4f4f5;
     --color-slate-200: #e4e4e7;
@@ -60,6 +86,12 @@
 @layer base {
   :root {
     color-scheme: light dark;
+  }
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
   }
   body {
     @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;

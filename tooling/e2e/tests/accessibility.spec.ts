@@ -59,6 +59,16 @@ for (const scheme of ['light', 'dark'] as const) {
       });
     }
 
+    test('the People page, with a person open', async ({ page }) => {
+      await signIn(page, OWNER);
+      await page.getByRole('button', { name: 'People', exact: true }).click();
+      const row = page.getByRole('listitem').filter({ hasText: OWNER.email }).locator('button[aria-expanded]');
+      await row.click();
+      await expect(row).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator(`[id="${await row.getAttribute('aria-controls')}"]`).getByRole('combobox').first()).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
+
     for (const [name, key] of [['plain', WEBSITE_KEY], ['styled, asking for an email first', STYLED_WEBSITE_KEY]] as const) {
       test(`the widget, ${name}`, async ({ browser }) => {
         const context = await browser.newContext({ colorScheme: scheme, extraHTTPHeaders: { 'cf-connecting-ip': nextIp() } });
@@ -98,4 +108,21 @@ test('every dashboard screen fits 320 pixels without scrolling sideways', async 
     await page.waitForTimeout(500);
     await fits(name);
   }
+});
+
+test('a chosen theme wins over the device’s, and is remembered', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await signIn(page, OWNER);
+  const body = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(await body()).not.toBe('rgb(0, 0, 0)');
+  await page.getByRole('combobox', { name: 'Theme' }).selectOption('dark');
+  await expect.poll(body).toBe('rgb(0, 0, 0)');
+  expect(await violations(page)).toEqual([]);
+  await page.reload();
+  await expect.poll(body).toBe('rgb(0, 0, 0)');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.getByRole('combobox', { name: 'Theme' }).selectOption('light');
+  await expect.poll(body).not.toBe('rgb(0, 0, 0)');
+  await page.getByRole('combobox', { name: 'Theme' }).selectOption('system');
+  await expect.poll(body).toBe('rgb(0, 0, 0)');
 });

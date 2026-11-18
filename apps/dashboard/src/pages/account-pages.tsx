@@ -3,6 +3,7 @@ import { api, errorMessage, session } from '../app-context';
 import { SoftwareFooter } from '../software-footer';
 import { t } from '../i18n';
 import { LanguagePicker } from '../language-picker';
+import { ThemePicker } from '../theme-picker';
 
 const go = (path: string) => window.location.assign(path);
 
@@ -20,6 +21,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
           <div className="card space-y-4 p-6 shadow-lg shadow-brand-900/5">{children}</div>
         </main>
         <div className="mt-4 flex justify-center">
+          <ThemePicker className="text-sm" />
           <LanguagePicker className="text-sm" />
         </div>
         <SoftwareFooter />

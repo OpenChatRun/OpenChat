@@ -12,6 +12,7 @@ import { SoftwareFooter } from '../software-footer';
 import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
 import { LanguagePicker } from '../language-picker';
+import { ThemePicker } from '../theme-picker';
 
 type Membership = Me['memberships'][number];
 
@@ -167,6 +168,7 @@ export function WorkspaceApp() {
             </select>
           )}
           <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-400">{me.data?.name}</span>
+          <ThemePicker className="text-sm" />
           <LanguagePicker className="text-sm" />
         </header>
         <main className={`w-full flex-1 space-y-6 px-4 py-6 md:px-6 ${width}`}>
