@@ -294,6 +294,23 @@ export const en = {
   auditOther: '{actor} {action} on {target}',
   some: 'some',
   foreverLower: 'forever',
+  // People page
+  peopleSearch: 'Search by name or email',
+  filterPeople: 'Show',
+  filterAll: 'All',
+  filterAdmins: 'Admins',
+  filterDeactivated: 'Deactivated',
+  peopleShown: 'Showing {shown} of {total}',
+  noPeopleMatch: 'Nobody matches.',
+  manage: 'Manage',
+  you: 'you',
+  adminBadge: 'Admin',
+  workspacesOne: '{count} workspace',
+  workspacesOther: '{count} workspaces',
+  inNoWorkspace: 'In no workspace',
+  accessSection: 'Access',
+  makeAdminConfirm: 'Make {name} an installation admin? They can then manage people, workspaces and websites.',
+  removeOwnAdminConfirm: 'Remove your own admin role? You lose these pages at once, and only another admin can give it back.',
 };
 
 export type Messages = Record<keyof typeof en, string>;
