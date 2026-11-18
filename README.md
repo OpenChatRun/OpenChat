@@ -33,7 +33,7 @@
 A chat button for your website, a team inbox on the web and on iPhone, and follow-up emails to visitors who go quiet. Each company runs its own installation, so its conversations stay in its own account.
 
 - **Website widget.** About 2 KB to load, in eleven languages, with optional consent mode and Cloudflare Turnstile.
-- **Team inbox.** Live replies, internal notes, files, statuses, priorities, assignment and tags, across several workspaces.
+- **Team inbox.** In the same eleven languages. Live replies, internal notes, files, statuses, priorities, assignment and tags, across several workspaces.
 - **The OpenChat iPhone app**, coming soon to the App Store, with notifications end-to-end encrypted to each phone, so the relay that carries them cannot read them. The app and the relay are not open source, but your installation works with them.
 - **Follow-up emails**, only with the visitor's consent, with an unsubscribe link.
 - **For operators:** one-command deploy and upgrade with rollback, backups, health checks, retention, data export and erasure, and an audit log.
@@ -56,11 +56,15 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 
 **Coming soon**
 
-- **The iPhone app on the App Store.** Version 1.0.0 was sent to Apple for review on 18 November 2026.
+- **The iPhone app on the App Store.** Version 1.0.0 was sent to Apple for review on 18 November 2026. Like the dashboard, it speaks eleven languages.
 
 **Planned.** These have no dates yet, and each gets a design before it is built.
 
 - **An AI assistant that answers first.** It replies to visitors from what you give it, such as your website, help articles and past answers, and hands the conversation to a person when it cannot answer, is unsure, or the visitor asks for one. Your team sees everything it said, and takes over from the same inbox. It would run in your own Cloudflare account.
+- **An Android app**, with the same inbox and end-to-end encrypted notifications as the iPhone app.
+- **A help centre:** articles your visitors can search from the widget and a public page, which the AI assistant also answers from.
+- **Automatic translation.** Visitors write in their own language and agents in theirs; each side sees the conversation translated, with the original one tap away.
+- **More languages**, including right-to-left ones such as Arabic and Hebrew.
 - **WhatsApp.** Customers write to your WhatsApp Business number, and the conversation arrives in the same inbox as website chats, with the same assignment, notes and tags.
 - **More channels in the same inbox:** email to a support address, Facebook Messenger, Instagram and Telegram.
 - **Saved replies**, for answers your team gives often.
