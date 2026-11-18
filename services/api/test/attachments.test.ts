@@ -368,4 +368,14 @@ describe('the orphan sweep', () => {
     expect(await testEnv.ATTACHMENTS.head(key(sent.id))).not.toBeNull();
     expect(await env.DB.prepare(`SELECT id FROM attachments WHERE id = ?1`).bind(sent.id).first()).not.toBeNull();
   });
+
+  it('removes several old files in one sweep', async () => {
+    const files = [await uploaded('visitor'), await uploaded('visitor'), await uploaded('visitor')];
+    const ids = files.map((file) => file.id);
+    await env.DB.prepare(`UPDATE attachments SET created_at = ?1 WHERE id IN (SELECT value FROM json_each(?2))`).bind(Date.now() - 25 * 60 * 60 * 1000, JSON.stringify(ids)).run();
+    await handleScheduled(onTheHour, testEnv);
+    for (const id of ids) expect(await testEnv.ATTACHMENTS.head(`w/work_1/c/${conversationId}/${id}`)).toBeNull();
+    const { results } = await env.DB.prepare(`SELECT id FROM attachments WHERE id IN (SELECT value FROM json_each(?1))`).bind(JSON.stringify(ids)).all();
+    expect(results).toEqual([]);
+  });
 });
