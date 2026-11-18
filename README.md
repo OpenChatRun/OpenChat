@@ -21,6 +21,7 @@
   <img src="https://img.shields.io/badge/server-AGPL--3.0-15296e" alt="Server licence: AGPL-3.0-or-later">
   <img src="https://img.shields.io/badge/widget%20%26%20app-Apache--2.0-15296e" alt="Widget and app licence: Apache-2.0">
   <img src="https://img.shields.io/badge/runs%20on-Cloudflare%20Workers-18a0fb" alt="Runs on Cloudflare Workers">
+  <img src="https://img.shields.io/badge/iPhone%20app-coming%20soon%20to%20the%20App%20Store-0a57f5" alt="iPhone app: coming soon to the App Store">
 </p>
 
 <p align="center">
@@ -33,11 +34,11 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 
 - **Website widget.** About 2 KB to load, in eleven languages, with optional consent mode and Cloudflare Turnstile.
 - **Team inbox.** Live replies, internal notes, files, statuses, priorities, assignment and tags, across several workspaces.
-- **The OpenChat iPhone app**, with notifications end-to-end encrypted to each phone, so the relay that carries them cannot read them. The app and the relay are not open source, but your installation works with them.
+- **The OpenChat iPhone app**, coming soon to the App Store, with notifications end-to-end encrypted to each phone, so the relay that carries them cannot read them. The app and the relay are not open source, but your installation works with them.
 - **Follow-up emails**, only with the visitor's consent, with an unsubscribe link.
 - **For operators:** one-command deploy and upgrade with rollback, backups, health checks, retention, data export and erasure, and an audit log.
 
-**Status: before 1.0.** It works, and has been tested on real Cloudflare, but has not had an independent security review, and the official iPhone app is not on the App Store yet. Read the [known issues](docs/known-issues.md) before relying on it.
+**Status: before 1.0.** It works, and has been tested on real Cloudflare, but has not had an independent security review, and the official iPhone app is waiting for Apple's review. Read the [known issues](docs/known-issues.md) before relying on it.
 
 ## Start
 
@@ -50,6 +51,25 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 | Understand how it works, or contribute | [Documentation index](docs/README.md), [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) |
 | Use the icon, or match the colours | [Design system](docs/architecture/design-system.md) |
 | Report a vulnerability | [SECURITY.md](SECURITY.md), privately |
+
+## Roadmap
+
+**Coming soon**
+
+- **The iPhone app on the App Store.** Version 1.0.0 was sent to Apple for review on 18 November 2026.
+
+**Planned.** These have no dates yet, and each gets a design before it is built.
+
+- **An AI assistant that answers first.** It replies to visitors from what you give it, such as your website, help articles and past answers, and hands the conversation to a person when it cannot answer, is unsure, or the visitor asks for one. Your team sees everything it said, and takes over from the same inbox. It would run in your own Cloudflare account.
+- **WhatsApp.** Customers write to your WhatsApp Business number, and the conversation arrives in the same inbox as website chats, with the same assignment, notes and tags.
+- **More channels in the same inbox:** email to a support address, Facebook Messenger, Instagram and Telegram.
+- **Saved replies**, for answers your team gives often.
+- **Business hours**, with an away message and a form for leaving an email outside them.
+- **Routing:** teams, and rules that assign new conversations automatically, such as by website, language or turn.
+- **Ratings and reports:** visitors rate a conversation once it is resolved, and supervisors see volume, first-response and resolution times.
+- **Webhooks and integrations**, so that other tools, such as Slack or a CRM, hear about new conversations and messages.
+
+Ideas and requests are welcome in [issues](https://github.com/OrangoLabsLtd/OpenChat/issues).
 
 ## Licence
 
