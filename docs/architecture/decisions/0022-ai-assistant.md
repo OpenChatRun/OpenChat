@@ -1,6 +1,6 @@
 # ADR-0022: An AI assistant that answers first, on Workers AI
 
-**Status:** Proposed, 2026-11-19. The owner chose Workers AI, learning from past conversations, and off by default on Cloud, on 19 November 2026. The rest of this design needs the owner's acceptance before it is built.
+**Status:** Proposed, 2026-11-19. The owner chose Workers AI, learning from past conversations, and off by default on Cloud, on 19 November 2026. The `messages` rebuild was measured on 19 November 2026 (see Data model); it is too slow, so assistant replies are marked by a new column instead. The rest of this design needs the owner's acceptance before it is built.
 
 ## Context
 
@@ -54,7 +54,19 @@ What makes this harder than it looks:
 
 ### Data model
 
-- Messages need to say an assistant wrote them. `messages.sender_type` gains `assistant`. SQLite cannot alter a CHECK constraint, so this means rebuilding `messages`, the largest table, as migration 0015 did for `push_subscriptions`. **Before this design is accepted, the rebuild is measured on a copy of the largest database we can produce, against D1's limits.** If it is too slow, the fallback is a new nullable column, `assistant_id`, on messages written as `system` by the assistant, which needs no rebuild.
+- Messages need to say an assistant wrote them. They gain a nullable column, `assistant_id`, referencing `assistant_settings`. An assistant reply is written with `sender_type = 'system'`, `message_type = 'text'`, `visibility = 'public'`, and `assistant_id` set. A CHECK added with the column requires `sender_type = 'system'` whenever `assistant_id` is set. Code that shows a sender reads `assistant_id` first. `ALTER TABLE … ADD COLUMN` changes only the schema, so it takes the same time at any size (2 ms on a 1M-message copy).
+- **Why not a new `sender_type`.** Adding `assistant` to `messages_sender_ck` means rebuilding `messages` and, because `attachments` references it, `attachments` too. Measured on 19 November 2026 with synthetic data (10 messages per conversation, one in ten an internal note, 2% with an attachment, 60 to 180 characters of text):
+
+  | Messages | Database | Local SQLite | D1 (`migrations apply --remote`, wall time) |
+  |---|---|---|---|
+  | 100,000 | 56 MB | 0.8 s | 3.9 s |
+  | 1,000,000 | 594 MB | 12.4 s | 26 s |
+
+  D1 stops any query after 30 seconds, and a migration runs as one. So the rebuild fails at roughly 1.1M messages, which is about 650 MB on a database that may grow to 10 GB. A failed migration rolls back cleanly but blocks every later deploy of that installation. Cloud holds 14 messages today, but self-hosted installations of any size run the same migration. The column has no such limit.
+- What the measurement also showed, for any later rebuild of a table that another table references:
+  - The child table must be emptied before the parent is dropped. Otherwise D1 rejects the migration ("FOREIGN KEY constraint failed", code 7500), even with `defer_foreign_keys`, although plain SQLite accepts it.
+  - The parent's unique index must exist before the child is refilled.
+  - The child must never point at the parent without an index while the parent is dropped. On 100k messages that one mistake turned 0.8 s into 12 s.
 - New tables: `assistant_settings` (per website), `assistant_sources`, `assistant_chunks`, `assistant_learned` (with `conversation_id` and approval state), and `assistant_usage` (per workspace per day).
 - Contact export includes assistant replies, as it includes the team's.
 
@@ -85,7 +97,7 @@ Each step has its own exit check, as milestones do, and ships only when it passe
 - Prompt injection is contained, not prevented: the assistant has nothing to leak except its sources and the visible conversation, and nothing it can do except write.
 - Learned answers can still carry personal data that the checks miss, such as a name written in an unusual way. Approval before use is the main defence, and is on by default.
 - A new queue, a Vectorize index and a Workers AI binding are added to every installation's configuration, and to the [technology baseline](../overview.md#technology-baseline).
-- `messages` is rebuilt once, or gains a column.
+- `messages` gains one nullable column, `assistant_id`. Every place that shows who sent a message checks it before `sender_type`.
 
 ## Alternatives considered
 
@@ -93,4 +105,5 @@ Each step has its own exit check, as milestones do, and ships only when it passe
 - **Cloudflare AI Search (formerly AutoRAG)**, which crawls, chunks and indexes by itself. Less to build, but it keeps an index per instance, not per workspace, and puts crawled content in R2 outside the workspace's scoped tables, which makes erasure and tenancy harder to show. Revisit when it supports per-tenant isolation.
 - **Indexing past conversations as they are.** Simplest, and the most useful, but an answer could quote another visitor's personal data. Rejected.
 - **Running the model in the Durable Object, or in the request.** Faster first reply, but a model call can take seconds, and rule 5 forbids holding up a Durable Object. A queue also gives retries and a dead-letter queue for free.
+- **A new `sender_type`, `assistant`.** It would be clearer, but it needs `messages` rebuilt, which D1 cannot do in time on a large installation (see Data model).
 - **An assistant member account**, so that its messages are `member` messages and no rebuild is needed. It would count in first-response times, appear in member lists, and need a session it should never have. Rejected.
