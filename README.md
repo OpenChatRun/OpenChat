@@ -57,11 +57,11 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 **Coming soon**
 
 - **The iPhone app on the App Store.** Version 1.0.0 was sent to Apple for review on 18 November 2026. Like the dashboard, it speaks eleven languages.
+- **The Android app on Google Play**, with the same inbox and end-to-end encrypted notifications as the iPhone app. It is in internal testing, and will be public from 19 December 2026 at the earliest.
 
 **Planned.** These have no dates yet, and each gets a design before it is built.
 
 - **An AI assistant that answers first.** It replies to visitors from what you give it, such as your website, help articles and past answers, and hands the conversation to a person when it cannot answer, is unsure, or the visitor asks for one. Your team sees everything it said, and takes over from the same inbox. It would run in your own Cloudflare account.
-- **An Android app**, with the same inbox and end-to-end encrypted notifications as the iPhone app.
 - **A help centre:** articles your visitors can search from the widget and a public page, which the AI assistant also answers from.
 - **Automatic translation.** Visitors write in their own language and agents in theirs; each side sees the conversation translated, with the original one tap away.
 - **More languages**, including right-to-left ones such as Arabic and Hebrew.
