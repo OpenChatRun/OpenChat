@@ -1,6 +1,6 @@
 # Data processing agreement: OpenChat managed relay
 
-> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
+> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OrangoLabsLtd/OpenChat/blob/53ad7d6/docs/legal/data-processing-agreement.md) applies.
 
 This agreement forms part of the [relay terms](relay-terms.md). It is between the organisation operating an OpenChat installation (the "controller") and Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT (the "processor"). It meets Article 28 of the UK GDPR and the EU GDPR.
 
@@ -10,7 +10,7 @@ This agreement forms part of the [relay terms](relay-terms.md). It is between th
 |---|---|
 | Subject | Delivering push notifications from the controller's OpenChat installation to its team members' phones, through the official OpenChat app |
 | Duration | While the controller's installation is registered with the relay, then until erasure under section 9 |
-| Nature | Storing, using to deliver, and erasing the data below. Sending each notification to Apple's push service |
+| Nature | Storing, using to deliver, and erasing the data below. Sending each notification to Apple's push service, or for an Android phone, Google's |
 | Purpose | Only to deliver notifications, and to keep the relay secure |
 
 ## 2. Data subjects and data
@@ -19,7 +19,7 @@ This agreement forms part of the [relay terms](relay-terms.md). It is between th
 |---|---|
 | The controller's team members who allow notifications in the app | Push token (encrypted), a device ID and hashed secret, app bundle ID, push environment, and the controller's pseudonymous ID for the member |
 | The same, through their activity | Per notification: an ID, the event type, a conversation ID, and the delivery outcome |
-| Team members, and the visitors and contacts they talk to | Encrypted notifications: the workspace name, sender name and up to 150 characters of message text, encrypted by the controller's installation for each phone. The processor cannot decrypt them, never stores them, and passes them only to Apple |
+| Team members, and the visitors and contacts they talk to | Encrypted notifications: the workspace name, sender name and up to 150 characters of message text, encrypted by the controller's installation for each phone. The processor cannot decrypt them, never stores them, and passes them only to Apple or Google |
 
 No special category data is intended, though the controller cannot rule it out in message text. No readable message content: the processor holds no key that can decrypt a notification. The relay's request formats are closed, and it refuses unknown fields. whether encrypted data the processor cannot decrypt is personal data in its hands.
 
@@ -38,7 +38,7 @@ The processor will:
 
 ## 4. International transfers
 
-The processor and its subprocessors may process the data outside the UK and EEA, including in the United States. Such transfers rely on the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc. and Apple Inc. are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback.
+The processor and its subprocessors may process the data outside the UK and EEA, including in the United States. Such transfers rely on the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc., Apple Inc. and Google LLC are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback.
 
 ## 5. Security measures
 

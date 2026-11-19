@@ -2,7 +2,7 @@
 
 > **Version 1, in force from 17 November 2026, adopted by Orango Labs Ltd** (company 17102914), which owns this repository and runs the managed relay, the app and the website. They were written without a lawyer, and the owner adopted them as they are. A lawyer's review is still worth having, and the decisions below are where to start.
 
-These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **official iOS app**, both run by Orango Labs Ltd. They do not cover a self-hosted installation. Whoever runs an installation is the controller of everything in it, and needs their own privacy notice for their visitors and team.
+These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **official app** for iPhone and Android, all run by Orango Labs Ltd. They do not cover a self-hosted installation. Whoever runs an installation is the controller of everything in it, and needs their own privacy notice for their visitors and team.
 
 | Document | For | Status |
 |---|---|---|
@@ -11,6 +11,10 @@ These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **of
 | [Data processing agreement](data-processing-agreement.md) | The same operators, under Article 28 GDPR | Draft |
 | [Records of processing](records-of-processing.md) | Orango Labs Ltd internally, under Article 30 | Draft |
 | [Subprocessors](subprocessors.md) | Published, and referenced by the agreement | Draft |
+
+## Version 2
+
+Published on 19 November 2026, in force from 19 December 2026, 30 days later, as the notice rule below requires for a new subprocessor. It adds the Android app ([ADR-0021](../architecture/decisions/0021-android-app-and-fcm.md)), and Google LLC, whose Firebase Cloud Messaging delivers notifications to Android phones. Google can no more read them than Apple can. Nothing else changes.
 
 ## Contact
 
@@ -23,7 +27,7 @@ privacy@openchat.run, security@openchat.run and support@openchat.run are routed 
 | Who we are | Orango Labs Ltd, 17102914, 111 New Union Street, Coventry, CV1 2NT. It owns the code (the repository moved to `OrangoLabsLtd/OpenChat` on 2026-11-17) and runs the services |
 | Law | England and Wales |
 | Roles | The operator is the controller of its team's relay data, and Orango Labs its processor. Orango Labs is the controller of its own security logs and correspondence |
-| Transfers | EU–US Data Privacy Framework and its UK Extension (Cloudflare and Apple are certified), with their standard contractual clauses and the UK Addendum as the fallback |
+| Transfers | EU–US Data Privacy Framework and its UK Extension (Cloudflare, Apple and Google are certified), with their standard contractual clauses and the UK Addendum as the fallback |
 | Cloudflare logs | Treated as holding IP addresses, kept 7 days |
 | D1 Time Travel | Disclosed: erased rows are gone after 30 days, and are never restored |
 | Encrypted notifications | Treated as personal data in our hands, though we cannot read them |

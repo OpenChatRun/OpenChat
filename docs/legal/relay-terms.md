@@ -1,8 +1,8 @@
 # Terms of use: OpenChat managed relay
 
-> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
+> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OrangoLabsLtd/OpenChat/blob/53ad7d6/docs/legal/relay-terms.md) applies.
 
-Effective: 17 November 2026
+Effective: 19 December 2026
 
 These terms are between Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT ("we"), and the organisation that operates an OpenChat installation and connects it to the relay at `openchat-relay.orangolabs.com` ("you").
 
@@ -31,7 +31,7 @@ You are the controller of the personal data your installation and your team's ph
 
 ## 5. Limits and suspension
 
-The relay applies rate limits per installation and per recipient. We may change them to protect the service. We may suspend an installation immediately if it threatens the relay's security, its availability for others, or Apple's terms for push notifications.
+The relay applies rate limits per installation and per recipient. We may change them to protect the service. We may suspend an installation immediately if it threatens the relay's security, its availability for others, or Apple's or Google's terms for push notifications.
 
 ## 6. Leaving
 
