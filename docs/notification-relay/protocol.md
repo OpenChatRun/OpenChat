@@ -1,12 +1,12 @@
 # Notification relay protocol
 
-Version 1, implemented. Machine-readable: [openapi.draft.yaml](openapi.draft.yaml) and [protocol.draft.ts](protocol.draft.ts). Decisions: [ADR-0005](../architecture/decisions/0005-relay-trust-model.md), [ADR-0006](../architecture/decisions/0006-apns-transport.md).
+Version 1, implemented. Machine-readable: [openapi.draft.yaml](openapi.draft.yaml) and [protocol.draft.ts](protocol.draft.ts). Decisions: [ADR-0005](../architecture/decisions/0005-relay-trust-model.md), [ADR-0006](../architecture/decisions/0006-apns-transport.md), [ADR-0021](../architecture/decisions/0021-android-app-and-fcm.md) (Android and FCM).
 
 ## Goals
 
 - The same code and protocol serve managed and independent modes. Only configuration differs.
 - The relay can never read conversation content, and receives none.
-- Installations never hold APNs tokens.
+- Installations never hold push tokens, from APNs or FCM.
 - Anyone may register a new installation on an open relay without an account, since spec §1 rules out a mandatory subscription, and doing so grants them no access to other people's devices.
 - Messaging keeps working when the relay is down.
 
@@ -67,7 +67,7 @@ App                          Installation                         Relay
  | POST /push/grants  ----------->|                                 |
  |    <-- grant (EdDSA JWS, 5 min)|                                 |
  |                                                                  |
- | POST /v1/devices/register { grant, apnsToken, bundleId, env, device } ->|
+ | POST /v1/devices/register { grant, platform, token, bundleId, env, device } ->|
  |                                                                  | verify the grant against
  |                                                                  | the installation's key
  |    <-- { deviceId, deviceSecret (first time only), subscriptionId } -----------|
@@ -76,11 +76,11 @@ App                          Installation                         Relay
  | POST /push/subscriptions { subscriptionId, previewKey } ->|      |
 ```
 
-The installation learns only the opaque `subscriptionId` and the phone's public key for it, and never the token. The relay never sees the key. The phone keeps the private key in a keychain group it shares with its notification extension, readable after the first unlock and never backed up.
+The installation learns only the opaque `subscriptionId` and the phone's public key for it, and never the token. The relay never sees the key. An iPhone keeps the private key in a keychain group it shares with its notification extension, readable after the first unlock and never backed up. An Android phone keeps it encrypted under a key in the Android Keystore that cannot leave the phone, in storage that is never backed up.
 
 If the device sends its ID and secret, the same device is kept and no new secret is returned. With neither, but a token already on file, holding the token is the proof: it is an app reinstalled, or a phone passed on. The device gets a new secret, and **every earlier subscription of that device is removed**, so nobody receives a previous user's pushes. A different member signing in on the same device replaces the subscription for that workspace with a new `subscriptionId`.
 
-`environment` must match the relay's. A token from the other environment would look invalid to APNs, and be deleted. Device registration is limited per IP, a grant is spent only once the other checks pass, and every kind of bad grant answers the same `401 invalid_grant`.
+An iPhone sends `platform: "ios"`, `apnsToken` and `environment`, which must match the relay's: a token from the other environment would look invalid to APNs, and be deleted. An Android phone sends `platform: "android"` and `fcmToken`, with no environment, because FCM has none, and its package name as `bundleId` ([ADR-0021](../architecture/decisions/0021-android-app-and-fcm.md)). The relay checks it against `RELAY_ANDROID_PACKAGES`, as it checks an iPhone's against `RELAY_BUNDLE_IDS`. Device registration is limited per IP, a grant is spent only once the other checks pass, and every kind of bad grant answers the same `401 invalid_grant`.
 
 Grant claims, in a compact JWS whose header is `{ "alg": "EdDSA", "kid": "k1", "typ": "oc-grant+jwt" }`. The relay fixes the algorithm, and never takes it from the token:
 
@@ -100,7 +100,7 @@ Rules: `aud` must match the relay, `exp` is at most 5 minutes after `iat`, and `
 
 ### 4. Token rotation
 
-`POST /v1/devices/token`, authenticated with `deviceId` and `deviceSecret` (`Authorization: Bearer`). It updates every subscription at once, so installations need not be online, and they never see the token.
+`POST /v1/devices/token`, authenticated with `deviceId` and `deviceSecret` (`Authorization: Bearer`), with `apnsToken` from an iPhone or `fcmToken` from an Android phone. A token of the other kind is refused. It updates every subscription at once, so installations need not be online, and they never see the token.
 
 ### 5. Unregister
 
@@ -111,7 +111,7 @@ Rules: `aud` must match the relay, `exp` is at most 5 minutes after `iat`, and `
 | Device | Device secret, with `deviceId` and `subscriptionId` | Logout, or disconnecting one workspace |
 | Installation | Signed request, with `subscriptionId` or `recipientId` | Member removed, or all sessions revoked |
 
-The app calls it on logout and the installation does too, so a device offline during logout is still handled. A device that has deleted the app is handled by APNs returning 410.
+The app calls it on logout and the installation does too, so a device offline during logout is still handled. A device that has deleted the app is handled by APNs returning 410, or FCM returning `UNREGISTERED`.
 
 ### 6. Erasure
 
@@ -232,13 +232,46 @@ The relay writes no text. Each phone receives only its own ciphertext, which its
 
 `loc-key` is `OC_` and the event in capitals. If the extension cannot decrypt in time, iOS shows the app's own phrase for it, in the phone's language, with no workspace name. The phrases are in the app, which is in the project's private repository. The payload is about 1 KB, whatever the number of phones. There is no badge number, because no single server knows the total across installations. The app computes it locally.
 
+### FCM message
+
+An Android phone gets a **data-only** message, so nothing is shown until the app has decrypted it. FCM HTTP v1, `POST https://fcm.googleapis.com/v1/projects/<FCM project>/messages:send`:
+
+```json
+{
+  "message": {
+    "token": "<the device's FCM token>",
+    "data": { "oc": "<PushData as a JSON string, the same fields as above>" },
+    "android": {
+      "priority": "high",
+      "ttl": "<seconds until expiresAt>s",
+      "collapse_key": "<first 32 hex of the APNs collapse hash>"
+    }
+  }
+}
+```
+
+The app's messaging service decrypts `c`, then posts the notification itself. If it cannot, it shows the app's own phrase for the event, in the phone's language, as iOS does with `loc-key`. A data message must be high priority to wake an idle phone, and Android expects one that is to show a notification, which it always does. The message is about 600 bytes, within FCM's 4 KB.
+
+| FCM result | Action |
+|---|---|
+| 200 | `delivered` (to FCM, not necessarily to the device) |
+| 404 `UNREGISTERED`; 403 `SENDER_ID_MISMATCH` | Delete the device and report the outcome |
+| 400 `INVALID_ARGUMENT` | Permanent failure, and alert. The token or the message is malformed, and the response cannot tell which, so the device is kept |
+| 401, or 403 `THIRD_PARTY_AUTH_ERROR` or `PERMISSION_DENIED` | **Do not delete devices.** Fetch a new access token once, then retry with backoff, and alert the operator |
+| 429 `QUOTA_EXCEEDED`, 500 `INTERNAL`, 503 `UNAVAILABLE`, network error | Retry with backoff until `expiresAt` |
+| Any other answer | Permanent failure, and alert |
+
+The relay signs in to Google as a service account: it signs a JWT with the account's key, exchanges it for an access token valid for an hour, and keeps that token in each isolate for 50 minutes. Google sets no limit like APNs's on how often tokens are made, so this needs no Durable Object. The key is the `FCM_SERVICE_ACCOUNT` Worker secret, the account's JSON key file, and the project comes from it.
+
+The self-check also sends `validate_only` to FCM with a token no phone has. `INVALID_ARGUMENT` or `UNREGISTERED` means the key and the path work; an authentication error means they do not.
+
 ### Delivery pipeline
 
 ```text
 Signed POST -> RelayGuard (nonce, rate, dedupe) -> D1 record -> Queue -> consumer
                                                                          | resolve devices
                                                                          | ApnsCredential DO: current JWT
-                                                                         | ApnsTransport.send (concurrency 6)
+                                                                         | ApnsTransport.send or FcmTransport.send (concurrency 6)
                                                                          v
                                                                   record per-device outcome
 ```
@@ -290,7 +323,7 @@ A self-check reveals a platform behaviour change. Once a day, or on `POST /v1/op
 - **Content.** At most 40, 40 and 150 characters. Line and control characters become spaces and bidi overrides are removed. If the JSON does not fit, the text is shortened first, then the sender, then the title, ending with `…`, never inside a character.
 - **Sealed form.** `enc` (32 bytes) then the ciphertext and tag (272 bytes), as 406 base64url characters, the same for every notification.
 - **Text.** `title` is the workspace name. For a message, `sender` is the contact's or colleague's name, or "Visitor", and `text` is the message, "Photo", "File", or for an internal note, "Note: " and the note. An assignment has no sender, and the text "Conversation assigned to you". The text is English for now.
-- **Who decides.** Nobody switches this off: there is no plain-text path. Each person hides message text on the lock screen with iOS's **Show Previews** setting.
+- **Who decides.** Nobody switches this off: there is no plain-text path. Each person hides message text on the lock screen with iOS's **Show Previews** setting, or Android's lock-screen notification setting.
 
 ## Relay data
 
@@ -301,6 +334,7 @@ installations   id, base_url, status, created_at
 installation_keys  installation_id, key_id, public_key, status, created_at
 workspaces      installation_id, workspace_id, status
 devices         id, secret_hash, platform, bundle_id, environment, apns_token, token_lookup, created_at, updated_at
+                platform is ios or android; apns_token holds either kind of token, encrypted
                 UNIQUE(bundle_id, token_lookup)
 subscriptions   id, device_id, installation_id, workspace_id, recipient_id, muted, created_at
                 UNIQUE(device_id, installation_id, workspace_id)
@@ -318,14 +352,14 @@ Every read filters by `installation_id`. `workspaceId` is never used alone, beca
 | Consumed grant IDs | 10 minutes |
 | Notification records, including dedupe | 30 days in full; dedupe window guaranteed for 72 hours |
 | Installations, keys, workspaces, subscriptions | Until the installation unregisters, or the operator erases it ([Erasure](#6-erasure)). A subscription also goes when its device or member is removed, or its workspace revoked |
-| Devices | Until APNs reports the token invalid, or 7 days after the device's last subscription went. A device left with none by an erasure goes at once |
+| Devices | Until APNs or FCM reports the token invalid, or 7 days after the device's last subscription went. A device left with none by an erasure goes at once |
 | Per-installation request and quota counters in `RelayGuard` | Request IDs and recipient quotas, 10 minutes after last use. Other counters, a day after last use. They hold request IDs, and recipient IDs in quota names |
 | Registration counters in `RelayGuard`, one per IP address | A day after last use. The object is named for a SHA-256 hash of the address, never the address |
 | Inactive installations | Kept until erased. Finding ones with no traffic is not built yet |
 
 The daily cron deletes notification records past 30 days and devices left with no subscription for 7 days.
 
-APNs tokens are encrypted at rest with AES-256-GCM under a key derived from the `RELAY_TOKEN_KEY` Worker secret, which narrows the exposure of a database-only leak. `token_lookup` is a keyed hash of the token, so that uniqueness needs no plain token. Losing that secret loses the ability to deliver, until apps register again. Rotating it is not built yet.
+APNs and FCM tokens are encrypted at rest with AES-256-GCM under a key derived from the `RELAY_TOKEN_KEY` Worker secret, which narrows the exposure of a database-only leak. `token_lookup` is a keyed hash of the token, so that uniqueness needs no plain token. Losing that secret loses the ability to deliver, until apps register again. Rotating it is not built yet.
 
 ## Rate limits
 

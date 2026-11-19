@@ -9,7 +9,7 @@ import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
 export interface PushSubscriptionRow {
   id: string;
   relaySubscriptionId: string;
-  platform: 'ios';
+  platform: 'ios' | 'android';
   deviceLabel: string | null;
   createdAt: number;
   updatedAt: number;
@@ -36,16 +36,16 @@ export function pushRepository(database: Database, ctx: WorkspaceContext) {
      * The same handle again answers the row it has, and takes the key it brings, so an app can repeat this or replace
      * a lost key. Null if the handle is someone else's, whose key is left alone.
      */
-    async recordSubscription(input: { relayId: string; relaySubscriptionId: string; previewKey: string; deviceLabel: string | null }): Promise<PushSubscriptionRow | null> {
+    async recordSubscription(input: { relayId: string; relaySubscriptionId: string; previewKey: string; platform: 'ios' | 'android'; deviceLabel: string | null }): Promise<PushSubscriptionRow | null> {
       await d1.batch([
         d1
           .prepare(
             `INSERT INTO push_subscriptions (id, workspace_id, member_id, relay_id, relay_subscription_id, preview_key, platform, device_label, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?7, 'ios', ?6, ${DB_NOW_MS}, ${DB_NOW_MS})
+             VALUES (?1, ?2, ?3, ?4, ?5, ?7, ?8, ?6, ${DB_NOW_MS}, ${DB_NOW_MS})
              ON CONFLICT (relay_id, relay_subscription_id) DO UPDATE SET preview_key = excluded.preview_key, updated_at = excluded.updated_at
                WHERE push_subscriptions.workspace_id = excluded.workspace_id AND push_subscriptions.member_id = excluded.member_id`,
           )
-          .bind(newId('pushSubscription'), w, ctx.memberId, input.relayId, input.relaySubscriptionId, input.deviceLabel, input.previewKey),
+          .bind(newId('pushSubscription'), w, ctx.memberId, input.relayId, input.relaySubscriptionId, input.deviceLabel, input.previewKey, input.platform),
         d1
           .prepare(
             `DELETE FROM push_subscriptions WHERE workspace_id = ?1 AND member_id = ?2 AND id NOT IN

@@ -20,7 +20,7 @@ export type NotificationEvent =
   | 'conversation_updated';
 
 export type PushEnvironment = 'sandbox' | 'production';
-export type Platform = 'ios';
+export type Platform = 'ios' | 'android';
 
 /**
  * Closed by design. The only content is per-phone ciphertext the relay cannot decrypt (ADR-0017). Adding readable
@@ -52,7 +52,7 @@ export interface NotificationStatus {
   updatedAt: string;
 }
 
-/** Custom key inside the APNs payload. The app routes from this alone. */
+/** Custom key inside the push payload: `oc` for APNs, the `oc` data field (a JSON string) for FCM. The app routes from this alone. */
 export interface PushData {
   v: 1;
   event: NotificationEvent;
@@ -72,15 +72,25 @@ export interface DeviceGrantClaims {
   exp: number; // at most GRANT_MAX_TTL_SECONDS after iat
 }
 
-export interface DeviceRegisterRequest {
-  grant: string;
-  platform: Platform;
-  apnsToken: string;
-  bundleId: string;
-  environment: PushEnvironment;
-  /** Present on subsequent registrations, so one device is reused across workspaces. */
-  device?: { id: string; secret: string };
-}
+export type DeviceRegisterRequest =
+  | {
+      grant: string;
+      platform: 'ios';
+      apnsToken: string;
+      bundleId: string;
+      environment: PushEnvironment;
+      /** Present on subsequent registrations, so one device is reused across workspaces. */
+      device?: { id: string; secret: string };
+    }
+  | {
+      grant: string;
+      platform: 'android';
+      /** FCM has no sandbox, so there is no environment (ADR-0021). */
+      fcmToken: string;
+      /** The package name. */
+      bundleId: string;
+      device?: { id: string; secret: string };
+    };
 
 export interface DeviceRegisterResponse {
   deviceId: string;
@@ -144,4 +154,19 @@ export interface ApnsResponse {
 }
 export interface ApnsTransport {
   send(request: ApnsRequest): Promise<ApnsResponse>;
+}
+
+/** FCM HTTP v1 (ADR-0021). */
+export interface FcmRequest {
+  projectId: string;
+  accessToken: string;
+  message: Record<string, unknown>;
+  validateOnly?: boolean;
+}
+export interface FcmResponse {
+  status: number;
+  errorCode?: string;
+}
+export interface FcmTransport {
+  send(request: FcmRequest): Promise<FcmResponse>;
 }

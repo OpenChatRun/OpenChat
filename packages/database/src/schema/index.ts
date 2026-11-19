@@ -541,7 +541,7 @@ export const pushSubscriptions = sqliteTable(
     relaySubscriptionId: text('relay_subscription_id').notNull(),
     /** The phone's X25519 public key for this subscription. Notifications are encrypted to it (ADR-0017). */
     previewKey: text('preview_key').notNull().default(''),
-    platform: text('platform', { enum: ['ios'] }).notNull(),
+    platform: text('platform', { enum: ['ios', 'android'] }).notNull(),
     deviceLabel: text('device_label'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
@@ -555,7 +555,7 @@ export const pushSubscriptions = sqliteTable(
       foreignColumns: [workspaceMembers.workspaceId, workspaceMembers.id],
     }).onDelete('cascade'),
     index('push_subscriptions_member_idx').on(t.workspaceId, t.memberId),
-    check('push_subscriptions_platform_ck', sql`${t.platform} IN ('ios')`),
+    check('push_subscriptions_platform_ck', sql`${t.platform} IN ('ios', 'android')`),
   ],
 );
 

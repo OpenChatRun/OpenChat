@@ -320,7 +320,7 @@ export const listWebsitesRoute = createRoute({
 // ---------- Push ----------
 
 export const PushSubscriptionSchema = z
-  .object({ id: z.string(), relaySubscriptionId: z.string(), platform: z.enum(['ios']), deviceLabel: z.string().nullable(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() })
+  .object({ id: z.string(), relaySubscriptionId: z.string(), platform: z.enum(['ios', 'android']), deviceLabel: z.string().nullable(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() })
   .openapi('PushSubscription');
 
 /** Only `push`. Members are not emailed about conversations (amendment A15). Adding a value is an additive change. */
@@ -366,6 +366,8 @@ export const recordPushSubscriptionRoute = createRoute({
           relaySubscriptionId: z.string().regex(/^sub_[A-Za-z0-9_-]{1,64}$/),
           // X25519, 32 bytes, base64url. Each notification is encrypted to it, so the relay cannot read it (ADR-0017).
           previewKey: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+          // Which kind of phone. Shown to the member only; it changes nothing about delivery (ADR-0021).
+          platform: z.enum(['ios', 'android']).default('ios'),
           deviceLabel: z.string().max(100).optional(),
         }),
       ),
