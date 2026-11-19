@@ -18,6 +18,8 @@ EMAIL_PROVIDER=console
 # LIMIT_MESSAGES_PER_IP_PER_MINUTE=60
 # LIMIT_MESSAGE_MAX_CHARS=4000
 # LIMIT_IPV6_PREFIX=64
+# LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY=500
+# LIMIT_ASSISTANT_PAGES_PER_SOURCE=50
 
 # Optional. Opens the operator health checks under /health/*. pnpm oc deploy generates it and keeps a copy locally.
 # OPERATOR_TOKEN=generated-by-pnpm-oc-deploy

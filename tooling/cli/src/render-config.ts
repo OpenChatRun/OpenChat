@@ -25,6 +25,8 @@ export interface DeploymentState {
   security?: SecuritySettings | undefined;
   /** Where users can get this installation's source, for an operator who changed it. See docs/operations/licensing.md. */
   sourceUrl?: string | undefined;
+  /** The AI assistant (ADR-0022): Workers AI and a Vectorize index, oc-<name>-assistant. Opt-in, because both are billed. */
+  assistant?: boolean;
   /** Push is opt-in until a managed relay exists. Its signing key is a secret, set separately. */
   relay?: { url: string; id: string; bundleIds: string } | undefined;
 }
@@ -117,6 +119,8 @@ export function parseTemplate(source: string): Template {
   return template;
 }
 
+export const assistantIndexName = (name: string) => `oc-${name}-assistant`;
+
 const renameResource = (value: string, name: string) => value.replace(/^oc-local/, `oc-${name}`);
 
 /**
@@ -154,6 +158,10 @@ export function renderConfig(templateSource: string, state: DeploymentState, rel
   if (state.security) t.vars = { ...(t.vars as object | undefined), ...securityVars(state.security) };
   if (release) t.vars = { ...(t.vars as object | undefined), OPENCHAT_VERSION: release };
   if (state.sourceUrl) t.vars = { ...(t.vars as object | undefined), SOURCE_URL: state.sourceUrl };
+  if (state.assistant) {
+    t.ai = { binding: 'AI' };
+    t.vectorize = [{ binding: 'VECTORIZE', index_name: assistantIndexName(state.name) }];
+  }
   if (state.cloudflareEmailFrom) t.send_email = [{ name: 'EMAIL', allowed_sender_addresses: [state.cloudflareEmailFrom] }];
   return t;
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { api, errorMessage, preference, queryClient, session } from '../app-context';
 import { InboxPanel } from '../inbox/inbox-panel';
 import { FollowUpRulesPanel, SuppressionsPanel } from './email-panels';
+import { AssistantPage } from './assistant-page';
 import { AuditLogPage } from './audit-log-page';
 import { FailedJobsPage } from './failed-jobs-page';
 import { PeoplePage } from './people-page';
@@ -92,6 +93,7 @@ const SECTIONS = [
   ['websites', 'sectionWebsites', 'websites'],
   ['members', 'sectionMembers', 'members'],
   ['email', 'sectionEmail', 'email'],
+  ['assistant', 'sectionAssistant', 'assistant'],
 ] as const satisfies readonly (readonly [string, MessageKey, IconName])[];
 const ADMIN_PAGES = [
   ['people', 'adminPeople', 'people'],
@@ -183,7 +185,7 @@ export function WorkspaceApp() {
           {current && !adminPage && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'inbox' ? <InboxWithMembers membership={current} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'inbox' ? <InboxWithMembers membership={current} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>

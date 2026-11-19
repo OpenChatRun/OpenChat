@@ -620,6 +620,30 @@ Observed, running `pnpm run deploy` from a computer against a throwaway `oc-prev
 | With `SETUP_CODE` set | `needed`. A wrong code 403, the right one 204, the same again 404, then `ready` |
 | Afterwards | Sign-in 200. Discovery named the company, the project relay, and one relay public key |
 
+## AI assistant sources on real Cloudflare (2026-11-19)
+
+Tested, on a throwaway `oc-ai-test` deployed with `pnpm oc deploy --assistant`, then deleted ([ADR-0022](decisions/0022-ai-assistant.md), step 1).
+
+| Check | Result |
+|---|---|
+| Wrangler's OAuth login creates a Vectorize index and its metadata index | Yes, though `wrangler whoami` lists no Vectorize scope |
+| Reading `https://openchat.run/` | First failed as unreachable: it answers 308 to `www.`. The reader now follows a start page between the bare domain and `www.`, under the new host's robots.txt. Then 25 pages, 99 passages |
+| Vectorize after an upsert | `vectorize info` showed the new vectors processed 30 to 60 seconds later. Questions in that time found only older sources |
+| Vectorize after a delete | The count fell from 100 to 99 about 35 seconds later |
+| bge-m3 scores | Relevant passages 0.55 to 0.75, across languages. Off-topic questions matched nothing above 0.45, or a little above it, and the model declined. `minScore` stays 0.45 |
+| Answer time, Llama 3.3 70B | 2 to 7 seconds |
+
+Models, the same questions in English, German, Japanese, Spanish and Chinese:
+
+| Model | Result |
+|---|---|
+| `@cf/meta/llama-3.3-70b-instruct-fp8-fast` | Correct prices, in the question's language; declined off-topic and override attempts. Once said "there is no mention of an Android app" rather than declining, even after the prompt forbade it. Kept as the default |
+| `@cf/mistralai/mistral-small-3.1-24b-instruct` | Correct and careful, declined more often. 2 to 15 seconds. Kept as a choice |
+| `@cf/google/gemma-4-26b-a4b-it` | Declined questions it could answer; one 500. Left out |
+| `@cf/qwen/qwen3-30b-a3b-fp8` | One 500 on a simple question. Left out |
+
+A failing model now gives `502 assistant_model_failed`, rather than an unexplained 500.
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
@@ -627,5 +651,6 @@ Observed, running `pnpm run deploy` from a computer against a throwaway `oc-prev
 - [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [batching and retries](https://developers.cloudflare.com/queues/configuration/batching-retries/), [delivery guarantees](https://developers.cloudflare.com/queues/reference/delivery-guarantees/)
 - [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [TCP sockets](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/), [rate limit binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/), [node:crypto](https://developers.cloudflare.com/workers/runtime-apis/nodejs/crypto/), [errors](https://developers.cloudflare.com/workers/observability/errors/), [static assets](https://developers.cloudflare.com/workers/static-assets/), [Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)
 - [R2 presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/), [Containers](https://developers.cloudflare.com/containers/), [`cf` CLI migration](https://developers.cloudflare.com/cf/wrangler/migrate/), [Email Service changelog](https://developers.cloudflare.com/changelog/product/email-service/index.md)
+- [Workers AI models](https://developers.cloudflare.com/workers-ai/models/), [Vectorize limits](https://developers.cloudflare.com/vectorize/platform/limits/), [Vectorize metadata filtering](https://developers.cloudflare.com/vectorize/reference/metadata-filtering/)
 - [Expo notifications](https://docs.expo.dev/versions/latest/sdk/notifications/), [Expo app config](https://docs.expo.dev/workflow/configuration/), [iOS app extensions](https://docs.expo.dev/build-reference/app-extensions/), [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - [workerd#4841](https://github.com/cloudflare/workerd/issues/4841), [paje](https://github.com/jonesphillip/paje), [FSF position on GPLv2 and the App Store](https://www.computerworld.com/article/1347653/gplv2-blocks-vlc-from-apple-s-app-store.html)

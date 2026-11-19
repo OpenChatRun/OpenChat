@@ -87,6 +87,12 @@ import {
   getQueueHealthRoute,
   getRealtimeHealthRoute,
   getNotificationHealthRoute,
+  getAssistantRoute,
+  saveAssistantSettingsRoute,
+  addAssistantSourceRoute,
+  updateAssistantSourceRoute,
+  deleteAssistantSourceRoute,
+  testAssistantRoute,
 } from './routes';
 
 /** Every route must be listed here so that it reaches the published document. */
@@ -176,6 +182,12 @@ export const ALL_ROUTES = [
   getQueueHealthRoute,
   getRealtimeHealthRoute,
   getNotificationHealthRoute,
+  getAssistantRoute,
+  saveAssistantSettingsRoute,
+  addAssistantSourceRoute,
+  updateAssistantSourceRoute,
+  deleteAssistantSourceRoute,
+  testAssistantRoute,
 ] as const;
 
 export function buildOpenApiDocument() {
@@ -203,6 +215,7 @@ export function buildOpenApiDocument() {
       { name: 'auth', description: 'Sign-in, sessions, and account recovery.' },
       { name: 'workspaces', description: 'Workspaces and their members.' },
       { name: 'websites', description: 'Websites that embed the widget.' },
+      { name: 'assistant', description: 'The AI assistant that answers from a website\'s sources (ADR-0022).' },
     ],
     servers: [{ url: '/' }],
   });

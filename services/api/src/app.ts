@@ -14,6 +14,7 @@ import { registerHealthRoutes } from './routes/health';
 import { registerEmailRoutes } from './routes/email';
 import { registerPushRoutes } from './routes/push';
 import { registerWorkspaceRoutes } from './routes/workspaces';
+import { registerAssistantRoutes } from './routes/assistant';
 import { discoveryRelay } from './push/relay-client';
 
 const OVERLOAD_RETRY_SECONDS = 2;
@@ -109,6 +110,7 @@ export function createApp() {
   registerSetupRoutes(app);
   registerAuthRoutes(app);
   registerWorkspaceRoutes(app);
+  registerAssistantRoutes(app);
   registerPushRoutes(app);
   registerEmailRoutes(app);
   registerAdminRoutes(app);

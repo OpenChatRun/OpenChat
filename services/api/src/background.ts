@@ -6,10 +6,11 @@ import { NEW_ACCOUNT_EMAIL_JOB, PASSWORD_RESET_JOB, sendNewAccountEmail, sendPas
 import { claimJob, getInstallation, openDatabase, recordFailedJob } from '@openchat/database';
 import { CloudflareEmailProvider, ConsoleEmailProvider, EmailSendError, ResendEmailProvider, type EmailProvider } from '@openchat/email';
 import { AppError, createLogger, newId, retryDelaySeconds, type JobEnvelope } from '@openchat/shared';
-import { sweepOutbox } from './dispatch';
+import { dispatchNow, sweepOutbox } from './dispatch';
 import { RETIRED_HANDLERS } from './email/delivery';
 import { FOLLOW_UP_HANDLERS } from './email/follow-ups';
 import { DISPATCH_JOB, NOTIFICATION_HANDLERS } from './push/fanout';
+import { ASSISTANT_INDEX_JOB, runIndexJob } from './assistant/jobs';
 import { RelayError } from './push/relay-client';
 import type { Env } from './env';
 
@@ -85,6 +86,7 @@ const HANDLERS: Record<string, Handler> = {
   ...NOTIFICATION_HANDLERS,
   ...RETIRED_HANDLERS,
   ...FOLLOW_UP_HANDLERS,
+  [ASSISTANT_INDEX_JOB]: (job, env) => runIndexJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
   // Queued by a Worker from before ADR-0016. Its link would lead nowhere, so it is acknowledged and dropped. Remove after one release.
   'workspace.invitation_email': async () => undefined,
 };

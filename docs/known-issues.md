@@ -21,6 +21,14 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **Not built:** rotating an installation's relay signing key, and alerts on failed deliveries.
 - **The app holds one installation at a time** ([ADR-0014](architecture/decisions/0014-one-installation-in-the-app.md)). To use a second installation, you sign out of the first, and notifications from the first stop. The original brief asked for both at once ([M6 exit check](plan/milestones.md#m6-exit-check)).
 
+## The AI assistant
+
+- **Step 1 only.** Supervisors can add sources and try it in the dashboard; it does not answer visitors yet ([ADR-0022](architecture/decisions/0022-ai-assistant.md)).
+- **Not offered on OpenChat Cloud** until its privacy documents cover Workers AI.
+- **It can be wrong.** The threshold for a relevant passage, 0.45, was set from one website in four languages ([validation](architecture/cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)).
+- **Changes take up to a minute to show**, because Vectorize applies writes in the background.
+- **Its dashboard text was machine-translated**, like the rest.
+
 ## The widget
 
 - **One conversation per visitor.** The widget shows one, though the API allows more.

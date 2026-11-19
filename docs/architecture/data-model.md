@@ -128,6 +128,23 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 **Not reached:** a push job already queued holds a notification's text for at most an hour, when it expires. The relay holds nothing about contacts. Copies in D1 Time Travel last 30 days. Erasure does not close a visitor's open socket. Nothing more is published to it, because the conversation is gone, and it cannot get a new ticket, because the visitor's token is gone too.
 
+## The AI assistant
+
+[ADR-0022](decisions/0022-ai-assistant.md), step 1. Four tables, each with `workspace_id`, reached only through `assistantRepository`:
+
+| Table | Holds |
+|---|---|
+| `assistant_settings` | One row per website: the name visitors will see, and a model, or NULL for the installation's default |
+| `assistant_sources` | What the assistant answers from: a web page (`kind='page'`, with `url`) or pasted text (`kind='text'`, with `content`). `status` is `pending`, `indexing`, `ready` or `failed`, with `error_code`. `generation` goes up each time the source changes or is read again; `indexed_generation` is the one the chunks are from |
+| `assistant_chunks` | Passages of a source, about 1,200 characters each. The ID is `<sourceId>.<generation>.<n>`, and is also the vector's ID in Vectorize |
+| `assistant_usage` | Per workspace and UTC day: answers, pages read, and passages written. Answers are counted with `INSERT … ON CONFLICT DO UPDATE … WHERE answers < limit RETURNING`, so the daily limit holds without a read first |
+
+**Generations guard the writes.** Indexing runs in a queue job, outside any transaction. Each statement that ends it (deleting old chunks, inserting new ones, marking the source ready) has `WHERE generation = ?` for the generation the job read. A job for a source that has since changed, or been deleted, writes nothing, and removes the vectors it wrote.
+
+**Vectors live outside D1.** Vectorize has one namespace per workspace, and a metadata index on `websiteId`, so a query sees only one website. Removing a source, or replacing a generation, writes an outbox row, `assistant.vectors_removed`, listing the vector IDs, in the same batch as the D1 change. Dispatch deletes them, and the sweep retries until it is done. On real Vectorize, deletes and upserts took 30 to 60 seconds to show in queries ([validation](cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)).
+
+**Erasure.** Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
+
 ## Retention
 
 Each workspace has `retention_days`, set by an installation admin under **Workspaces** (`PUT /api/v1/admin/workspaces/{id}/retention`), from 30 days to ten years. NULL, the default, keeps everything. A change is audited as `workspace.retention_changed`, with the old and new values.

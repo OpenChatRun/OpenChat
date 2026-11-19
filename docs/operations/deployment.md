@@ -36,6 +36,7 @@ A brand-new account has not been tried yet, so this list comes from Cloudflare's
 | Analytics Engine dataset | `oc_<name>`. Opt-in with `analyticsEngine: true` in deployment state, because it must first be enabled once per account in the Cloudflare dashboard, or the deploy fails |
 | Secrets | `AUTH_SIGNING_KEY`, `TICKET_SIGNING_KEY`, `RELAY_SIGNING_KEY`, `DATA_ENCRYPTION_KEY`, `TURNSTILE_SECRET_KEY`, with the public `TURNSTILE_SITE_KEY` set the same way |
 | Email binding | `EMAIL`, only with `--cloudflare-email`, and able to send only from `--email-from` |
+| Workers AI and Vectorize | `AI` and `VECTORIZE`, index `oc-<name>-assistant`, only with `--assistant`. See [the AI assistant](#the-ai-assistant) |
 
 The API Worker uses Smart Placement, which moves it near D1 when that is clearly faster. It needs traffic from several locations to decide, and it can take 15 minutes after a deploy. Create the database near your users with `--location`, because a Worker can move and the D1 primary cannot.
 
@@ -160,6 +161,27 @@ pnpm oc deploy --env production --relay-url https://openchat-relay.orangolabs.co
 ```
 
 The relay is in open mode: any installation that proves control of its domain can register, within the [limits](../notification-relay/protocol.md#rate-limits). Using it means accepting its [terms](../legal/relay-terms.md). `--no-relay` takes it out again; disconnect in the dashboard first, so that the relay erases its records.
+
+## The AI assistant
+
+Off unless deployed with it ([ADR-0022](../architecture/decisions/0022-ai-assistant.md)):
+
+```bash
+pnpm oc deploy --env production --assistant
+```
+
+This creates the Vectorize index `oc-<name>-assistant` (1,024 dimensions, cosine) with a metadata index on `websiteId`, and binds it and Workers AI to the Worker. Supervisors then find **Assistant** in the dashboard. Workers AI and Vectorize are billed by Cloudflare by use; the daily limit on answers, `LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY`, caps the main cost ([abuse limits](abuse-limits.md)). `ASSISTANT_MODEL` sets the installation's default model, from the list in `packages/core/src/assistant.ts`.
+
+`--no-assistant` removes the bindings and keeps the index, so turning it back on does not read everything again. To delete the index too: `pnpm exec wrangler vectorize delete oc-<name>-assistant`.
+
+An installation from the [Deploy button](one-click-deploy.md) has no assistant. To add one, create the index by hand, because the button cannot set its dimensions or metadata index:
+
+```bash
+pnpm exec wrangler vectorize create <worker-name>-assistant --dimensions 1024 --metric cosine
+pnpm exec wrangler vectorize create-metadata-index <worker-name>-assistant --propertyName websiteId --type string
+```
+
+then add `"ai": { "binding": "AI" }` and `"vectorize": [{ "binding": "VECTORIZE", "index_name": "<worker-name>-assistant" }]` to the fork's `wrangler.jsonc`, and deploy.
 
 ## Operations
 

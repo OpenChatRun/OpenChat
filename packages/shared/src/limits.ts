@@ -11,6 +11,10 @@ export const ABUSE_LIMITS = {
   messageMaxChars: { variable: 'LIMIT_MESSAGE_MAX_CHARS', flag: 'message-max-chars', default: 4_000, min: 1, max: 16_000 },
   /** How much of an IPv6 address counts as one address, because one connection usually holds a whole /64. */
   ipv6Prefix: { variable: 'LIMIT_IPV6_PREFIX', flag: 'ipv6-prefix', default: 64, min: 32, max: 128 },
+  /** Questions the AI assistant answers for one workspace in a day (UTC), test questions included. See ADR-0022. */
+  assistantAnswersPerWorkspacePerDay: { variable: 'LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY', flag: 'assistant-answers-per-workspace-per-day', default: 500, min: 1, max: 1_000_000 },
+  /** Pages the assistant reads from one website address given as a source. */
+  assistantPagesPerSource: { variable: 'LIMIT_ASSISTANT_PAGES_PER_SOURCE', flag: 'assistant-pages-per-source', default: 50, min: 1, max: 500 },
 } as const;
 
 export type AbuseLimitName = keyof typeof ABUSE_LIMITS;
@@ -32,3 +36,10 @@ export function readAbuseLimits(variables: object): AbuseLimits {
 }
 
 export const DEFAULT_ABUSE_LIMITS: AbuseLimits = readAbuseLimits({});
+
+/**
+ * The assistant's embedding model and its output size. The Vectorize index is created for this size, by `oc deploy`,
+ * so changing the model means a new index.
+ */
+export const ASSISTANT_EMBEDDING_MODEL = '@cf/baai/bge-m3';
+export const ASSISTANT_EMBEDDING_DIMENSIONS = 1024;

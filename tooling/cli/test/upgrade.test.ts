@@ -172,3 +172,28 @@ describe('oc deploy --no-relay', () => {
     expect(calls).toEqual([]);
   });
 });
+
+describe('oc deploy --assistant', () => {
+  it('creates the index and its websiteId filter once, and binds both', async () => {
+    const { deployer, calls, state, root } = setup({ state: { version: '0.2.0', r2Created: true, queuesCreated: ['notifications', 'email', 'jobs'].flatMap((q) => [`oc-acme-${q}-dlq`, `oc-acme-${q}`]) } });
+    await deployer.deploy({ name: 'acme', assistant: true });
+    expect(calls).toContain('vectorize create oc-acme-assistant --dimensions 1024 --metric cosine');
+    expect(calls).toContain('vectorize create-metadata-index oc-acme-assistant --propertyName websiteId --type string');
+    expect(state()).toMatchObject({ assistant: true, vectorizeCreated: true, vectorizeFilterCreated: true });
+    const config = JSON.parse(readFileSync(join(root, '.openchat/acme/api.wrangler.jsonc'), 'utf8')) as { ai?: unknown; vectorize?: unknown };
+    expect(config.ai).toEqual({ binding: 'AI' });
+    expect(config.vectorize).toEqual([{ binding: 'VECTORIZE', index_name: 'oc-acme-assistant' }]);
+
+    calls.length = 0;
+    await deployer.deploy({ name: 'acme' });
+    expect(calls.filter((c) => c.startsWith('vectorize'))).toEqual([]);
+  });
+
+  it('can be taken out again, keeping the index', async () => {
+    const { deployer, state, lines, root } = setup({ state: { version: '0.2.0', assistant: true, vectorizeCreated: true, vectorizeFilterCreated: true } });
+    await deployer.deploy({ name: 'acme', noAssistant: true });
+    expect(state().assistant).toBeUndefined();
+    expect(lines.join('\n')).toContain('is kept');
+    expect(JSON.parse(readFileSync(join(root, '.openchat/acme/api.wrangler.jsonc'), 'utf8'))).not.toHaveProperty('vectorize');
+  });
+});

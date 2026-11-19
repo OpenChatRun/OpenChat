@@ -36,3 +36,4 @@ export * from './admin';
 export * from './messaging';
 export * from './widget';
 export * from './attachments';
+export * from './assistant';
