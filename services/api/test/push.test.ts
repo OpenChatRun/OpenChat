@@ -259,6 +259,14 @@ describe('subscriptions', () => {
     expect(listed.data).toMatchObject([{ id: first, relaySubscriptionId: 'sub_one', platform: 'ios' }]);
   });
 
+  it('records an Android phone, and refuses a platform it does not know (ADR-0021)', async () => {
+    const android = await call('POST', `/api/v1/workspaces/${W}/push/subscriptions`, { token: tokens.one!, body: { relaySubscriptionId: 'sub_android', previewKey: await newPreviewKey('sub_android'), platform: 'android' } });
+    expect(android.status).toBe(201);
+    expect(await android.json()).toMatchObject({ relaySubscriptionId: 'sub_android', platform: 'android' });
+    const other = await call('POST', `/api/v1/workspaces/${W}/push/subscriptions`, { token: tokens.one!, body: { relaySubscriptionId: 'sub_other', previewKey: await newPreviewKey('sub_other'), platform: 'windows' } });
+    expect(other.status).toBe(400);
+  });
+
   it('refuses something that is not a handle, such as a device token', async () => {
     const response = await call('POST', `/api/v1/workspaces/${W}/push/subscriptions`, { token: tokens.one!, body: { relaySubscriptionId: 'a'.repeat(64), previewKey: await newPreviewKey('x') } });
     expect(response.status).toBe(400);

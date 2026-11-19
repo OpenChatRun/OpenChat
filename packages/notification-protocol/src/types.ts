@@ -16,7 +16,7 @@ export const NOTIFICATION_EVENTS = [
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
 export type PushEnvironment = 'sandbox' | 'production';
-export type Platform = 'ios';
+export type Platform = 'ios' | 'android';
 
 /** Each person may have this many subscriptions, so a notification carries at most this many payloads. */
 export const MAX_NOTIFICATION_PAYLOADS = 20;
@@ -56,7 +56,10 @@ export interface NotificationStatus {
   updatedAt: string;
 }
 
-/** The custom key inside the APNs payload. The app routes from this alone, and its extension decrypts `c`. */
+/**
+ * The custom key inside the push payload: `oc` in an APNs payload, and the JSON string in the `oc` data field of an
+ * FCM message (ADR-0021). The app routes from this alone, and decrypts `c` on the phone.
+ */
 export interface PushData {
   v: 1;
   event: NotificationEvent;
@@ -79,14 +82,28 @@ export interface DeviceGrantClaims {
   exp: number;
 }
 
-export interface DeviceRegisterRequest {
+export interface IosDeviceRegisterRequest {
   grant: string;
-  platform: Platform;
+  platform: 'ios';
   apnsToken: string;
   bundleId: string;
   environment: PushEnvironment;
   device?: { id: string; secret: string };
 }
+
+/** FCM has no sandbox, so an Android phone names no environment (ADR-0021). `bundleId` is the app's package name. */
+export interface AndroidDeviceRegisterRequest {
+  grant: string;
+  platform: 'android';
+  fcmToken: string;
+  bundleId: string;
+  device?: { id: string; secret: string };
+}
+
+export type DeviceRegisterRequest = IosDeviceRegisterRequest | AndroidDeviceRegisterRequest;
+
+/** `POST /v1/devices/token`. A device sends the kind of token its platform has. */
+export type DeviceTokenRequest = { deviceId: string; apnsToken: string } | { deviceId: string; fcmToken: string };
 
 export interface DeviceRegisterResponse {
   deviceId: string;
@@ -109,4 +126,23 @@ export interface ApnsResponse {
 }
 export interface ApnsTransport {
   send(request: ApnsRequest): Promise<ApnsResponse>;
+}
+
+/** FCM HTTP v1 (ADR-0021). A seam like the APNs one, so tests and local development need no Google account. */
+export interface FcmRequest {
+  projectId: string;
+  /** An OAuth 2.0 access token for the relay's service account. */
+  accessToken: string;
+  /** The `message` object of `projects.messages.send`. */
+  message: Record<string, unknown>;
+  /** Asks FCM to check the request without sending it. Used by the self-check. */
+  validateOnly?: boolean;
+}
+export interface FcmResponse {
+  status: number;
+  /** `error.details[].errorCode` when FCM gives one, such as `UNREGISTERED`, else `error.status`. */
+  errorCode?: string;
+}
+export interface FcmTransport {
+  send(request: FcmRequest): Promise<FcmResponse>;
 }

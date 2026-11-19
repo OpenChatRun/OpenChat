@@ -173,22 +173,27 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [grant, platform, apnsToken, bundleId, environment]
-              properties:
-                grant: { type: string, description: Compact JWS signed by the installation. }
-                platform: { type: string, enum: [ios] }
-                apnsToken: { type: string, pattern: '^[0-9a-fA-F]{32,200}$' }
-                bundleId: { type: string, maxLength: 155 }
-                environment: { type: string, enum: [sandbox, production] }
-                device:
-                  type: object
+              oneOf:
+                - type: object
                   additionalProperties: false
-                  required: [id, secret]
+                  required: [grant, platform, apnsToken, bundleId, environment]
                   properties:
-                    id: { type: string }
-                    secret: { type: string }
+                    grant: { type: string, description: Compact JWS signed by the installation. }
+                    platform: { type: string, enum: [ios] }
+                    apnsToken: { type: string, pattern: '^[0-9a-fA-F]{32,200}$' }
+                    bundleId: { type: string, maxLength: 155 }
+                    environment: { type: string, enum: [sandbox, production] }
+                    device: { $ref: '#/components/schemas/DeviceCredentials' }
+                - type: object
+                  description: An Android phone (ADR-0021). FCM has no sandbox, so there is no environment. bundleId is the package name.
+                  additionalProperties: false
+                  required: [grant, platform, fcmToken, bundleId]
+                  properties:
+                    grant: { type: string, description: Compact JWS signed by the installation. }
+                    platform: { type: string, enum: [android] }
+                    fcmToken: { type: string, pattern: '^[A-Za-z0-9_:-]{32,1024}$' }
+                    bundleId: { type: string, maxLength: 155 }
+                    device: { $ref: '#/components/schemas/DeviceCredentials' }
       responses:
         '201':
           description: Subscription created
@@ -207,7 +212,7 @@ paths:
     post:
       tags: [devices]
       operationId: updateDeviceToken
-      summary: Replace the APNs token for all of a device's subscriptions
+      summary: Replace the push token for all of a device's subscriptions. A device sends the kind its platform has.
       security:
         - deviceSecret: []
       requestBody:
@@ -215,12 +220,19 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [deviceId, apnsToken]
-              properties:
-                deviceId: { type: string }
-                apnsToken: { type: string, pattern: '^[0-9a-fA-F]{32,200}$' }
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [deviceId, apnsToken]
+                  properties:
+                    deviceId: { type: string }
+                    apnsToken: { type: string, pattern: '^[0-9a-fA-F]{32,200}$' }
+                - type: object
+                  additionalProperties: false
+                  required: [deviceId, fcmToken]
+                  properties:
+                    deviceId: { type: string }
+                    fcmToken: { type: string, pattern: '^[A-Za-z0-9_:-]{32,1024}$' }
       responses:
         '204': { description: Updated }
         default: { $ref: '#/components/responses/Problem' }
@@ -440,6 +452,14 @@ components:
                 description: For example invalid_signature, stale_timestamp, replayed_request, invalid_grant, rate_limited, or unknown_workspace.
               requestId: { type: string }
   schemas:
+    DeviceCredentials:
+      type: object
+      description: Present on later registrations, so one device is kept across workspaces.
+      additionalProperties: false
+      required: [id, secret]
+      properties:
+        id: { type: string }
+        secret: { type: string }
     NotificationEvent:
       type: string
       enum: [new_conversation, new_message, conversation_assigned, conversation_transferred, mention, conversation_updated]

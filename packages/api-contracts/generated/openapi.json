@@ -1720,7 +1720,8 @@
           "platform": {
             "type": "string",
             "enum": [
-              "ios"
+              "ios",
+              "android"
             ]
           },
           "deviceLabel": {
@@ -3967,6 +3968,14 @@
                   "previewKey": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9_-]{43}$"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "ios",
+                      "android"
+                    ],
+                    "default": "ios"
                   },
                   "deviceLabel": {
                     "type": "string",
