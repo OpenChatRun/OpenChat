@@ -1,6 +1,6 @@
 # Records of processing: Orango Labs Ltd
 
-> Version 1, in force from 17 November 2026. Adopted by Orango Labs Ltd.
+> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OrangoLabsLtd/OpenChat/blob/53ad7d6/docs/legal/records-of-processing.md) applies.
 
 Organisation: Orango Labs Ltd, 111 New Union Street, Coventry, England, CV1 2NT. Contact: privacy@openchat.run. We have not appointed a representative in the EU under Article 27 of the EU GDPR, relying on the exemption in Article 27(2) for occasional processing that is unlikely to result in a risk to people's rights.. ICO data protection fee: not yet paid, to be paid before launch, and its registration number added here. No data protection officer appointed.
 
@@ -11,9 +11,9 @@ Last reviewed: 17 November 2026
 | | Managed notification relay |
 |---|---|
 | Controllers | Each organisation operating an OpenChat installation connected to the relay. The list is the relay's `installations` table, and `pnpm ocp relay stats` gives the count |
-| Categories of processing | Storing device registrations and subscriptions; delivering notifications through Apple's push service; recording delivery outcomes; erasing on request |
+| Categories of processing | Storing device registrations and subscriptions; delivering notifications through Apple's push service, and Google's for Android phones; recording delivery outcomes; erasing on request |
 | Data | See [data processing agreement](data-processing-agreement.md#2-data-subjects-and-data) |
-| Transfers | Cloudflare (global network, including the United States), Apple (United States). Mechanism: the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc. and Apple Inc. are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback |
+| Transfers | Cloudflare (global network, including the United States), Apple (United States), Google (United States). Mechanism: the EU–US Data Privacy Framework and its UK Extension, under which Cloudflare, Inc., Apple Inc. and Google LLC are certified, with their standard contractual clauses and the UK International Data Transfer Addendum as the fallback |
 | Security | See [data processing agreement](data-processing-agreement.md#5-security-measures) |
 
 ## B. As controller (Article 30(1))
