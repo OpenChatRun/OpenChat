@@ -356,6 +356,22 @@ Spec Phase 6 list, plus search (FTS5), webhooks, inbound email, and signed visit
 
 The first, the AI assistant from the README's roadmap, is designed in [ADR-0022](../architecture/decisions/0022-ai-assistant.md), accepted on 19 November 2026, in three steps, each with its own exit check.
 
+### Assistant step 1 exit check
+
+Sources and a test panel, with no visitor-facing behaviour. Run on a throwaway installation on real Cloudflare on 19 November 2026 ([validation](../architecture/cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)):
+
+| Criterion | Result |
+|---|---|
+| `oc deploy --assistant` creates the index and bindings | Yes |
+| A website is read, within the page limit, honouring robots.txt | openchat.run: 25 pages, 99 passages, after following its redirect to `www.` |
+| Pasted text is indexed | Yes |
+| Answers come from sources only, in the question's language, and it declines otherwise | Yes, in English, German, Japanese, Spanish and Chinese; it declined off-topic questions and an attempt to override its rules |
+| Deleting a source removes its vectors | Yes, within 35 seconds |
+| Tenancy | Isolation harness covers the six routes |
+| Dashboard, light, dark and phone width | Screenshots checked |
+
+Limits: one website tried, so `minScore` may need tuning; translations need native review; not deployed to OpenChat Cloud.
+
 ## Mapping to spec §20
 
 | Journey step | Milestone |

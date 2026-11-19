@@ -1,10 +1,10 @@
 # Abuse limits
 
-These limits stop a stranger on the internet from filling the database that all of an installation's tenants share. Anyone can reach the widget API without an account, so limits are the main defence.
+These limits stop a stranger on the internet from filling the database that all of an installation's tenants share. The last two also cap what the [AI assistant](../architecture/decisions/0022-ai-assistant.md) costs in Workers AI. Anyone can reach the widget API without an account, so limits are the main defence.
 
 ## What you can change
 
-Four settings apply to every website on an installation. The defaults suit most installations.
+Six settings apply to every website on an installation. The defaults suit most installations.
 
 | Setting | Default | Allowed | `oc deploy` flag | Worker variable |
 |---|---|---|---|---|
@@ -12,6 +12,8 @@ Four settings apply to every website on an installation. The defaults suit most 
 | Visitor messages per address, per minute | 60 | 1 to 100,000 | `--messages-per-ip-per-minute` | `LIMIT_MESSAGES_PER_IP_PER_MINUTE` |
 | Longest visitor message, in characters | 4,000 | 1 to 16,000 | `--message-max-chars` | `LIMIT_MESSAGE_MAX_CHARS` |
 | How much of an IPv6 address counts as one address | /64 | /32 to /128 | `--ipv6-prefix` | `LIMIT_IPV6_PREFIX` |
+| AI assistant answers per workspace, per day (UTC), test questions included | 500 | 1 to 1,000,000 | `--assistant-answers-per-workspace-per-day` | `LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY` |
+| Pages the AI assistant reads from one website address | 50 | 1 to 500 | `--assistant-pages-per-source` | `LIMIT_ASSISTANT_PAGES_PER_SOURCE` |
 
 ## How to change a setting
 

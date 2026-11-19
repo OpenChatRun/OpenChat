@@ -51,6 +51,13 @@ export interface Env {
   LIMIT_MESSAGES_PER_IP_PER_MINUTE?: string;
   LIMIT_MESSAGE_MAX_CHARS?: string;
   LIMIT_IPV6_PREFIX?: string;
+  LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY?: string;
+  LIMIT_ASSISTANT_PAGES_PER_SOURCE?: string;
+  /** Optional, both together: without them this installation has no AI assistant. `oc deploy --assistant` adds them. See ADR-0022. */
+  AI?: Ai;
+  VECTORIZE?: Vectorize;
+  /** Optional. The Workers AI text model the assistant uses, from ASSISTANT_MODELS in @openchat/core. */
+  ASSISTANT_MODEL?: string;
   /** Optional: Analytics Engine has to be enabled per account. See tooling/cli/src/render-config.ts. */
   METRICS?: AnalyticsEngineDataset;
 }

@@ -12,6 +12,8 @@ import {
   messageForDispatch,
   openDatabase,
   pendingOutboxFor,
+  SOURCE_CHANGED_TOPIC,
+  VECTORS_REMOVED_TOPIC,
   purgeDispatchedOutbox,
   recordOutboxFailure,
   staleOutbox,
@@ -26,6 +28,7 @@ import type { Env } from './env';
 import { sweepFollowUps } from './email/follow-ups';
 import { sweepRetention } from './retention';
 import { pushJobsFor } from './push/fanout';
+import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs';
 
 const SWEEP_AGE_MS = 60_000;
 const SWEEP_LIMIT = 200;
@@ -98,6 +101,13 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
         await deleteStoredFiles(env, `w/${row.workspaceId}/c/${conversationId}/`);
       }
       return;
+    case SOURCE_CHANGED_TOPIC:
+      // The job checks the generation, so a source changed again since is not read twice.
+      await env.JOBS_QUEUE.send(indexJob(row));
+      return;
+    case VECTORS_REMOVED_TOPIC:
+      await removeVectors(env, row);
+      return;
     default:
       // A newer Worker's row, read by an older one during a deploy. It stays for a Worker that knows it.
       throw new Error('Unknown outbox topic');
@@ -124,6 +134,12 @@ export function dispatchSoon(c: Context<AppEnv>, workspaceId: string, aggregateI
       .then((rows) => dispatchRows(c.env, db, rows))
       .catch((error: unknown) => createLogger({ workspaceId }).warn('outbox_dispatch_failed', { errorName: (error as Error).name })),
   );
+}
+
+/** For a job that wrote outbox rows: dispatches them now, rather than at the next sweep. */
+export async function dispatchNow(env: Env, workspaceId: string, aggregateIds: string[]): Promise<void> {
+  const db = openDatabase(env.DB);
+  await dispatchRows(env, db, await pendingOutboxFor(db, workspaceId, aggregateIds));
 }
 
 /**
@@ -167,6 +183,8 @@ export async function sweepOutbox(env: Env, scheduledTime: number): Promise<void
     await purgeDispatchedOutbox(db, PURGE_AGE_MS, PURGE_LIMIT);
     await sweepAttachments(env, db);
     await sweepRetention(db);
+    const refreshed = await refreshAssistantPages(env, db);
+    for (const source of refreshed) await dispatchNow(env, source.workspaceId, [source.id]);
   }
 }
 

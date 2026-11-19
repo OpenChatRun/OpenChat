@@ -42,6 +42,14 @@ describe('renderConfig', () => {
     expect(enabled.analytics_engine_datasets?.[0]?.dataset).toBe('oc_acme_prod');
   });
 
+  it('binds the assistant only when chosen', () => {
+    expect(rendered.ai).toBeUndefined();
+    expect(rendered.vectorize).toBeUndefined();
+    const chosen = renderConfig(source, { ...state, assistant: true }, '../../services/api');
+    expect(chosen.ai).toEqual({ binding: 'AI' });
+    expect(chosen.vectorize).toEqual([{ binding: 'VECTORIZE', index_name: 'oc-acme-prod-assistant' }]);
+  });
+
   it('leaves no local resource names behind', () => {
     expect(JSON.stringify(rendered)).not.toMatch(/oc-local|oc_local/);
   });

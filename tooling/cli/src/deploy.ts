@@ -7,10 +7,11 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { generateOpaqueToken, generateSerializedKey, hashOpaqueToken } from '@openchat/auth';
+import { ASSISTANT_EMBEDDING_DIMENSIONS } from '@openchat/shared';
 import { createBackups, databaseName, type RestoreRecord } from './backup';
 import { assertEmail, assertPublicUrl, bootstrapSql, recoverySql, resetLink } from './bootstrap';
 import { formatChecks, hasFailure, isMissingWorkersDev, runPreflight, WORKERS_DEV_HELP } from './preflight';
-import { renderConfig, type DeploymentState, mergeLimitFlags, mergeSecurityFlags, mergeSourceFlag } from './render-config';
+import { assistantIndexName, renderConfig, type DeploymentState, mergeLimitFlags, mergeSecurityFlags, mergeSourceFlag } from './render-config';
 import { compareVersions, releaseCheckout, releaseVersion, UNRECORDED_VERSION, UPGRADE_FROM_AT_LEAST } from './releases';
 import { createResource, describeFailure, type RunWrangler, sleep, UUID, wranglerIn } from './wrangler';
 
@@ -18,6 +19,9 @@ export interface State extends Omit<DeploymentState, 'd1DatabaseId'> {
   d1DatabaseId?: string;
   r2Created?: boolean;
   queuesCreated?: string[];
+  /** The assistant's Vectorize index, and its metadata index on websiteId, which must exist before any vector. */
+  vectorizeCreated?: boolean;
+  vectorizeFilterCreated?: boolean;
   deployed?: boolean;
   secretsSet?: boolean;
   relayKeySet?: boolean;
@@ -66,6 +70,10 @@ export interface DeployOptions {
   securityPolicy?: string | undefined;
   /** Where users can get the source, for a changed release. Remembered; `none` goes back to the project's. */
   sourceUrl?: string | undefined;
+  /** Adds the AI assistant: Workers AI and a Vectorize index. Remembered for later deploys. */
+  assistant?: boolean;
+  /** Takes the assistant's bindings out. Its index is kept, so that turning it back on finds its sources. */
+  noAssistant?: boolean;
   /** Takes the relay out of the deployment. Disconnect in the dashboard first, so that the relay erases its records. */
   noRelay?: boolean;
 }
@@ -135,6 +143,22 @@ export function createDeployer(root: string, deps: DeployerDeps = {}) {
       await create(`Queue ${queue}`, ['queues', 'create', queue]);
       state.queuesCreated.push(queue);
       save(state);
+    }
+    if (state.assistant) {
+      const index = assistantIndexName(state.name);
+      if (!state.vectorizeCreated) {
+        log(`Creating Vectorize index ${index}`);
+        // bge-m3, the assistant's embedding model, gives 1,024 dimensions. See ASSISTANT_EMBEDDING_DIMENSIONS.
+        await create(`Vectorize index ${index}`, ['vectorize', 'create', index, '--dimensions', String(ASSISTANT_EMBEDDING_DIMENSIONS), '--metric', 'cosine']);
+        state.vectorizeCreated = true;
+        save(state);
+      }
+      if (!state.vectorizeFilterCreated) {
+        log(`Indexing websiteId in ${index}`);
+        await create(`Metadata index on ${index}`, ['vectorize', 'create-metadata-index', index, '--propertyName', 'websiteId', '--type', 'string']);
+        state.vectorizeFilterCreated = true;
+        save(state);
+      }
     }
   }
 
@@ -376,6 +400,12 @@ export function createDeployer(root: string, deps: DeployerDeps = {}) {
       if (!state.sourceUrl) delete state.sourceUrl;
       if (!state.initialized && !options.ownerEmail) throw new Error('A first deploy needs --owner-email');
       if (options.analytics) state.analyticsEngine = true;
+      if (options.assistant && options.noAssistant) throw new Error('--assistant cannot go with --no-assistant');
+      if (options.assistant) state.assistant = true;
+      if (options.noAssistant) {
+        if (state.assistant) log(`Taking the AI assistant out of this deployment. Its index, ${assistantIndexName(state.name)}, is kept. Delete it with wrangler vectorize delete if you no longer want it.`);
+        delete state.assistant;
+      }
       if (options.noRelay) {
         if (options.relayUrl || options.relayId || options.relayBundleIds) throw new Error('--no-relay cannot go with --relay-url, --relay-id, or --relay-bundle-ids');
         if (state.relay) log(`Taking ${state.relay.url} out of this deployment. If you have not yet, disconnect in the dashboard first (Workspaces, Push notifications), so that the relay erases what it holds.`);

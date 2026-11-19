@@ -39,6 +39,9 @@ import type {
   listPeopleRoute,
   updateWebsiteRoute,
   updateWorkspaceRoute,
+  getAssistantRoute,
+  addAssistantSourceRoute,
+  testAssistantRoute,
 } from '@openchat/api-contracts';
 import type { z } from 'zod';
 
@@ -75,6 +78,10 @@ export type Retention = Json200<typeof getRetentionRoute>;
 export type AuditLogPage = Json200<typeof listAuditLogRoute>;
 export type AuditEntry = AuditLogPage['data'][number];
 export type LoginInput = BodyOf<typeof loginRoute>;
+export type Assistant = Json200<typeof getAssistantRoute>;
+export type AssistantSource = Assistant['sources'][number];
+export type AssistantSourceInput = BodyOf<typeof addAssistantSourceRoute>;
+export type AssistantAnswer = Json200<typeof testAssistantRoute>;
 export type CreatedWorkspace = Json201<typeof createWorkspaceRoute>;
 export type Conversation = Json200<typeof getConversationRoute>;
 export type ConversationPage = Json200<typeof listConversationsRoute>;
@@ -231,6 +238,14 @@ export function createClient(options: ClientOptions) {
     createFollowUpRule: (workspaceId: string, input: { name: string; inactiveMinutes: number }) => request<FollowUpRule>('POST', `${workspace(workspaceId)}/follow-up-rules`, input),
     updateFollowUpRule: (workspaceId: string, ruleId: string, change: { name?: string; enabled?: boolean; inactiveMinutes?: number }) => request<FollowUpRule>('PATCH', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`, change),
     deleteFollowUpRule: (workspaceId: string, ruleId: string) => request<void>('DELETE', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`),
+    getAssistant: (workspaceId: string, websiteId: string) => get<Assistant>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant`),
+    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null }) =>
+      request<{ name: string; model: string | null }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
+    addAssistantSource: (workspaceId: string, websiteId: string, input: AssistantSourceInput) => request<AssistantSource>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/sources`, input),
+    updateAssistantSource: (workspaceId: string, sourceId: string, change: { title?: string; content?: string } = {}) =>
+      request<AssistantSource>('PATCH', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`, change),
+    deleteAssistantSource: (workspaceId: string, sourceId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`),
+    testAssistant: (workspaceId: string, websiteId: string, question: string) => request<AssistantAnswer>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/test`, { question }),
     createRealtimeTicket: (workspaceId: string) => request<RealtimeTicket>('POST', `${workspace(workspaceId)}/realtime/tickets`),
   };
 }

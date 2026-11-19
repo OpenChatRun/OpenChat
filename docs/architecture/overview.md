@@ -107,6 +107,7 @@ Versions were the latest published on 2026-11-03. The lockfile pins exact versio
 | E2E | Playwright | |
 | Accessibility tests | axe-core through `@axe-core/playwright`, in end-to-end tests only ([ADR-0018](decisions/0018-axe-core-for-accessibility-tests.md)) | 4.14 |
 | Metrics | Workers Analytics Engine, an addition to the spec's list | |
+| AI assistant, optional | Workers AI (`@cf/baai/bge-m3` embeddings, a chat model) and Vectorize ([ADR-0022](decisions/0022-ai-assistant.md)) | |
 
 Spec constraints still hold: no PostgreSQL, Redis, Kubernetes, or conventional application servers. The only external dependencies are APNs and email providers.
 

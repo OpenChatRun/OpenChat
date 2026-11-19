@@ -33,7 +33,7 @@ Three queues plus DLQs, not one per job type. Few queues keep self-hosted setup 
 |---|---|---|---|---|---|
 | `oc-notifications` | `notification.fanout`, `notification.dispatch`, `notification.unregister` | 25 | 1 s | 8 | 20 |
 | `oc-email` | `email.follow_up`, `auth.password_reset_email`, `auth.new_account_email` | 10 | 5 s | 8 | 5 |
-| `oc-jobs` | `attachment.process`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
+| `oc-jobs` | `attachment.process`, `assistant.index_source`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
 | `*-dlq` | All of the above | 25 | 30 s | 3 | 1 |
 
 Email jobs hold IDs only and read the address when sending. System email (`auth.password_reset_email`, `auth.new_account_email`) has no delivery row, because the token is created at send time. Each attempt has a new token and so a new provider idempotency key. A crash after sending can deliver two emails, and failures of any kind retry and then dead-letter.
@@ -131,9 +131,16 @@ One schedule, `* * * * *`, with a dispatcher inside. Each sweep is bounded and m
 | Attachment orphans | Hourly | Unattached and older than 24 h, `LIMIT 200` | Delete from R2, then the row |
 | Outbox purge | Hourly | Dispatched more than 14 days ago, in chunks | Delete |
 | Retention | Hourly | Expired sessions and tokens, old receipts and failed jobs, and anonymous visitors, then each workspace's setting, in chunks | Delete. See [retention](data-model.md#retention) |
+| Assistant pages | Hourly | Page sources read more than a week ago, 20 at a time | Bump the generation and queue `assistant.index_source`, guarded by the generation read |
 | Heartbeat | Every minute | | Record the time for `/health/queues` |
 
 Sweeps from overlapping cron runs are harmless, because each action is idempotent. Sweep writes use small chunks, because D1 is shared with live traffic.
+
+## The AI assistant's jobs
+
+`assistant.index_source` ([ADR-0022](decisions/0022-ai-assistant.md)) reads one source at one generation: it fetches the pages, splits the text, embeds it with Workers AI, writes vectors to Vectorize, and then ends in one guarded batch (see [data model](data-model.md#the-ai-assistant)). Its idempotency key is `assistant.index_source:<sourceId>:<generation>`, and vector IDs carry the generation, so a retry overwrites what it wrote before. A page that cannot be read marks the source `failed` with a reason, and is not retried; a platform error is.
+
+Two outbox topics: `assistant.source_changed` queues the job, and `assistant.vectors_removed` deletes vectors, 1,000 per call. Both are dispatched straight after the request or job that wrote them, and by the sweep if that fails.
 
 ## What email is for
 

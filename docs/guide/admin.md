@@ -64,6 +64,16 @@ In each workspace, on its **Email** tab, a supervisor can add follow-up rules: s
 
 Email has to be set up when OpenChat is deployed; see the [self-hosting guide](../operations/self-hosting.md#optional-email).
 
+## The AI assistant
+
+If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard. For now it is for trying out: visitors do not see it yet.
+
+- **Settings**: the name visitors will see, and the model. The default is chosen by whoever runs the installation.
+- **Sources**: what it answers from, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
+- **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
+
+The assistant can be wrong, even with good sources. Try the questions your customers ask most before you rely on it. A change to a page shows within a few minutes of reading it again.
+
 ## Failed jobs
 
 Background work, such as sending a push notification or an email, is retried several times. If it still fails, it is listed here, by kind, with the time and the number of attempts. Fix the cause, for example the email settings, and then **Replay**, or **Dismiss** a job you no longer need. Work a job already finished is not repeated. Some jobs cannot be replayed, because the time they had to run by has passed. Failed jobs are kept for 90 days.

@@ -25,6 +25,10 @@
     {
       "name": "websites",
       "description": "Websites that embed the widget."
+    },
+    {
+      "name": "assistant",
+      "description": "The AI assistant that answers from a website's sources (ADR-0022)."
     }
   ],
   "servers": [
@@ -3171,6 +3175,219 @@
           "problems",
           "relay",
           "roundTripMs"
+        ]
+      },
+      "Assistant": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "False when the installation has no Workers AI and Vectorize bindings. Sources cannot be added then."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ]
+            }
+          },
+          "defaultModel": {
+            "type": "string"
+          },
+          "settings": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "model"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssistantSource"
+            }
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "sourcesPerWebsite": {
+                "type": "integer"
+              },
+              "pagesPerSource": {
+                "type": "integer"
+              },
+              "textSourceChars": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "sourcesPerWebsite",
+              "pagesPerSource",
+              "textSourceChars"
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "models",
+          "defaultModel",
+          "settings",
+          "sources",
+          "limits"
+        ]
+      },
+      "AssistantSource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "page",
+              "text"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "indexing",
+              "ready",
+              "failed"
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the last reading failed: unreachable, blocked_by_robots, not_html, empty, or too_large."
+          },
+          "chunkCount": {
+            "type": "integer"
+          },
+          "pageCount": {
+            "type": "integer"
+          },
+          "indexedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "url",
+          "status",
+          "errorCode",
+          "chunkCount",
+          "pageCount",
+          "indexedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AssistantAnswer": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "answered",
+              "no_sources",
+              "unsure",
+              "limit_reached"
+            ]
+          },
+          "answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "excerpt": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "title",
+                "url",
+                "excerpt",
+                "score"
+              ]
+            }
+          }
+        },
+        "required": [
+          "outcome",
+          "answer",
+          "model",
+          "sources"
         ]
       }
     },
@@ -8508,6 +8725,477 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotificationHealth"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "getAssistant",
+        "summary": "A website's AI assistant: its settings and sources. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assistant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Assistant"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/settings": {
+      "put": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "saveAssistantSettings",
+        "summary": "Name the assistant and choose its model. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60,
+                    "pattern": "^\\P{Cc}*$/u"
+                  },
+                  "model": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "name",
+                  "model"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "model"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/sources": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "addAssistantSource",
+        "summary": "Add a page or text for the assistant to answer from. For supervisors.",
+        "description": "A page must be https and on one of the website's allowed origins. Pages it links to on the same host, under the same path, are read too, up to the installation's limit, respecting robots.txt. Reading happens in the background.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "page"
+                        ]
+                      },
+                      "url": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "pattern": "^\\P{Cc}*$/u"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "url"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "text"
+                        ]
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200,
+                        "pattern": "^\\P{Cc}*$/u"
+                      },
+                      "content": {
+                        "type": "string",
+                        "maxLength": 20000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "title",
+                      "content"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSource"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/assistant/sources/{sourceId}": {
+      "patch": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "updateAssistantSource",
+        "summary": "Read a source again, or change its title or text. For supervisors.",
+        "description": "An empty body reads it again. The answers it gave stay in use until the new reading is ready.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "sourceId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "pattern": "^\\P{Cc}*$/u"
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 20000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSource"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "deleteAssistantSource",
+        "summary": "Delete a source, and everything read from it. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "sourceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/test": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "testAssistant",
+        "summary": "Ask the assistant a question, as a visitor would. For supervisors.",
+        "description": "No visitor sees this. It counts against the daily limit on answers.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "question"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantAnswer"
                 }
               }
             }

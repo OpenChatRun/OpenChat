@@ -1480,3 +1480,127 @@ export const getNotificationHealthRoute = createRoute({
   summary: 'Whether the relay answers and accepts this installation\'s signature. A problem here only warns: messaging works without push.',
   responses: { 200: { description: 'Push is ok, off, or only warns', ...json(NotificationHealthSchema) }, default: problemResponse },
 });
+
+// ---------- The AI assistant (ADR-0022) ----------
+
+const assistantParams = workspaceParams.extend({ websiteId: z.string() });
+const assistantSourceParams = workspaceParams.extend({ sourceId: z.string() });
+const AssistantName = SafeName.max(60);
+const SourceTitle = z.string().trim().min(1).max(200).regex(/^\P{Cc}*$/u, 'Must not contain control characters');
+const SourceText = z.string().max(20_000);
+
+export const AssistantSourceSchema = z
+  .object({
+    id: z.string(),
+    kind: z.enum(['page', 'text']),
+    title: z.string(),
+    url: z.string().nullable(),
+    status: z.enum(['pending', 'indexing', 'ready', 'failed']),
+    errorCode: z.string().nullable().openapi({ description: 'Why the last reading failed: unreachable, blocked_by_robots, not_html, empty, or too_large.' }),
+    chunkCount: z.number().int(),
+    pageCount: z.number().int(),
+    indexedAt: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi('AssistantSource');
+
+export const AssistantSchema = z
+  .object({
+    available: z.boolean().openapi({ description: 'False when the installation has no Workers AI and Vectorize bindings. Sources cannot be added then.' }),
+    models: z.array(z.object({ id: z.string(), label: z.string() })),
+    defaultModel: z.string(),
+    settings: z.object({ name: z.string(), model: z.string().nullable() }).nullable(),
+    sources: z.array(AssistantSourceSchema),
+    limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int() }),
+  })
+  .openapi('Assistant');
+
+export const AssistantAnswerSchema = z
+  .object({
+    outcome: z.enum(['answered', 'no_sources', 'unsure', 'limit_reached']),
+    answer: z.string().nullable(),
+    model: z.string(),
+    sources: z.array(z.object({ title: z.string(), url: z.string().nullable(), excerpt: z.string(), score: z.number() })),
+  })
+  .openapi('AssistantAnswer');
+
+export const getAssistantRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant',
+  tags: ['assistant'],
+  operationId: 'getAssistant',
+  summary: "A website's AI assistant: its settings and sources. For supervisors.",
+  security: bearer,
+  request: { params: assistantParams },
+  responses: { 200: { description: 'Assistant', ...json(AssistantSchema) }, default: problemResponse },
+});
+
+export const saveAssistantSettingsRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/settings',
+  tags: ['assistant'],
+  operationId: 'saveAssistantSettings',
+  summary: "Name the assistant and choose its model. For supervisors.",
+  security: bearer,
+  request: { params: assistantParams, body: { required: true, ...json(z.strictObject({ name: AssistantName, model: z.string().max(100).nullable() })) } },
+  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable() })) }, default: problemResponse },
+});
+
+export const addAssistantSourceRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/sources',
+  tags: ['assistant'],
+  operationId: 'addAssistantSource',
+  summary: 'Add a page or text for the assistant to answer from. For supervisors.',
+  description: "A page must be https and on one of the website's allowed origins. Pages it links to on the same host, under the same path, are read too, up to the installation's limit, respecting robots.txt. Reading happens in the background.",
+  security: bearer,
+  request: {
+    params: assistantParams,
+    body: {
+      required: true,
+      ...json(
+        z.discriminatedUnion('kind', [
+          z.strictObject({ kind: z.literal('page'), url: z.string().max(2000), title: SourceTitle.optional() }),
+          z.strictObject({ kind: z.literal('text'), title: SourceTitle, content: SourceText }),
+        ]),
+      ),
+    },
+  },
+  responses: { 201: { description: 'Source', ...json(AssistantSourceSchema) }, default: problemResponse },
+});
+
+export const updateAssistantSourceRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/sources/{sourceId}',
+  tags: ['assistant'],
+  operationId: 'updateAssistantSource',
+  summary: 'Read a source again, or change its title or text. For supervisors.',
+  description: 'An empty body reads it again. The answers it gave stay in use until the new reading is ready.',
+  security: bearer,
+  request: { params: assistantSourceParams, body: { required: true, ...json(z.strictObject({ title: SourceTitle.optional(), content: SourceText.optional() })) } },
+  responses: { 200: { description: 'Source', ...json(AssistantSourceSchema) }, default: problemResponse },
+});
+
+export const deleteAssistantSourceRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/sources/{sourceId}',
+  tags: ['assistant'],
+  operationId: 'deleteAssistantSource',
+  summary: 'Delete a source, and everything read from it. For supervisors.',
+  security: bearer,
+  request: { params: assistantSourceParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+export const testAssistantRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/test',
+  tags: ['assistant'],
+  operationId: 'testAssistant',
+  summary: 'Ask the assistant a question, as a visitor would. For supervisors.',
+  description: 'No visitor sees this. It counts against the daily limit on answers.',
+  security: bearer,
+  request: { params: assistantParams, body: { required: true, ...json(z.strictObject({ question: z.string().trim().min(1).max(1000) })) } },
+  responses: { 200: { description: 'Answer', ...json(AssistantAnswerSchema) }, default: problemResponse },
+});

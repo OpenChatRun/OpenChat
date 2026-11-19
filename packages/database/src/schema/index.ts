@@ -697,6 +697,117 @@ export const automationRuns = sqliteTable(
   ],
 );
 
+// ---------- The AI assistant (ADR-0022) ----------
+
+/** One per website that has been given an assistant. Without a row, the website has none. */
+export const assistantSettings = sqliteTable(
+  'assistant_settings',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    /** What visitors will see it called. */
+    name: text('name').notNull(),
+    /** A Workers AI text model from ASSISTANT_MODELS. NULL means the installation's default. */
+    model: text('model'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    unique('assistant_settings_tenant_uq').on(t.workspaceId, t.id),
+    unique('assistant_settings_website_uq').on(t.workspaceId, t.websiteId),
+    foreignKey({
+      name: 'assistant_settings_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * What the assistant may answer from. Each change bumps `generation`, and the indexing job for that generation
+ * writes chunks whose IDs are `<source id>.<generation>.<n>`, the same IDs as their vectors. So a retried job
+ * overwrites rather than duplicates, and the vectors of any generation can be named without a lookup.
+ */
+export const assistantSources = sqliteTable(
+  'assistant_sources',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    kind: text('kind', { enum: ['page', 'text'] }).notNull(),
+    title: text('title').notNull(),
+    /** For a page: where reading starts. Only pages under it, on the same host, are read. */
+    url: text('url'),
+    /** For text: what the admin pasted. */
+    content: text('content'),
+    status: text('status', { enum: ['pending', 'indexing', 'ready', 'failed'] }).notNull().default('pending'),
+    /** A code, never a message from elsewhere. */
+    errorCode: text('error_code'),
+    generation: integer('generation').notNull().default(1),
+    /** The generation whose chunks are in use, and how many it has. Together they name its vectors. */
+    indexedGeneration: integer('indexed_generation'),
+    chunkCount: integer('chunk_count').notNull().default(0),
+    pageCount: integer('page_count').notNull().default(0),
+    indexedAt: integer('indexed_at'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    unique('assistant_sources_tenant_uq').on(t.workspaceId, t.id),
+    foreignKey({
+      name: 'assistant_sources_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+    index('assistant_sources_website_idx').on(t.workspaceId, t.websiteId),
+    // Pages are refreshed weekly.
+    index('assistant_sources_refresh_idx').on(t.indexedAt).where(sql`${t.kind} = 'page'`),
+    check('assistant_sources_kind_ck', sql`${t.kind} IN ('page','text')`),
+    check('assistant_sources_status_ck', sql`${t.status} IN ('pending','indexing','ready','failed')`),
+    check('assistant_sources_shape_ck', sql`(${t.kind} = 'page') = (${t.url} IS NOT NULL) AND (${t.kind} = 'text') = (${t.content} IS NOT NULL)`),
+  ],
+);
+
+/** The text of each chunk. Vectorize holds only its vector, under the same ID. */
+export const assistantChunks = sqliteTable(
+  'assistant_chunks',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    sourceId: text('source_id').notNull(),
+    title: text('title').notNull(),
+    url: text('url'),
+    content: text('content').notNull(),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    foreignKey({
+      name: 'assistant_chunks_source_fk',
+      columns: [t.workspaceId, t.sourceId],
+      foreignColumns: [assistantSources.workspaceId, assistantSources.id],
+    }).onDelete('cascade'),
+    index('assistant_chunks_source_idx').on(t.workspaceId, t.sourceId),
+  ],
+);
+
+/** What the assistant cost each workspace each day (UTC), so that a limit can stop it and an operator can see it. */
+export const assistantUsage = sqliteTable(
+  'assistant_usage',
+  {
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    /** YYYY-MM-DD */
+    day: text('day').notNull(),
+    answers: integer('answers').notNull().default(0),
+    pages: integer('pages').notNull().default(0),
+    chunks: integer('chunks').notNull().default(0),
+  },
+  (t) => [primaryKey({ name: 'assistant_usage_pk', columns: [t.workspaceId, t.day] })],
+);
+
 // ---------- Reliability, audit ----------
 
 export const outbox = sqliteTable(

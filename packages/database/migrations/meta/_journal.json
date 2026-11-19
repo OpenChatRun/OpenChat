@@ -113,6 +113,13 @@
       "when": 1795086757612,
       "tag": "0015_push_android",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1795117307436,
+      "tag": "0016_assistant_sources",
+      "breakpoints": true
     }
   ]
 }

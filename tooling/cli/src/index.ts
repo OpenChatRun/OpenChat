@@ -17,6 +17,7 @@ function usage(): never {
                  [--public-url <https origin>] [--location <hint>] [--analytics] [--cloudflare-email] [--email-from <address>]
                  [--security-contact <mailto:...|https://...>[,...] | none] [--security-policy <https://...>]
                  [--source-url <https://...> | none]   where users get your source, if you changed the code
+                 [--assistant | --no-assistant]   the AI assistant, on Workers AI and Vectorize (ADR-0022)
   pnpm oc upgrade --env <name>      after checking out a newer release
   pnpm oc rollback --env <name>     puts back the Worker from before the last upgrade
   pnpm oc recover --env <name> --email <address>
@@ -94,6 +95,8 @@ async function main(name: string) {
       relayId: flag('relay-id'),
       relayBundleIds: flag('relay-bundle-ids'),
       noRelay: rest.includes('--no-relay'),
+      assistant: rest.includes('--assistant'),
+      noAssistant: rest.includes('--no-assistant'),
       securityContact: flag('security-contact'),
       securityPolicy: flag('security-policy'),
       sourceUrl: flag('source-url'),

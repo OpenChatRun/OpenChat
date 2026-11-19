@@ -14,6 +14,7 @@ const JOB_NAMES: Record<string, MessageKey> = {
   'automation.evaluate': 'jobAutomation',
   'auth.password_reset_email': 'jobPasswordReset',
   'auth.new_account_email': 'jobNewAccount',
+  'assistant.index_source': 'jobAssistantIndex',
 };
 
 function Failure({ error }: { error: unknown }) {

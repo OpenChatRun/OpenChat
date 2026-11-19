@@ -31,6 +31,8 @@ export const ID_PREFIXES = {
   request: 'req',
   mutation: 'mut',
   grant: 'grant',
+  assistant: 'asst',
+  assistantSource: 'asrc',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
