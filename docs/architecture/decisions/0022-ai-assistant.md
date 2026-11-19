@@ -1,6 +1,6 @@
 # ADR-0022: An AI assistant that answers first, on Workers AI
 
-**Status:** Proposed, 2026-11-19. The owner chose Workers AI, learning from past conversations, and off by default on Cloud, on 19 November 2026. The `messages` rebuild was measured on 19 November 2026 (see Data model); it is too slow, so assistant replies are marked by a new column instead. The rest of this design needs the owner's acceptance before it is built.
+**Status:** Accepted, 2026-11-19, by the owner. The owner chose Workers AI, learning from past conversations, and off by default on Cloud. The `messages` rebuild was measured before acceptance (see Data model); it is too slow, so assistant replies are marked by a new column instead.
 
 ## Context
 
