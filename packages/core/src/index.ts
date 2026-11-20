@@ -41,3 +41,4 @@ export * from './assistant-learning';
 export * from './help';
 export * from './help-public';
 export * from './help-draft';
+export * from './help-assistant';

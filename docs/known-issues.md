@@ -37,7 +37,10 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## The help centre
 
-- **Steps 1 to 3 of [ADR-0023](architecture/decisions/0023-help-centre.md) are built:** articles, collections, images, the public pages with search, Draft with AI, and the widget's Help tab. The AI assistant answering from articles is the next step.
+- **All 4 steps of [ADR-0023](architecture/decisions/0023-help-centre.md) are built:** articles, collections, images, the public pages with search, Draft with AI, the widget's Help tab, and the AI assistant answering from published articles.
+- **The assistant reads at most 40 pieces of an article**, about 40,000 characters, more than an article can hold. A website's articles are brought in 1,000 at a time; more wait for the next change.
+- **The widget's Help tab searches by words, not meaning,** even when the assistant is on.
+- **For a minute or two after an article is edited, the assistant does not answer from it,** while Vectorize takes the new version. Sources behave the same way.
 - **The widget's Help tab lists articles in order, not the most read,** because views are not counted. It appears up to 30 seconds after the first article is published.
 - **Only the first conversation records the article.** Still need help? from an article, when the visitor already has a conversation, takes them back to it without noting the article.
 - **Draft with AI can be wrong.** It writes from the material only, but a model can still misread it. Every article is a draft for a person to check.

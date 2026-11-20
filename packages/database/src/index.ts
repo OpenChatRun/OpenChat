@@ -35,3 +35,4 @@ export {
 } from './repositories';
 export type { AttachmentJson } from './internal/message-statements';
 export * from './help-repository';
+export * from './help-assistant';

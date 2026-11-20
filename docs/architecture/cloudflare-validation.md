@@ -712,6 +712,20 @@ Tested on a throwaway `oc-ai-test3`, deployed with `pnpm oc deploy --assistant` 
 | Rejecting one | Its vector was gone about 75 seconds later, and the question it answered found nothing |
 | Dashboard, light, dark and phone width | Screenshots checked |
 
+## Help articles in the assistant on real Cloudflare (2026-11-20)
+
+A throwaway installation deployed with `--assistant`, the default model, and two English articles. All of it was deleted afterwards.
+
+| What | Result |
+|---|---|
+| An article published before the assistant was set up | In use 10 seconds after saving the settings |
+| An article published afterwards | In use 7 seconds after publishing, by the database. Questions found it about 40 seconds later, as Vectorize applied the write |
+| Answers | "How long until I get my money back?" was answered from the returns article (score 0.72), with its page as the source. "Where can I print the return label?" gave the address written inside the article. "Wie lange dauert der Expressversand?" was answered in German from the English shipping article (0.68). The model added one sentence the article did not say ("you can track the status of your return on your orders page") |
+| A help-centre link in an article | Given in an answer as the absolute address of the other article |
+| Editing a published article | The new text answered about 1 to 2 minutes later, and the old text never again. In between, the article answered nothing: its old chunks are swapped out at once, and its new vectors are not yet served. Sources behave the same way |
+| Unpublishing, then deleting | Out of answers at once. A minute later, Vectorize held 0 vectors: every version of both articles was removed |
+| Straight after the deploy | Logging in answered 500, then 503 `not_configured`, for under a minute, then worked. Deleting the Worker failed on the first try and worked on the second, both times this happened |
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)

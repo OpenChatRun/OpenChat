@@ -104,19 +104,26 @@ export function registerHelpRoutes(app: App) {
   app.openapi(updateHelpArticleRoute, async (c) => {
     const { workspaceId, articleId } = c.req.valid('param');
     const { db, ctx } = await scoped(c, workspaceId);
-    return c.json(await updateHelpArticle(db, ctx, articleId, c.req.valid('json')), 200);
+    const article = await updateHelpArticle(db, ctx, articleId, c.req.valid('json'));
+    // A published article changed: the assistant reads it again.
+    dispatchSoon(c, workspaceId, [articleId]);
+    return c.json(article, 200);
   });
 
   app.openapi(setHelpArticleStatusRoute, async (c) => {
     const { workspaceId, articleId } = c.req.valid('param');
     const { db, ctx } = await scoped(c, workspaceId);
-    return c.json(await setHelpArticleStatus(db, ctx, articleId, c.req.valid('json').status), 200);
+    const article = await setHelpArticleStatus(db, ctx, articleId, c.req.valid('json').status);
+    // Into the assistant, or its vectors out.
+    dispatchSoon(c, workspaceId, [articleId]);
+    return c.json(article, 200);
   });
 
   app.openapi(deleteHelpArticleRoute, async (c) => {
     const { workspaceId, articleId } = c.req.valid('param');
     const { db, ctx } = await scoped(c, workspaceId);
     await deleteHelpArticle(db, ctx, articleId);
+    dispatchSoon(c, workspaceId, [articleId]);
     return c.body(null, 204);
   });
 

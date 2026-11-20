@@ -122,6 +122,11 @@ function SourcesCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
           </li>
         ))}
       </ul>
+      {assistant.helpArticles.published > 0 && (
+        <p className="text-sm" role="status">
+          {t(assistant.settings ? 'helpArticlesInUse' : 'helpArticlesNeedSettings', { inUse: String(assistant.helpArticles.inUse), published: String(assistant.helpArticles.published) })}
+        </p>
+      )}
       {!full && (
         <>
           <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); addPage.mutate(); }}>
@@ -284,7 +289,11 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
     queryFn: () => api.getAssistant(workspaceId, current!.id),
     enabled: isSupervisor && current !== undefined,
     // While a source is being read, its status changes without anyone doing anything here.
-    refetchInterval: (query) => (query.state.data?.sources.some((s) => s.status === 'pending' || s.status === 'indexing') ? 3000 : false),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const reading = data?.sources.some((s) => s.status === 'pending' || s.status === 'indexing') || (data?.settings && data.helpArticles.inUse < data.helpArticles.published);
+      return reading ? 3000 : false;
+    },
   });
   if (!isSupervisor) return <p className="card text-sm">{t('supervisorAssistant')}</p>;
   return (

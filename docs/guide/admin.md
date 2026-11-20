@@ -69,7 +69,8 @@ Email has to be set up when OpenChat is deployed; see the [self-hosting guide](.
 If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard.
 
 - **Settings**: the name visitors will see, the model, **Answer visitors**, and **Learn from resolved conversations**. The default model is chosen by whoever runs the installation.
-- **Sources**: what it answers from, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
+- **Sources**: what it answers from, with your help centre's articles and approved learned answers, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
+- **Help centre**: published articles of your help centre are a source too, as soon as you save the settings, with a link to the article. Drafts never are. Unpublishing or deleting an article takes it out at once; a change is read again within a minute or two.
 - **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
 
 With **Answer visitors** on, it answers new messages in conversations nobody on your team has:

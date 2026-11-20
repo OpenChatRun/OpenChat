@@ -16,6 +16,7 @@ import {
   VECTORS_REMOVED_TOPIC,
   LEARNED_CHANGED_TOPIC,
   HELP_DRAFT_TOPIC,
+  HELP_ASSISTANT_SYNC_TOPIC,
   HELP_DRAFT_LIMITS,
   stopStaleHelpDraftRuns,
   purgeDispatchedOutbox,
@@ -34,6 +35,7 @@ import { sweepRetention } from './retention';
 import { pushJobsFor } from './push/fanout';
 import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs';
 import { learnedIndexJob, queueAssistantLearning } from './assistant/learning';
+import { syncHelpArticles } from './assistant/help-articles';
 import { queueAssistantReply } from './assistant/reply';
 import { deleteHelpDraftFiles, helpDraftJob } from './help/drafting';
 
@@ -124,6 +126,10 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
     case HELP_DRAFT_TOPIC:
       // The job looks at the run's status, so a second send reads nothing twice once it has an outline.
       await env.JOBS_QUEUE.send(helpDraftJob(row.workspaceId, row.aggregateId));
+      return;
+    case HELP_ASSISTANT_SYNC_TOPIC:
+      // The articles' versions say what is behind, so a repeat sends the same jobs.
+      await syncHelpArticles(env, row);
       return;
     case VECTORS_REMOVED_TOPIC:
       await removeVectors(env, row);

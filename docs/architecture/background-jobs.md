@@ -33,7 +33,7 @@ Three queues plus DLQs, not one per job type. Few queues keep self-hosted setup 
 |---|---|---|---|---|---|
 | `oc-notifications` | `notification.fanout`, `notification.dispatch`, `notification.unregister` | 25 | 1 s | 8 | 20 |
 | `oc-email` | `email.follow_up`, `auth.password_reset_email`, `auth.new_account_email` | 10 | 5 s | 8 | 5 |
-| `oc-jobs` | `attachment.process`, `assistant.index_source`, `help.draft`, `help.draft_article`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
+| `oc-jobs` | `attachment.process`, `assistant.index_source`, `help.draft`, `help.draft_article`, `help.index_article`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
 | `*-dlq` | All of the above | 25 | 30 s | 3 | 1 |
 
 Email jobs hold IDs only and read the address when sending. System email (`auth.password_reset_email`, `auth.new_account_email`) has no delivery row, because the token is created at send time. Each attempt has a new token and so a new provider idempotency key. A crash after sending can deliver two emails, and failures of any kind retry and then dead-letter.
@@ -151,6 +151,19 @@ A visitor message's push is held back while the assistant answers the conversati
 `assistant.learn` (step 3) runs on the jobs queue, so that it never delays an answer to a visitor. Dispatch of `conversation.updated` queues it when the conversation is resolved, its website learns, and there is something new: no learned answer, or one still `pending` or `discarded` from fewer messages. The key is `assistant.learn:<conversationId>:<lastMessageSeq>`. The job reads the visitor's and members' public text messages, at most 30, asks the model for a question and answer, checks the result for personal data, and saves it guarded as the [data model](data-model.md#the-ai-assistant) describes. A model failure is retried. Two jobs for the same conversation at once can both ask the model; only one is saved.
 
 `assistant.index_learned` embeds an approved learned answer and writes its vector, queued by the outbox topic `assistant.learned_changed` with the generation. It is safe to repeat, as source indexing is.
+
+## Help articles in the assistant
+
+Published help articles are a source for the assistant ([ADR-0023](decisions/0023-help-centre.md), step 4).
+- **Queuing.** The outbox topic `help.assistant_sync`, with the website in its payload, is written in the same batch as:
+  - publishing an article;
+  - changing a published one;
+  - saving the assistant's settings, which brings in articles published before the assistant was set up.
+
+  It is written only for a website with assistant settings.
+- **The sync.** Dispatch looks for published articles whose `indexed_version` is not their `version`, at most 1,000, and queues one `help.index_article` for each, with the key `help.index_article:<articleId>:<version>`. Without Workers AI and Vectorize it does nothing.
+- **`help.index_article`** chunks and embeds the article and writes its vectors. Then, guarded on the article still being published at that version, it removes the previous version's vectors through `assistant.vectors_removed` and swaps the chunks. Otherwise it deletes the vectors it wrote. It is safe to repeat, as source indexing is.
+- **Unpublishing or deleting** writes `assistant.vectors_removed` for the version in use, in the same batch.
 
 ## Draft with AI's jobs
 

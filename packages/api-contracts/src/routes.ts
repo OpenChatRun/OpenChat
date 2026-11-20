@@ -1528,6 +1528,9 @@ export const AssistantSchema = z
     defaultModel: z.string(),
     settings: z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean(), learn: z.boolean() }).nullable(),
     sources: z.array(AssistantSourceSchema),
+    helpArticles: z
+      .object({ published: z.number().int(), inUse: z.number().int().openapi({ description: 'Published articles the assistant answers from, at their current version. The rest are being read.' }) })
+      .openapi({ description: "The website's published help articles, which are a source as soon as the assistant is set up (ADR-0023)." }),
     learning: z
       .object({
         autoApprove: z.boolean().openapi({ description: 'For the whole workspace: learned answers are used without waiting for approval.' }),
