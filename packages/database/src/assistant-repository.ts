@@ -21,6 +21,7 @@ export interface AssistantSettingsRow {
   name: string;
   model: string | null;
   enabled: number;
+  learn: number;
   updatedAt: number;
 }
 
@@ -74,7 +75,7 @@ export const VECTORS_REMOVED_TOPIC = 'assistant.vectors_removed';
 
 export const assistantChunkId = (sourceId: string, generation: number, n: number) => `${sourceId}.${generation}.${n}`;
 
-const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, enabled, updated_at AS updatedAt`;
+const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, enabled, learn, updated_at AS updatedAt`;
 const SOURCE_COLUMNS = `id, website_id AS websiteId, kind, title, url, status, error_code AS errorCode, generation,
   indexed_generation AS indexedGeneration, chunk_count AS chunkCount, page_count AS pageCount, indexed_at AS indexedAt,
   created_at AS createdAt, updated_at AS updatedAt`;
@@ -118,15 +119,17 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
     },
 
     /** Null if the website does not exist here. */
-    async saveSettings(websiteId: string, input: { name: string; model: string | null; enabled?: boolean | undefined }): Promise<AssistantSettingsRow | null> {
+    async saveSettings(websiteId: string, input: { name: string; model: string | null; enabled?: boolean | undefined; learn?: boolean | undefined }): Promise<AssistantSettingsRow | null> {
+      const flag = (value: boolean | undefined) => (value === undefined ? null : value ? 1 : 0);
       return d1
         .prepare(
-          `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, created_at, updated_at)
-           SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
-           ON CONFLICT (workspace_id, website_id) DO UPDATE SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), updated_at = excluded.updated_at
+          `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, learn, created_at, updated_at)
+           SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), COALESCE(?7, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
+           ON CONFLICT (workspace_id, website_id) DO UPDATE
+              SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), learn = COALESCE(?7, learn), updated_at = excluded.updated_at
            RETURNING ${SETTINGS_COLUMNS}`,
         )
-        .bind(w, websiteId, newId('assistant'), input.name, input.model, input.enabled === undefined ? null : input.enabled ? 1 : 0)
+        .bind(w, websiteId, newId('assistant'), input.name, input.model, flag(input.enabled), flag(input.learn))
         .first<AssistantSettingsRow>();
     },
 
@@ -201,7 +204,7 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
       return results[1]!.results.length === 1;
     },
 
-    /** Chunks of this website only, in the order asked. A vector whose chunk is gone is left out. */
+    /** Chunks of this website only, in the order asked, including approved learned answers. A vector whose chunk is gone is left out. */
     chunks(websiteId: string, ids: string[]): Promise<AssistantChunkRow[]> {
       return chunksOf(d1, w, websiteId, ids);
     },
@@ -217,9 +220,15 @@ async function chunksOf(d1: D1Database, workspaceId: string, websiteId: string, 
   if (ids.length === 0) return [];
   const { results } = await d1
     .prepare(
-      `SELECT c.id, c.source_id AS sourceId, c.title, c.url, c.content
-         FROM json_each(?3) j JOIN assistant_chunks c ON c.workspace_id = ?1 AND c.website_id = ?2 AND c.id = j.value
-        ORDER BY j.key`,
+      `SELECT id, sourceId, title, url, content FROM (
+         SELECT c.id, c.source_id AS sourceId, c.title, c.url, c.content, j.key AS k
+           FROM json_each(?3) j JOIN assistant_chunks c ON c.workspace_id = ?1 AND c.website_id = ?2 AND c.id = j.value
+         UNION ALL
+         -- A learned answer (step 3), only while approved and only at the generation in use.
+         SELECT j.value, l.id, l.question, NULL, l.question || char(10) || l.answer, j.key
+           FROM json_each(?3) j JOIN assistant_learned l ON l.workspace_id = ?1 AND l.website_id = ?2 AND l.status = 'approved'
+                AND l.indexed_generation IS NOT NULL AND j.value = l.id || '.' || l.indexed_generation || '.0'
+       ) ORDER BY k`,
     )
     .bind(workspaceId, websiteId, JSON.stringify(ids))
     .all<AssistantChunkRow>();

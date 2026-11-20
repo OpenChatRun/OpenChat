@@ -662,6 +662,26 @@ Tested on a throwaway `oc-ai-test2`, deployed with `pnpm oc deploy --assistant`,
 
 Teardown without `oc destroy`: remove each queue's consumer before deleting the Worker (error 10064 otherwise), and pipe `yes` to `queues delete`.
 
+## AI assistant learning on real Cloudflare (2026-11-20)
+
+Tested on a throwaway `oc-ai-test3`, deployed with `pnpm oc deploy --assistant` on the first try, then deleted ([ADR-0022](decisions/0022-ai-assistant.md), step 3). Llama 3.3 70B, five conversations resolved by a member:
+
+| Conversation | Learned |
+|---|---|
+| "How long do I have to send something back?", answered with the returns policy | "How long do I have to return an item?", with the policy |
+| "Where is my parcel??" from Olivia Bennett, answered "Hi Olivia, your order 48213 left…" | Nothing: the model replied `NONE`, as the prompt asks for answers about one visitor's order |
+| "Hi, I'm Tom… my email is tom.h@example.org", answered "Hi Tom! Go to Settings…" | "How do I reset my password?", with the steps and no name or address |
+| German, "Kann ich mit PayPal bezahlen?" | "Welche Zahlungsmethoden werden akzeptiert?", in German |
+| Japanese, about shipping abroad | A Japanese question and answer |
+
+| Check | Result |
+|---|---|
+| Migration 0018 on D1 | Applied |
+| Approved answers in use | Within about 60 seconds of approving, as Vectorize applies writes. Then "Can I send back a jacket I bought 3 weeks ago?" was answered from the learned answer (score 0.60), and "Kann ich mit Apple Pay zahlen?" from the German one (0.71). "Do you accept bitcoin?" matched it (0.62), and the model declined |
+| Erasing a contact | Their learned answer was deleted, and the vector count fell from 3 to 2 |
+| Rejecting one | Its vector was gone about 75 seconds later, and the question it answered found nothing |
+| Dashboard, light, dark and phone width | Screenshots checked |
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)

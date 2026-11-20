@@ -147,6 +147,10 @@ Two outbox topics: `assistant.source_changed` queues the job, and `assistant.vec
 
 A visitor message's push is held back while the assistant answers the conversation, and sent with the handover instead. If the job dead-letters, or a supervisor turns the assistant off between the two, nobody gets a push for that message. The conversation is still in the inbox, unassigned, with **AI answering** on it.
 
+`assistant.learn` (step 3) runs on the jobs queue, so that it never delays an answer to a visitor. Dispatch of `conversation.updated` queues it when the conversation is resolved, its website learns, and there is something new: no learned answer, or one still `pending` or `discarded` from fewer messages. The key is `assistant.learn:<conversationId>:<lastMessageSeq>`. The job reads the visitor's and members' public text messages, at most 30, asks the model for a question and answer, checks the result for personal data, and saves it guarded as the [data model](data-model.md#the-ai-assistant) describes. A model failure is retried. Two jobs for the same conversation at once can both ask the model; only one is saved.
+
+`assistant.index_learned` embeds an approved learned answer and writes its vector, queued by the outbox topic `assistant.learned_changed` with the generation. It is safe to repeat, as source indexing is.
+
 ## What email is for
 
 By the owner's decision ([amendment A15](spec-review.md#amendments-to-the-specification)), email has two uses: follow-ups to visitors who have gone quiet, and account email such as password resets. Members hear about conversations through push, not email. Job types from before, `email.alert` and `email.send`, are acknowledged and dropped, in case a Worker from before a deploy queues one.

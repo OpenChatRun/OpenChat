@@ -127,6 +127,8 @@ export const workspaces = sqliteTable(
       .default('unregistered'),
     /** Closed conversations older than this, by their last message, are deleted. NULL keeps them. */
     retentionDays: integer('retention_days'),
+    /** The AI assistant uses what it learns without waiting for a supervisor's approval (ADR-0022). Off by default. */
+    assistantAutoApprove: integer('assistant_auto_approve', { mode: 'boolean' }).notNull().default(false),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
@@ -723,6 +725,8 @@ export const assistantSettings = sqliteTable(
     model: text('model'),
     /** Answers visitors. Off until a supervisor turns it on. */
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+    /** Learns a question and answer from each resolved conversation (step 3). Off until a supervisor turns it on. */
+    learn: integer('learn', { mode: 'boolean' }).notNull().default(false),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
@@ -802,6 +806,50 @@ export const assistantChunks = sqliteTable(
       foreignColumns: [assistantSources.workspaceId, assistantSources.id],
     }).onDelete('cascade'),
     index('assistant_chunks_source_idx').on(t.workspaceId, t.sourceId),
+  ],
+);
+
+/**
+ * A question and answer learned from one resolved conversation (ADR-0022, step 3), never its messages. One per
+ * conversation, deleted with it by cascade; its vector goes through the outbox in the same batch. Only `approved`
+ * ones are used. Its vector's ID is `<id>.<indexed generation>.0`, so the sources' removal works for it too.
+ * `discarded` keeps the conversation from being read again when nothing could be learned from it.
+ */
+export const assistantLearned = sqliteTable(
+  'assistant_learned',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    conversationId: text('conversation_id').notNull(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+    status: text('status', { enum: ['pending', 'approved', 'rejected', 'discarded'] }).notNull(),
+    /** Why nothing was learned, for a discarded one: a code. */
+    discardReason: text('discard_reason'),
+    /** The conversation's last message when it was learned, so that it is read again only after new messages. */
+    learnedSeq: integer('learned_seq').notNull(),
+    generation: integer('generation').notNull().default(1),
+    indexedGeneration: integer('indexed_generation'),
+    decidedByMemberId: text('decided_by_member_id'),
+    decidedAt: integer('decided_at'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    unique('assistant_learned_conversation_uq').on(t.workspaceId, t.conversationId),
+    foreignKey({
+      name: 'assistant_learned_conversation_fk',
+      columns: [t.workspaceId, t.conversationId],
+      foreignColumns: [conversations.workspaceId, conversations.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'assistant_learned_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+    index('assistant_learned_website_idx').on(t.workspaceId, t.websiteId, t.status),
+    check('assistant_learned_status_ck', sql`${t.status} IN ('pending','approved','rejected','discarded')`),
   ],
 );
 

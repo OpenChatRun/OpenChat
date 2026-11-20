@@ -64,6 +64,8 @@ export function describeAudit(entry: AuditEntry): [MessageKey, Record<string, st
       return ['auditJobReplayed', { job }];
     case 'failed_job.dismissed':
       return ['auditJobDismissed', { job }];
+    case 'assistant.auto_approve_changed':
+      return [m.autoApprove === 1 || m.autoApprove === true ? 'auditAutoApproveOn' : 'auditAutoApproveOff', { target }];
     case 'contact.erased':
       return ['auditContactErased', { target }];
     case 'conversations.expired':

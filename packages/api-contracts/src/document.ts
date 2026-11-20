@@ -93,6 +93,10 @@ import {
   updateAssistantSourceRoute,
   deleteAssistantSourceRoute,
   testAssistantRoute,
+  listLearnedAnswersRoute,
+  decideLearnedAnswerRoute,
+  deleteLearnedAnswerRoute,
+  setLearnedAutoApproveRoute,
 } from './routes';
 
 /** Every route must be listed here so that it reaches the published document. */
@@ -188,6 +192,10 @@ export const ALL_ROUTES = [
   updateAssistantSourceRoute,
   deleteAssistantSourceRoute,
   testAssistantRoute,
+  listLearnedAnswersRoute,
+  decideLearnedAnswerRoute,
+  deleteLearnedAnswerRoute,
+  setLearnedAutoApproveRoute,
 ] as const;
 
 export function buildOpenApiDocument() {

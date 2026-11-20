@@ -3347,12 +3347,16 @@
               },
               "enabled": {
                 "type": "boolean"
+              },
+              "learn": {
+                "type": "boolean"
               }
             },
             "required": [
               "name",
               "model",
-              "enabled"
+              "enabled",
+              "learn"
             ]
           },
           "sources": {
@@ -3360,6 +3364,31 @@
             "items": {
               "$ref": "#/components/schemas/AssistantSource"
             }
+          },
+          "learning": {
+            "type": "object",
+            "properties": {
+              "autoApprove": {
+                "type": "boolean",
+                "description": "For the whole workspace: learned answers are used without waiting for approval."
+              },
+              "pending": {
+                "type": "integer"
+              },
+              "approved": {
+                "type": "integer"
+              },
+              "rejected": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "autoApprove",
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "description": "Answers learned from this website's resolved conversations, by status."
           },
           "limits": {
             "type": "object",
@@ -3392,6 +3421,7 @@
           "defaultModel",
           "settings",
           "sources",
+          "learning",
           "limits"
         ]
       },
@@ -3522,6 +3552,58 @@
           "answer",
           "model",
           "sources"
+        ]
+      },
+      "AssistantLearned": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "inUse": {
+            "type": "boolean",
+            "description": "Approved, and indexed, so the assistant answers from it now."
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "question",
+          "answer",
+          "status",
+          "inUse",
+          "decidedAt",
+          "createdAt",
+          "updatedAt"
         ]
       }
     },
@@ -8981,7 +9063,7 @@
           "assistant"
         ],
         "operationId": "saveAssistantSettings",
-        "summary": "Name the assistant, choose its model, and turn answering visitors on or off. For supervisors.",
+        "summary": "Name the assistant, choose its model, and turn answering visitors and learning on or off. For supervisors.",
         "security": [
           {
             "bearerAuth": []
@@ -9028,6 +9110,10 @@
                   "enabled": {
                     "type": "boolean",
                     "description": "Answer visitors in conversations nobody has. Left out, it stays as it was; a new assistant starts off."
+                  },
+                  "learn": {
+                    "type": "boolean",
+                    "description": "Learn a question and answer from each resolved conversation. Left out, it stays as it was; a new assistant starts off."
                   }
                 },
                 "required": [
@@ -9058,12 +9144,16 @@
                     },
                     "enabled": {
                       "type": "boolean"
+                    },
+                    "learn": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "name",
                     "model",
-                    "enabled"
+                    "enabled",
+                    "learn"
                   ]
                 }
               }
@@ -9383,6 +9473,293 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AssistantAnswer"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/learned": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "listLearnedAnswers",
+        "summary": "Questions and answers learned from the website's resolved conversations, newest first, up to 200. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ],
+              "default": "pending"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Learned answers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AssistantLearned"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/assistant/learned/{learnedId}": {
+      "patch": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "decideLearnedAnswer",
+        "summary": "Approve a learned answer, optionally with changed words, or reject it. For supervisors.",
+        "description": "An approved answer is used once it is indexed, within a minute or so. Rejecting one stops it being used.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "learnedId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "approved",
+                      "rejected"
+                    ]
+                  },
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "answer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1200
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Learned answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantLearned"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "deleteLearnedAnswer",
+        "summary": "Delete a learned answer. For supervisors.",
+        "description": "The conversation is not read again unless it gets new messages and is resolved again.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "learnedId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/assistant/learning": {
+      "put": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "setLearnedAutoApprove",
+        "summary": "Whether learned answers are used without a supervisor's approval, for every website in the workspace. For supervisors.",
+        "description": "Off by default. A change is recorded in the audit log.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "autoApprove": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "autoApprove"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "autoApprove": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "autoApprove"
+                  ]
                 }
               }
             }

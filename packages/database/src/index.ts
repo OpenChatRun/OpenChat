@@ -9,6 +9,7 @@ export * from './retention-repository';
 export * from './health-repository';
 export * from './setup-repository';
 export * from './assistant-repository';
+export * from './assistant-learning';
 export { authorizeWorkspaceMember, type Role, type WorkspaceContext } from './context';
 export {
   claimJob,

@@ -5,6 +5,7 @@
 import { newId } from '@openchat/shared';
 import type { Role, WorkspaceContext } from './context';
 import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
+import { learnedVectorRemovalSql } from './assistant-learning';
 import { ATTACHMENTS_JSON, messageStatements } from './internal/message-statements';
 import { effectiveRole } from './internal/roles';
 
@@ -329,6 +330,8 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
           d1
             .prepare(`DELETE FROM failed_jobs WHERE workspace_id = ?1 AND EXISTS (SELECT 1 FROM ${theirs} t WHERE instr(failed_jobs.envelope_json, t.id) > 0) AND ${done}`)
             .bind(w, contactId, audit),
+          // What the assistant learned from these conversations goes by cascade; its vectors, through the outbox.
+          d1.prepare(learnedVectorRemovalSql('?1', theirs, '?2', done)).bind(w, contactId, audit),
           // Messages and files both cascade from a conversation, but a file also refers to its message without a cascade.
           d1.prepare(`DELETE FROM attachments WHERE workspace_id = ?1 AND conversation_id IN ${theirs} AND ${done}`).bind(w, contactId, audit),
           d1.prepare(`UPDATE contacts SET merged_into_contact_id = NULL WHERE workspace_id = ?1 AND merged_into_contact_id = ?2 AND ${done}`).bind(w, contactId, audit),

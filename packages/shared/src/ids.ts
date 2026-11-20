@@ -33,6 +33,7 @@ export const ID_PREFIXES = {
   grant: 'grant',
   assistant: 'asst',
   assistantSource: 'asrc',
+  assistantLearned: 'alrn',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;

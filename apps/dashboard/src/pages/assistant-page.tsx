@@ -1,12 +1,12 @@
 /**
- * The AI assistant, for supervisors (ADR-0022, step 1): its name and model, what it answers from, and a place to
- * try it. No visitor sees it yet.
+ * The AI assistant, for supervisors (ADR-0022): its name and model, whether it answers visitors and learns, what it
+ * answers from, what it has learned, and a place to try it.
  */
-import type { Assistant, AssistantAnswer, AssistantSource } from '@openchat/api-client';
+import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer } from '@openchat/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, errorMessage } from '../app-context';
-import { t, type MessageKey } from '../i18n';
+import { intlLocale, t, type MessageKey } from '../i18n';
 
 const READ_ERRORS: Record<string, MessageKey> = {
   unreachable: 'readUnreachable',
@@ -33,8 +33,9 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
   const [name, setName] = useState(assistant.settings?.name ?? t('sectionAssistant'));
   const [model, setModel] = useState(assistant.settings?.model ?? '');
   const [enabled, setEnabled] = useState(assistant.settings?.enabled ?? false);
+  const [learn, setLearn] = useState(assistant.settings?.learn ?? false);
   const save = useMutation({
-    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: model || null, enabled }),
+    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: model || null, enabled, learn }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
   });
   const defaultLabel = assistant.models.find((m) => m.id === assistant.defaultModel)?.label ?? assistant.defaultModel;
@@ -59,6 +60,13 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
             <span id="assistant-enabled-help" className={`block ${quiet}`}>
               {assistant.canReply ? t('assistantEnabledHelp', { count: String(assistant.limits.turnsPerConversation) }) : t('assistantCannotReply')}
             </span>
+          </span>
+        </label>
+        <label className="flex w-full items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-0.5" checked={learn} onChange={(event) => setLearn(event.target.checked)} aria-describedby="assistant-learn-help" />
+          <span>
+            <span className="font-medium">{t('assistantLearn')}</span>
+            <span id="assistant-learn-help" className={`block ${quiet}`}>{t('assistantLearnHelp')}</span>
           </span>
         </label>
         <button className="button" disabled={save.isPending}>{t('saveSettings')}</button>
@@ -133,6 +141,91 @@ function SourcesCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
           </form>
         </>
       )}
+    </section>
+  );
+}
+
+type LearnedStatus = LearnedAnswer['status'];
+const TABS: { status: LearnedStatus; label: MessageKey }[] = [
+  { status: 'pending', label: 'learnedTabPending' },
+  { status: 'approved', label: 'learnedTabApproved' },
+  { status: 'rejected', label: 'learnedTabRejected' },
+];
+
+function LearnedItem({ workspaceId, item, onChanged }: { workspaceId: string; item: LearnedAnswer; onChanged: () => void }) {
+  const [question, setQuestion] = useState(item.question);
+  const [answer, setAnswer] = useState(item.answer);
+  const decide = useMutation({
+    mutationFn: (status: 'approved' | 'rejected') =>
+      api.decideLearnedAnswer(workspaceId, item.id, { status, ...(question.trim() !== item.question ? { question: question.trim() } : {}), ...(answer.trim() !== item.answer ? { answer: answer.trim() } : {}) }),
+    onSuccess: onChanged,
+  });
+  const remove = useMutation({ mutationFn: () => api.deleteLearnedAnswer(workspaceId, item.id), onSuccess: onChanged });
+  const busy = decide.isPending || remove.isPending;
+  const edited = question.trim() !== item.question || answer.trim() !== item.answer;
+  return (
+    <li className="space-y-2 py-3 text-sm">
+      <Failure error={decide.error ?? remove.error} />
+      <label className="block">{t('learnedQuestion')}
+        <input className="field" required maxLength={300} value={question} onChange={(event) => setQuestion(event.target.value)} />
+      </label>
+      <label className="block">{t('learnedAnswer')}
+        <textarea className="field min-h-20" required maxLength={1200} value={answer} onChange={(event) => setAnswer(event.target.value)} />
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`${quiet} flex-1`}>
+          {t('learnedWhen', { date: new Date(item.createdAt).toLocaleDateString(intlLocale()) })}
+          {item.status === 'approved' && <> · {t(item.inUse ? 'learnedInUse' : 'learnedPreparing')}</>}
+        </span>
+        {(item.status !== 'approved' || edited) && (
+          <button className="button" disabled={busy || !question.trim() || !answer.trim()} onClick={() => decide.mutate('approved')}>{t('approve')}</button>
+        )}
+        {item.status !== 'rejected' && <button className="button-quiet" disabled={busy} onClick={() => decide.mutate('rejected')}>{t('reject')}</button>}
+        <button className="button-quiet" disabled={busy} onClick={() => { if (window.confirm(t('learnedDeleteConfirm'))) remove.mutate(); }}>{t('delete')}</button>
+      </div>
+    </li>
+  );
+}
+
+function LearnedCard({ workspaceId, websiteId, assistant }: { workspaceId: string; websiteId: string; assistant: Assistant }) {
+  const client = useQueryClient();
+  const [status, setStatus] = useState<LearnedStatus>('pending');
+  const learned = useQuery({
+    queryKey: ['assistant-learned', workspaceId, websiteId, status],
+    queryFn: () => api.listLearnedAnswers(workspaceId, websiteId, status),
+    // An approved answer becomes "in use" when its indexing finishes, without anyone doing anything here.
+    refetchInterval: (query) => (query.state.data?.data.some((item) => item.status === 'approved' && !item.inUse) ? 3000 : false),
+  });
+  const changed = () => {
+    void client.invalidateQueries({ queryKey: ['assistant-learned', workspaceId, websiteId] });
+    void client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] });
+  };
+  const autoApprove = useMutation({ mutationFn: (value: boolean) => api.setLearnedAutoApprove(workspaceId, value), onSuccess: changed });
+  const counts = assistant.learning;
+  return (
+    <section className="card space-y-3" aria-label={t('learnedAnswers')}>
+      <h2 className="font-medium">{t('learnedAnswers')}</h2>
+      <p className={quiet}>{t('learnedHelp')}</p>
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-0.5" checked={autoApprove.isPending ? autoApprove.variables : counts.autoApprove} disabled={autoApprove.isPending} onChange={(event) => autoApprove.mutate(event.target.checked)} aria-describedby="learned-auto-help" />
+        <span>
+          <span className="font-medium">{t('learnedAutoApprove')}</span>
+          <span id="learned-auto-help" className={`block ${quiet}`}>{t('learnedAutoApproveHelp')}</span>
+        </span>
+      </label>
+      <Failure error={autoApprove.error ?? learned.error} />
+      <div role="tablist" className="flex flex-wrap gap-2">
+        {TABS.map((tab) => (
+          <button key={tab.status} role="tab" aria-selected={status === tab.status} className={status === tab.status ? 'button' : 'button-quiet'} onClick={() => setStatus(tab.status)}>
+            {t(tab.label, { count: String(counts[tab.status]) })}
+          </button>
+        ))}
+      </div>
+      {learned.data?.data.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('learnedNone')}</p>}
+      <ul role="tabpanel" className="divide-y divide-slate-200 dark:divide-slate-800">
+        {/* Keyed by the words too, so that a list refreshed after a change starts from what was saved. */}
+        {learned.data?.data.map((item) => <LearnedItem key={`${item.id}:${item.updatedAt}`} workspaceId={workspaceId} item={item} onChanged={changed} />)}
+      </ul>
     </section>
   );
 }
@@ -212,6 +305,7 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
         <div key={current.id} className="space-y-6">
           <SettingsCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
           <SourcesCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
+          <LearnedCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
           <TestCard workspaceId={workspaceId} websiteId={current.id} />
         </div>
       )}

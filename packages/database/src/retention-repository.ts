@@ -6,6 +6,7 @@
  */
 import { newId } from '@openchat/shared';
 import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
+import { learnedVectorRemovalSql } from './assistant-learning';
 
 const DAY_MS = 86_400_000;
 
@@ -64,6 +65,8 @@ export async function expireConversations(database: Database, workspace: Retenti
       .bind(workspace.id, workspace.retentionDays, outboxId, newId('audit')),
     // A failed job's envelope names the conversation it was about.
     d1.prepare(`DELETE FROM failed_jobs WHERE workspace_id = ?1 AND EXISTS (SELECT 1 FROM ${expired} e WHERE instr(failed_jobs.envelope_json, e.value) > 0)`).bind(workspace.id, workspace.retentionDays, outboxId),
+    // What the assistant learned from them goes by cascade; its vectors, through the outbox.
+    d1.prepare(learnedVectorRemovalSql('?1', expired, '?1')).bind(workspace.id, workspace.retentionDays, outboxId),
     // Messages and files both cascade from a conversation, but a file also refers to its message without a cascade.
     d1.prepare(`DELETE FROM attachments WHERE workspace_id = ?1 AND conversation_id IN ${expired}`).bind(workspace.id, workspace.retentionDays, outboxId),
     d1.prepare(`DELETE FROM conversations WHERE workspace_id = ?1 AND id IN ${expired}`).bind(workspace.id, workspace.retentionDays, outboxId),

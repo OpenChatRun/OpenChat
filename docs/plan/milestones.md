@@ -387,6 +387,22 @@ Answering visitors. Run on a throwaway installation on real Cloudflare on 20 Nov
 
 Limits: the apps label its messages only from their next release; translations need native review; not offered on OpenChat Cloud.
 
+### Assistant step 3 exit check
+
+Learned answers. Run on a throwaway installation on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#ai-assistant-learning-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| A resolved conversation becomes one general question and answer, in its language | Yes, in English, German and Japanese |
+| No personal data | Names and an email address in the conversations were left out; an order-specific conversation gave nothing. The check rejects the patterns in tests |
+| Only public messages are read | Tests: notes, system messages and the assistant's answers never reach the prompt |
+| Nothing is used until approved, unless approval is turned off and audited | Yes; tests for turning it off |
+| Approved answers are used, and rejected ones stop | Yes, within about a minute either way |
+| Erasure and retention delete it and its vector | Erasure on real Cloudflare; retention in tests |
+| Tenancy | Isolation harness covers the four new routes |
+
+Limits: the personal-data check is pattern-based, so approval stays on by default; translations need native review; not offered on OpenChat Cloud.
+
 ## Mapping to spec §20
 
 | Journey step | Milestone |

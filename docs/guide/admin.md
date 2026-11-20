@@ -68,7 +68,7 @@ Email has to be set up when OpenChat is deployed; see the [self-hosting guide](.
 
 If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard.
 
-- **Settings**: the name visitors will see, the model, and **Answer visitors**. The default model is chosen by whoever runs the installation.
+- **Settings**: the name visitors will see, the model, **Answer visitors**, and **Learn from resolved conversations**. The default model is chosen by whoever runs the installation.
 - **Sources**: what it answers from, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
 - **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
 
@@ -77,6 +77,10 @@ With **Answer visitors** on, it answers new messages in conversations nobody on 
 - Every answer is labelled AI, for the visitor and in the inbox, with the name you chose. The inbox marks those conversations **AI answering**.
 - It passes the conversation to your team when the visitor asks for a person, when the sources do not answer, when it is unsure, after 5 answers, at the daily limit, or if the model fails. The visitor is told someone will reply, and your team gets a push notification then, not for each message before.
 - It stops for good in a conversation once someone replies, writes a note, or assigns it.
+
+With **Learn from resolved conversations** on, each conversation your team resolves is read once: the visitor's messages and your team's replies, never notes. The assistant writes one general question and answer from it, without names, email addresses, phone numbers or order numbers, and drops it if any are left. It writes nothing when the answer was only about that visitor, such as their order.
+
+What it learns is listed under **Learned answers**. Nothing is used until a supervisor approves it: change the words first if you need to, then **Approve**. **Reject** stops one being used; **Delete** removes it. Reopening a conversation, adding to it and resolving it again lets it learn again, unless you have already approved or rejected what it learned. Once you trust what it learns, **Use learned answers without approval** skips the review for every website in the workspace; the change is recorded in the audit log. Erasing a contact, or retention deleting a conversation, deletes what was learned from it.
 
 The assistant can be wrong, even with good sources. Try the questions your customers ask most before you rely on it. A change to a page shows within a few minutes of reading it again.
 
