@@ -354,7 +354,9 @@ Also seen: while the owner replied from the phone, B's widget said "We are away"
 
 Spec Phase 6 list, plus search (FTS5), webhooks, inbound email, and signed visitor identity. A Notification Service Extension, once listed here, shipped early with [ADR-0017](../architecture/decisions/0017-encrypted-notifications.md). Prioritise from user feedback.
 
-The first, the AI assistant from the README's roadmap, is designed in [ADR-0022](../architecture/decisions/0022-ai-assistant.md), accepted on 19 November 2026, in three steps, each with its own exit check.
+The first, the AI assistant from the README's roadmap, is designed in [ADR-0022](../architecture/decisions/0022-ai-assistant.md), accepted on 19 November 2026, in three steps, each with its own exit check. All three are built.
+
+Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check
 
