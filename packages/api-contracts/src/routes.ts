@@ -600,6 +600,8 @@ export const AttachmentSchema = z
   .object({ id: z.string(), filename: z.string(), contentType: z.string(), size: z.number().int(), status: z.enum(['pending', 'ready', 'rejected']), url: z.string() })
   .openapi('Attachment');
 
+export const MessageTranslationSchema = z.object({ language: z.string(), content: z.string() }).openapi('MessageTranslation');
+
 export const MessageSchema = z
   .object({
     id: z.string(),
@@ -615,6 +617,7 @@ export const MessageSchema = z
     createdAt: z.string(),
     metadata: z.record(z.string(), z.unknown()),
     assistant: AssistantMessageSchema.optional().openapi({ description: 'Present when the AI assistant wrote it, as a system message. `sender.displayName` is its name.' }),
+    translations: z.array(MessageTranslationSchema).optional().openapi({ description: "Machine translations of a visitor's message for the team (ADR-0024), one per language. Absent when there are none." }),
   })
   .openapi('Message');
 
@@ -693,6 +696,53 @@ export const listMessagesRoute = createRoute({
     }),
   },
   responses: { 200: { description: 'Messages', ...json(z.object({ data: z.array(MessageSchema) })) }, default: problemResponse },
+});
+
+// ---------- Automatic translation (ADR-0024) ----------
+
+export const TranslationSettingsSchema = z
+  .object({
+    available: z.boolean().openapi({ description: 'False when the installation has no Workers AI or no assistant queue. Nothing is translated then.' }),
+    enabled: z.boolean(),
+    model: z.string().openapi({ description: "The model for visitors' messages." }),
+    models: z.array(z.object({ id: z.string(), label: z.string() })),
+    usage: z.object({ day: z.string(), characters: z.number().int(), limit: z.number().int() }).openapi({ description: 'Characters translated today (UTC), and the daily limit.' }),
+  })
+  .openapi('TranslationSettings');
+
+export const getTranslationSettingsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/translation',
+  tags: ['conversations'],
+  operationId: 'getTranslationSettings',
+  summary: "Whether visitors' messages are translated for the team, and with which model",
+  security: bearer,
+  request: { params: workspaceParams },
+  responses: { 200: { description: 'Settings', ...json(TranslationSettingsSchema) }, default: problemResponse },
+});
+
+export const updateTranslationSettingsRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/workspaces/{workspaceId}/translation',
+  tags: ['conversations'],
+  operationId: 'updateTranslationSettings',
+  summary: 'Turn translation on or off, or choose its model. For supervisors.',
+  description: 'Audited. Refused with 409 `translation_unavailable` on an installation without Workers AI.',
+  security: bearer,
+  request: { params: workspaceParams, body: { required: true, ...json(z.strictObject({ enabled: z.boolean(), model: z.string().max(128) })) } },
+  responses: { 200: { description: 'Settings', ...json(TranslationSettingsSchema) }, default: problemResponse },
+});
+
+export const translateMessageRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/translation',
+  tags: ['conversations'],
+  operationId: 'translateMessage',
+  summary: "Translate a visitor's message into the caller's language, or another of OpenChat's",
+  description: 'Returns the stored translation if there is one. Counts against the daily limit; 429 `translation_limit` past it, 502 `translation_failed` if the model fails.',
+  security: bearer,
+  request: { params: conversationParams.extend({ messageId: z.string() }), body: { required: true, ...json(z.strictObject({ language: AppLanguageSchema.optional() })) } },
+  responses: { 200: { description: 'Translation', ...json(MessageTranslationSchema) }, default: problemResponse },
 });
 
 export const sendMessageRoute = createRoute({
@@ -1010,6 +1060,7 @@ export const ContactExportSchema = z
             content: z.string(),
             createdAt: z.string(),
             attachments: z.array(z.object({ filename: z.string(), contentType: z.string(), size: z.number().int() })),
+            machineTranslations: z.array(MessageTranslationSchema).openapi({ description: 'Machine translations for the team (ADR-0024). Written by a model, not by anyone in the conversation.' }),
           }),
         ),
       }),

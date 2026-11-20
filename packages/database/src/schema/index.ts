@@ -131,6 +131,10 @@ export const workspaces = sqliteTable(
     retentionDays: integer('retention_days'),
     /** The AI assistant uses what it learns without waiting for a supervisor's approval (ADR-0022). Off by default. */
     assistantAutoApprove: integer('assistant_auto_approve', { mode: 'boolean' }).notNull().default(false),
+    /** Visitors' messages are translated for members (ADR-0024). Off by default; supervisors turn it on. */
+    translationEnabled: integer('translation_enabled', { mode: 'boolean' }).notNull().default(false),
+    /** The model for visitors' messages. NULL is the default, m2m100. */
+    translationModel: text('translation_model'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
@@ -404,6 +408,32 @@ export const messages = sqliteTable(
     check('messages_note_visibility_ck', sql`(${t.messageType} = 'internal_note') = (${t.visibility} = 'internal')`),
     check('messages_public_seq_ck', sql`(${t.visibility} = 'public') = (${t.publicSeq} IS NOT NULL)`),
     check('messages_note_sender_ck', sql`${t.messageType} <> 'internal_note' OR ${t.senderType} = 'member'`),
+  ],
+);
+
+/**
+ * Machine translations of messages (ADR-0024), one per message and language. They go with their message, so erasure
+ * and retention need nothing more. Members read them; visitors never do.
+ */
+export const messageTranslations = sqliteTable(
+  'message_translations',
+  {
+    workspaceId: text('workspace_id').notNull(),
+    messageId: text('message_id').notNull(),
+    /** A BCP 47 tag: a member's language, one of OpenChat's. */
+    language: text('language').notNull(),
+    content: text('content').notNull(),
+    /** The Workers AI model that wrote it. */
+    model: text('model').notNull(),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    primaryKey({ name: 'message_translations_pk', columns: [t.workspaceId, t.messageId, t.language] }),
+    foreignKey({
+      name: 'message_translations_message_fk',
+      columns: [t.workspaceId, t.messageId],
+      foreignColumns: [messages.workspaceId, messages.id],
+    }).onDelete('cascade'),
   ],
 );
 
@@ -1063,6 +1093,8 @@ export const assistantUsage = sqliteTable(
     answers: integer('answers').notNull().default(0),
     pages: integer('pages').notNull().default(0),
     chunks: integer('chunks').notNull().default(0),
+    /** Characters sent to be translated (ADR-0024), counted before the call, and limited per day. */
+    translatedChars: integer('translated_chars').notNull().default(0),
   },
   (t) => [primaryKey({ name: 'assistant_usage_pk', columns: [t.workspaceId, t.day] })],
 );

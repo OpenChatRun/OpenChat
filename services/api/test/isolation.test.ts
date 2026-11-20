@@ -120,6 +120,9 @@ const CASES: Record<string, Case> = {
   getConversation: { kind: 'workspace', ownerStatus: 200 },
   updateConversation: { kind: 'workspace', body: { expectedVersion: 1, priority: 'urgent' }, ownerStatus: 200 },
   listMessages: { kind: 'workspace', ownerStatus: 200 },
+  getTranslationSettings: { kind: 'workspace', ownerStatus: 200 },
+  updateTranslationSettings: { kind: 'workspace', body: { enabled: true, model: '@cf/meta/m2m100-1.2b' }, ownerStatus: 409 },
+  translateMessage: { kind: 'workspace', body: { language: 'en' }, ownerStatus: 409 },
   sendMessage: { kind: 'workspace', body: { clientMessageId: 'isolation-1', type: 'text', content: 'Taken over' }, ownerStatus: 201 },
   markConversationRead: { kind: 'workspace', body: { deliveredSeq: 0, readSeq: 0 }, ownerStatus: 204 },
   uploadAttachment: { kind: 'workspace', body: UPLOAD, ownerStatus: 201 },
@@ -229,8 +232,8 @@ const testEnv = { ...env, EMAIL_QUEUE: { send: async (_job: JobEnvelope) => unde
 
 /** Resources in each workspace, by the name of the path parameter that holds them. */
 const RESOURCES: Record<'a' | 'b', Record<string, string>> = {
-  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a', runId: 'hdrf_a' },
-  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b', runId: 'hdrf_b' },
+  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a', runId: 'hdrf_a', messageId: 'msg_a' },
+  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b', runId: 'hdrf_b', messageId: 'msg_b' },
 };
 
 function urlFor(path: string, ...sources: Record<string, string>[]): string {
@@ -300,6 +303,8 @@ async function seed() {
       env.DB.prepare(`INSERT INTO assistant_sources (id, workspace_id, website_id, kind, title, content, created_at, updated_at) VALUES (?1, ?2, ?3, 'text', 'Hours', 'Open 9 to 5', 1, 1)`).bind(`asrc_${w}`, `work_${w}`, `site_${w}`),
       env.DB.prepare(`INSERT INTO contacts (id, workspace_id, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?1, ?2, 1, 1, 1, 1)`).bind(`cont_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 1, 1, 1)`).bind(`conv_${w}`, `work_${w}`, `site_${w}`, `cont_${w}`),
+      // Far ahead in sequence, so that messages sent by the cases take their own numbers.
+      env.DB.prepare(`INSERT INTO messages (id, workspace_id, conversation_id, seq, public_seq, sender_type, message_type, visibility, content, created_at) VALUES (?1, ?2, ?3, 1000, 1000, 'visitor', 'text', 'public', 'Hallo', 1)`).bind(`msg_${w}`, `work_${w}`, `conv_${w}`),
       env.DB.prepare(`INSERT INTO assistant_learned (id, workspace_id, website_id, conversation_id, question, answer, status, learned_seq, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 'Q?', 'A.', 'pending', 0, 1, 1)`).bind(`alrn_${w}`, `work_${w}`, `site_${w}`, `conv_${w}`),
       env.DB.prepare(`INSERT INTO help_collections (id, workspace_id, website_id, language, name, slug, created_at, updated_at) VALUES (?1, ?2, ?3, 'en', 'Basics', 'basics', 1, 1)`).bind(`hcol_${w}`, `work_${w}`, `site_${w}`),
       env.DB.prepare(`INSERT INTO help_articles (id, workspace_id, website_id, collection_id, translation_group_id, language, slug, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?1, 'en', 'hours', 'Hours', 1, 1)`).bind(`hart_${w}`, `work_${w}`, `site_${w}`, `hcol_${w}`),

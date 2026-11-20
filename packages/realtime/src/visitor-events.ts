@@ -19,7 +19,9 @@ export type DomainEvent =
        * This is the only read position a visitor may see, because readSeq would reveal internal notes.
        */
       publicReadSeq: number | null;
-    };
+    }
+  /** Machine translations for members are stored (ADR-0024). A hint: members read them through REST. */
+  | { v: 1; kind: 'message.translated'; workspaceId: string; conversationId: string; messageId: string; languages: string[] };
 
 /**
  * The allowlist from agent events to visitor events. A new DomainEvent kind fails to compile here
@@ -60,6 +62,9 @@ export function toVisitorEvent(event: DomainEvent, options: { showAgentNames?: b
         ? { v: 1, type: 'conversation.read', data: { conversationId: event.conversationId, readSeq: event.publicReadSeq } }
         : null;
     case 'conversation.created':
+      return null;
+    case 'message.translated':
+      // For the team only. A visitor reads what they wrote.
       return null;
     default: {
       const unreachable: never = event;

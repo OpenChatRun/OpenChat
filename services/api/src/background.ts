@@ -15,6 +15,7 @@ import { HELP_INDEX_ARTICLE_JOB, runIndexHelpArticleJob } from './assistant/help
 import { HELP_DRAFT_ARTICLE_JOB, HELP_DRAFT_JOB, runHelpDraftArticleJob, runHelpDraftJob } from './help/drafting';
 import { ASSISTANT_INDEX_LEARNED_JOB, ASSISTANT_LEARN_JOB, runIndexLearnedJob, runLearnJob } from './assistant/learning';
 import { ASSISTANT_REPLY_JOB, runReplyJob } from './assistant/reply';
+import { runTranslationJob, TRANSLATE_MESSAGE_JOB } from './translation';
 import { RelayError } from './push/relay-client';
 import type { Env } from './env';
 
@@ -97,6 +98,7 @@ const HANDLERS: Record<string, Handler> = {
   [HELP_DRAFT_JOB]: (job, env) => runHelpDraftJob(job, env, openDatabase(env.DB)),
   [HELP_DRAFT_ARTICLE_JOB]: (job, env) => runHelpDraftArticleJob(job, env, openDatabase(env.DB)),
   [HELP_INDEX_ARTICLE_JOB]: (job, env) => runIndexHelpArticleJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
+  [TRANSLATE_MESSAGE_JOB]: (job, env) => runTranslationJob(job, env),
   // Queued by a Worker from before ADR-0016. Its link would lead nowhere, so it is acknowledged and dropped. Remove after one release.
   'workspace.invitation_email': async () => undefined,
 };

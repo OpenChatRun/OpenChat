@@ -235,6 +235,47 @@ function LearnedCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
   );
 }
 
+/** Automatic translation of visitors' messages, for the whole workspace (ADR-0024). */
+function TranslationCard({ workspaceId }: { workspaceId: string }) {
+  const client = useQueryClient();
+  const settings = useQuery({ queryKey: ['translation', workspaceId], queryFn: () => api.getTranslationSettings(workspaceId) });
+  const save = useMutation({
+    mutationFn: (input: { enabled: boolean; model: string }) => api.updateTranslationSettings(workspaceId, input),
+    onSuccess: (data) => client.setQueryData(['translation', workspaceId], data),
+  });
+  const data = settings.data;
+  if (!data) return <Failure error={settings.error} />;
+  const value = save.isPending ? save.variables : { enabled: data.enabled, model: data.model };
+  return (
+    <section className="card space-y-3" aria-label={t('translationTitle')}>
+      <h2 className="font-medium">{t('translationTitle')}</h2>
+      <p className={quiet}>{t('translationIntro')}</p>
+      {!data.available ? (
+        <p className="text-sm">{t('translationUnavailable')}</p>
+      ) : (
+        <>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5" checked={value.enabled} disabled={save.isPending} onChange={(event) => save.mutate({ ...value, enabled: event.target.checked })} aria-describedby="translation-privacy" />
+            <span>
+              <span className="font-medium">{t('translationEnable')}</span>
+              <span id="translation-privacy" className={`block ${quiet}`}>{t('translationPrivacy')}</span>
+            </span>
+          </label>
+          <label className="block max-w-sm text-sm">
+            {t('translationModel')}
+            <select className="field" value={value.model} disabled={save.isPending} onChange={(event) => save.mutate({ ...value, model: event.target.value })} aria-describedby="translation-model-help">
+              {data.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            </select>
+          </label>
+          <p id="translation-model-help" className={quiet}>{t('translationModelHelp')}</p>
+          <p className={quiet}>{t('translationUsage', { count: data.usage.characters.toLocaleString(intlLocale()), limit: data.usage.limit.toLocaleString(intlLocale()) })}</p>
+        </>
+      )}
+      <Failure error={save.error} />
+    </section>
+  );
+}
+
 function TestCard({ workspaceId, websiteId }: { workspaceId: string; websiteId: string }) {
   const [question, setQuestion] = useState('');
   const ask = useMutation({ mutationFn: () => api.testAssistant(workspaceId, websiteId, question.trim()) });
@@ -299,6 +340,7 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600 dark:text-slate-400">{t('assistantIntro')}</p>
+      <TranslationCard workspaceId={workspaceId} />
       <Failure error={websites.error ?? assistant.error} />
       {websites.data?.data.length === 0 && <p className="card text-sm">{t('noWebsitesMember')}</p>}
       {websites.data && websites.data.data.length > 1 && current && (

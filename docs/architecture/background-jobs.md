@@ -180,6 +180,16 @@ Draft with AI ([ADR-0023](decisions/0023-help-centre.md), step 2) starts from th
 
 The hourly sweep fails any run that has not moved for an hour, including one left taking files, and removes its files.
 
+## Translation's job
+
+Automatic translation ([ADR-0024](decisions/0024-automatic-translation.md), step 2). Dispatch of `message.created` queues **`translation.visitor_message`** on the assistant's queue for every visitor text message, with the key `translation.visitor_message:<messageId>`, while the installation has Workers AI and that queue. The job decides from what is true when it runs:
+
+- Nothing is done unless the workspace has translation on, the message is a visitor's public text, and the conversation has a visitor language.
+- It translates into the languages the workspace's active members read, most readers first, at most 3, leaving out the visitor's own and any already stored.
+- The characters (length × languages) are counted against the day's limit before the model is called. Past the limit, nothing is translated and nothing counted.
+- A model that fails costs that language only, and is not retried: members can ask with **Translate**. A D1 failure is retried, and the repeat skips what is stored.
+- Afterwards the workspace hub gets `message.translated`, with IDs and languages only. Members read the translations through REST.
+
 ## What email is for
 
 By the owner's decision ([amendment A15](spec-review.md#amendments-to-the-specification)), email has two uses: follow-ups to visitors who have gone quiet, and account email such as password resets. Members hear about conversations through push, not email. Job types from before, `email.alert` and `email.send`, are acknowledged and dropped, in case a Worker from before a deploy queues one.

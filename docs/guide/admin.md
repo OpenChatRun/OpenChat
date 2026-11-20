@@ -101,6 +101,12 @@ The assistant can be wrong, even with good sources. Try the questions your custo
 
 Visitors search titles, summaries and text. Search ignores capitals and accents, and finds Chinese, Japanese and Korean words without spaces. **Ask search engines not to list it** adds `noindex` and removes the sitemap. A website can have 1,000 articles.
 
+## Automatic translation
+
+If your installation has Workers AI, a supervisor can turn on **Automatic translation**, at the top of the **Assistant** page. Each visitor's message is then translated into the language each team member uses the dashboard in, and shown with **Translated from …** and **Show original**. A member whose language was not covered can choose **Translate**. Internal notes and your team's replies are not translated.
+
+Every visitor message in the workspace is then sent to Workers AI, so check that your privacy notice covers it. **M2M100**, the default model, only translates, so a visitor cannot steer it; a text model translates chat better, but a visitor could try to steer what it writes, which only your team sees. Turning it on or off, or changing the model, is recorded in the audit log. A workspace can translate 200,000 characters a day by default; after that, members see the originals until the next day (UTC).
+
 ## Failed jobs
 
 Background work, such as sending a push notification or an email, is retried several times. If it still fails, it is listed here, by kind, with the time and the number of attempts. Fix the cause, for example the email settings, and then **Replay**, or **Dismiss** a job you no longer need. Work a job already finished is not repeated. Some jobs cannot be replayed, because the time they had to run by has passed. Failed jobs are kept for 90 days.

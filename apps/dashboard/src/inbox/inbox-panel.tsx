@@ -7,9 +7,10 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClie
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { Icon, Initials } from '../icons';
-import { intlLocale, t, type MessageKey } from '../i18n';
+import { getLocale, intlLocale, t, type MessageKey } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 import { createRealtime, type Realtime, type RealtimeStatus, type ServerFrame } from '@openchat/api-client/realtime';
+import { sameLanguage } from '@openchat/shared';
 import {
   applyPatch,
   hasGap,
@@ -39,6 +40,7 @@ const NEWEST = 2_147_483_647;
 
 const listKey = (workspaceId: string) => ['conversations', workspaceId];
 const threadKey = (workspaceId: string, id: string) => ['messages', workspaceId, id];
+const TRANSLATION_WAIT_MS = 20_000;
 const detailKey = (workspaceId: string, id: string) => ['conversation', workspaceId, id];
 const label = (conversation: Pick<Conversation, 'id' | 'contactName' | 'contactEmail'>) => conversation.contactName ?? conversation.contactEmail ?? t('visitorNumber', { id: conversation.id.slice(-6) });
 
@@ -186,6 +188,19 @@ function useInboxSocket(workspaceId: string, selectedRef: { current: string | nu
         case 'presence.visitor':
           setOnline(setVisitorsOnline, String(data.conversationId), data.online === true);
           break;
+        case 'message.translated': {
+          // A hint without the text: the translations come through REST, from that message on (ADR-0024).
+          const conversationId = String(data.conversationId);
+          const key = threadKey(workspaceId, conversationId);
+          const seq = client.getQueryData<Message[]>(key)?.find((m) => m.id === data.messageId)?.seq;
+          if (seq !== undefined) {
+            void api
+              .listMessages(workspaceId, conversationId, { afterSeq: seq - 1 })
+              .then(({ data: fresh }) => client.setQueryData<Message[]>(key, (known) => (known ? mergeMessages(known, fresh.filter((m) => known.some((k) => k.id === m.id))) : known)))
+              .catch(() => undefined);
+          }
+          break;
+        }
         default:
         // Clients ignore what they do not know, because clients and servers upgrade independently.
       }
@@ -359,7 +374,53 @@ const HANDOVER_REASON: Record<NonNullable<NonNullable<Message['assistant']>['rea
   error: 'handoverError',
 };
 
-function MessageBubble({ message }: { message: Message }) {
+/** A visitor's message with its translation for this member, or the means to get one (ADR-0024). */
+function TranslatedContent({ workspaceId, message, reader, from }: { workspaceId: string; message: Message; reader: string; from: string }) {
+  const client = useQueryClient();
+  const [original, setOriginal] = useState(false);
+  const translated = message.translations?.find((x) => x.language === reader);
+  // The job usually takes about a second. After this, offer to try.
+  const waitUntil = Date.parse(message.createdAt) + TRANSLATION_WAIT_MS;
+  const [waiting, setWaiting] = useState(() => Date.now() < waitUntil);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => setWaiting(false), Math.max(0, waitUntil - Date.now()));
+    return () => clearTimeout(timer);
+  }, [waiting, waitUntil]);
+  const ask = useMutation({
+    mutationFn: () => api.translateMessage(workspaceId, message.conversationId, message.id, reader),
+    onSuccess: (done) =>
+      client.setQueryData<Message[]>(threadKey(workspaceId, message.conversationId), (list) =>
+        list?.map((m) => (m.id === message.id ? { ...m, translations: [...(m.translations ?? []).filter((x) => x.language !== done.language), done] } : m)),
+      ),
+  });
+  if (translated) {
+    return (
+      <>
+        <div className="break-words whitespace-pre-wrap" lang={original ? from : reader}>{original ? message.content : translated.content}</div>
+        <p className="mt-1.5 text-xs opacity-75">
+          {t('translatedFrom', { language: languageName(from) })} ·{' '}
+          <button type="button" className="underline" onClick={() => setOriginal(!original)}>{t(original ? 'showTranslation' : 'showOriginal')}</button>
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="break-words whitespace-pre-wrap" lang={from}>{message.content}</div>
+      <p className="mt-1.5 text-xs opacity-75">
+        {waiting || ask.isPending ? (
+          <span role="status">{t('translating')}</span>
+        ) : (
+          <button type="button" className="underline" onClick={() => ask.mutate()}>{t('translate')}</button>
+        )}
+        {ask.error ? <span role="alert"> {errorMessage(ask.error)}</span> : null}
+      </p>
+    </>
+  );
+}
+
+function MessageBubble({ message, translation }: { message: Message; translation?: { workspaceId: string; reader: string; from: string } | null }) {
   const shown = message.sender.displayName ?? t('agent');
   if (message.assistant?.kind === 'handover') {
     return (
@@ -388,7 +449,11 @@ function MessageBubble({ message }: { message: Message }) {
           {ai && <span className="mr-1.5 rounded border border-current px-1 font-semibold">{t('aiLabel')}</span>}
           {note ? t('internalNoteFrom', { name: sender }) : sender} · <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' })}</time>
         </div>
-        {message.content && <div className="break-words whitespace-pre-wrap">{message.content}</div>}
+        {message.content && translation && message.sender.type === 'visitor' && message.type === 'text' ? (
+          <TranslatedContent workspaceId={translation.workspaceId} message={message} reader={translation.reader} from={translation.from} />
+        ) : (
+          message.content && <div className="break-words whitespace-pre-wrap">{message.content}</div>
+        )}
         {message.attachments.map((file) => <AttachmentView key={file.id} file={file} />)}
       </div>
     </li>
@@ -706,6 +771,12 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
   const memberName = (id: string) => members.find((m) => m.id === id)?.name ?? t('teammate');
   const typists = typing.filter((entry) => entry.conversationId === conversationId).map((entry) => (entry.actorType === 'visitor' ? t('theVisitor') : memberName(entry.actorId)));
   const data = conversation.data;
+  // Translated for this member when the workspace translates and the visitor writes in another language (ADR-0024).
+  const translationSettings = useQuery({ queryKey: ['translation', workspaceId], queryFn: () => api.getTranslationSettings(workspaceId), staleTime: 60_000 });
+  const me = useQuery({ queryKey: ['me'], queryFn: api.getMe });
+  const reader = me.data?.language ?? getLocale();
+  const from = data?.visitorLanguage ?? null;
+  const translation = translationSettings.data?.enabled && from && !sameLanguage(from, reader) ? { workspaceId, reader, from } : null;
   const conflict = update.error instanceof ApiError && update.error.status === 409;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
@@ -757,7 +828,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
         {rows.length > 0 && (rows[0]?.seq ?? 1) > 1 && !noMoreHistory && <button className="button-quiet mx-auto mb-3 flex" disabled={older.isPending} onClick={() => older.mutate()}>{t('loadEarlier')}</button>}
         {/* Polite, so a screen reader reads a new message once it finishes what it is saying, as the widget does. */}
         <ol className="space-y-3" aria-label={t('messages')} aria-live="polite">
-          {rows.map((message) => <MessageBubble key={message.id} message={message} />)}
+          {rows.map((message) => <MessageBubble key={message.id} message={message} translation={translation} />)}
         </ol>
       </div>
       <p className="min-h-6 bg-slate-50 px-4 py-1 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-400" aria-live="polite">{typists.length > 0 ? t(typists.length > 1 ? 'typingMany' : 'typingOne', { names: typists.join(', ') }) : ''}</p>

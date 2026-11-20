@@ -11,7 +11,11 @@ export interface ConversationPages {
 
 export function mergeMessages(existing: Message[], incoming: Message[]): Message[] {
   const byId = new Map(existing.map((message) => [message.id, message]));
-  for (const message of incoming) byId.set(message.id, message);
+  for (const message of incoming) {
+    // A socket's copy has no translations, and may arrive after REST brought them (ADR-0024).
+    const kept = byId.get(message.id)?.translations;
+    byId.set(message.id, message.translations || !kept ? message : { ...message, translations: kept });
+  }
   return [...byId.values()].sort((a, b) => a.seq - b.seq);
 }
 

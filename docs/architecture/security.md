@@ -196,6 +196,13 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 - **A visitor's language is a well-formed BCP 47 tag of at most 35 characters,** checked by the contract and stored in its canonical spelling. Only the conversation's first one is kept, so a visitor cannot change what the team sees after it is set; only a supervisor can (`conversation.language`), and that is recorded as a conversation event.
 - **A member's language** is one of OpenChat's eleven, and each person can change only their own.
 
+### Automatic translation
+
+- **Visitors never see translations.** The visitor message query and mapper do not read them, and the `message.translated` event is dropped by `toVisitorEvent` and goes only to the workspace hub, carrying IDs and languages, not text.
+- **A visitor's message cannot steer the default model.** `m2m100` only translates. A text model, which a supervisor can choose, gets the message inside `<message>` tags with a reminder after it, as the assistant does; what it writes is shown only to members, labelled, with the original beside it. On real Workers AI, Llama 3.3 translated "ignore all previous instructions…" rather than obeying it.
+- **Off by default**, and turned on or off only by supervisors (`translation.manage`), audited as `translation.settings_changed`. Every member's request counts against the workspace's daily character limit, taken before the model is called.
+- **Personal data.** Every visitor message in a workspace that turns it on goes to Workers AI, as for the assistant. Translations are deleted with their messages and included in contact export.
+
 ### Draft with AI
 
 - **It reads only the company's own pages.** Links follow the assistant's rules: `https`, on the host of one of the website's allowed origins, no credentials or ports, robots.txt respected, size and time limits, and redirects checked. Reading the website starts at the first allowed origin.

@@ -845,6 +845,50 @@
               "type": {
                 "type": "string",
                 "enum": [
+                  "message.translated"
+                ]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "conversationId": {
+                    "type": "string"
+                  },
+                  "messageId": {
+                    "type": "string"
+                  },
+                  "languages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "conversationId",
+                  "messageId",
+                  "languages"
+                ]
+              }
+            },
+            "required": [
+              "v",
+              "type",
+              "data"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "v": {
+                "type": "number",
+                "enum": [
+                  1
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
                   "presence.visitor"
                 ]
               },
@@ -1688,6 +1732,13 @@
                             "size"
                           ]
                         }
+                      },
+                      "machineTranslations": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/MessageTranslation"
+                        },
+                        "description": "Machine translations for the team (ADR-0024). Written by a model, not by anyone in the conversation."
                       }
                     },
                     "required": [
@@ -1697,7 +1748,8 @@
                       "internal",
                       "content",
                       "createdAt",
-                      "attachments"
+                      "attachments",
+                      "machineTranslations"
                     ]
                   }
                 }
@@ -1745,6 +1797,21 @@
           "emailSuppressions"
         ],
         "description": "Everything this workspace holds about one contact, for a request from that person. Files are listed, not included."
+      },
+      "MessageTranslation": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "content"
+        ]
       },
       "Tag": {
         "type": "object",
@@ -2507,6 +2574,13 @@
               "kind"
             ],
             "description": "Present when the AI assistant wrote it, as a system message. `sender.displayName` is its name."
+          },
+          "translations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageTranslation"
+            },
+            "description": "Machine translations of a visitor's message for the team (ADR-0024), one per language. Absent when there are none."
           }
         },
         "required": [
@@ -2522,6 +2596,83 @@
           "attachments",
           "createdAt",
           "metadata"
+        ]
+      },
+      "TranslationSettings": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "False when the installation has no Workers AI or no assistant queue. Nothing is translated then."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string",
+            "description": "The model for visitors' messages."
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ]
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "day": {
+                "type": "string"
+              },
+              "characters": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "day",
+              "characters",
+              "limit"
+            ],
+            "description": "Characters translated today (UTC), and the daily limit."
+          }
+        },
+        "required": [
+          "available",
+          "enabled",
+          "model",
+          "models",
+          "usage"
+        ]
+      },
+      "AppLanguage": {
+        "type": "string",
+        "enum": [
+          "en",
+          "es",
+          "fr",
+          "de",
+          "it",
+          "pt",
+          "nl",
+          "ja",
+          "ko",
+          "zh-Hans",
+          "zh-Hant"
         ]
       },
       "Health": {
@@ -2740,7 +2891,18 @@
             "type": "string"
           },
           "language": {
-            "$ref": "#/components/schemas/AppLanguage"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppLanguage"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The language they read (ADR-0024), the same in every workspace. Null until a client sets it."
+              }
+            ]
           },
           "isInstallationAdmin": {
             "type": "boolean"
@@ -2776,27 +2938,6 @@
           "isInstallationAdmin",
           "memberships"
         ]
-      },
-      "AppLanguage": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "enum": [
-          "en",
-          "es",
-          "fr",
-          "de",
-          "it",
-          "pt",
-          "nl",
-          "ja",
-          "ko",
-          "zh-Hans",
-          "zh-Hant",
-          null
-        ],
-        "description": "The language they read (ADR-0024), the same in every workspace. Null until a client sets it."
       },
       "Role": {
         "type": "string",
@@ -7410,6 +7551,200 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/translation": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "getTranslationSettings",
+        "summary": "Whether visitors' messages are translated for the team, and with which model",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "updateTranslationSettings",
+        "summary": "Turn translation on or off, or choose its model. For supervisors.",
+        "description": "Audited. Refused with 409 `translation_unavailable` on an installation without Workers AI.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "model"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationSettings"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/conversations/{conversationId}/messages/{messageId}/translation": {
+      "post": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "translateMessage",
+        "summary": "Translate a visitor's message into the caller's language, or another of OpenChat's",
+        "description": "Returns the stored translation if there is one. Counts against the daily limit; 429 `translation_limit` past it, 502 `translation_failed` if the model fails.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "messageId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "$ref": "#/components/schemas/AppLanguage"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Translation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageTranslation"
                 }
               }
             }

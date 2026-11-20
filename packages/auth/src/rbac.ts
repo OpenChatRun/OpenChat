@@ -15,6 +15,7 @@ const CAPABILITIES = {
   'conversation.assign.self': ALL,
   'conversation.assign.others': SUPERVISORS,
   'conversation.language': SUPERVISORS,
+  'translation.manage': SUPERVISORS,
   'contact.merge': SUPERVISORS,
   'tag.delete': SUPERVISORS,
   'suppression.manage': SUPERVISORS,

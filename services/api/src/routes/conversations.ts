@@ -1,9 +1,10 @@
-import { downloadAttachmentRoute, uploadAttachmentRoute, createAgentTicketRoute, createTagRoute, deleteTagRoute, getContactRoute, exportContactRoute, eraseContactRoute, listTagsRoute, setConversationTagsRoute, updateContactRoute, getConversationRoute, listConversationsRoute, listMessagesRoute, markConversationReadRoute, sendMessageRoute, updateConversationRoute } from '@openchat/api-contracts';
-import { agentAttachment, beginAgentUpload, createAgentTicket, createTag, deleteTag, getContact, exportContact, eraseContact, listTags, setConversationTags, updateContact, getConversation, listConversations, listMessages, markConversationRead, sendMessage, updateConversation, workspaceContext } from '@openchat/core';
+import { downloadAttachmentRoute, uploadAttachmentRoute, createAgentTicketRoute, createTagRoute, deleteTagRoute, getContactRoute, exportContactRoute, eraseContactRoute, listTagsRoute, setConversationTagsRoute, updateContactRoute, getConversationRoute, listConversationsRoute, listMessagesRoute, markConversationReadRoute, sendMessageRoute, updateConversationRoute, getTranslationSettingsRoute, updateTranslationSettingsRoute, translateMessageRoute } from '@openchat/api-contracts';
+import { agentAttachment, beginAgentUpload, createAgentTicket, createTag, deleteTag, getContact, exportContact, eraseContact, listTags, setConversationTags, updateContact, getConversation, listConversations, listMessages, markConversationRead, sendMessage, updateConversation, workspaceContext, getTranslationSettings, saveTranslationSettings, translateMessageOnRequest } from '@openchat/core';
 import type { Context } from 'hono';
 import { authDeps, type App, type AppEnv } from '../context';
 import { receiveUpload, sendFile } from '../attachments';
 import { dispatchSoon, publishRead, socketUrl } from '../dispatch';
+import { translationDeps } from '../translation';
 
 /** Authentication comes from the /api/v1/workspaces/* prefix in routes/workspaces.ts. */
 async function scoped(c: Context<AppEnv>, workspaceId: string) {
@@ -12,6 +13,22 @@ async function scoped(c: Context<AppEnv>, workspaceId: string) {
 }
 
 export function registerConversationRoutes(app: App) {
+  app.openapi(getTranslationSettingsRoute, async (c) => {
+    const { ctx } = await scoped(c, c.req.valid('param').workspaceId);
+    return c.json(await getTranslationSettings(translationDeps(c.env), ctx), 200);
+  });
+
+  app.openapi(updateTranslationSettingsRoute, async (c) => {
+    const { ctx } = await scoped(c, c.req.valid('param').workspaceId);
+    return c.json(await saveTranslationSettings(translationDeps(c.env), ctx, c.req.valid('json')), 200);
+  });
+
+  app.openapi(translateMessageRoute, async (c) => {
+    const { workspaceId, conversationId, messageId } = c.req.valid('param');
+    const { ctx } = await scoped(c, workspaceId);
+    return c.json(await translateMessageOnRequest(translationDeps(c.env), ctx, c.get('principal').userId, { conversationId, messageId, language: c.req.valid('json').language }), 200);
+  });
+
   app.openapi(listConversationsRoute, async (c) => {
     const { db, ctx } = await scoped(c, c.req.valid('param').workspaceId);
     return c.json(await listConversations(db, ctx, c.req.valid('query')), 200);
