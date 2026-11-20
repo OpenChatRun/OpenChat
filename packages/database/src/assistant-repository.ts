@@ -72,6 +72,8 @@ export interface AssistantVectorRange {
 
 export const SOURCE_CHANGED_TOPIC = 'assistant.source_changed';
 export const VECTORS_REMOVED_TOPIC = 'assistant.vectors_removed';
+/** Brings a website's published help articles into the assistant (ADR-0023 step 4). See help-assistant.ts. */
+export const HELP_ASSISTANT_SYNC_TOPIC = 'help.assistant_sync';
 
 export const assistantChunkId = (sourceId: string, generation: number, n: number) => `${sourceId}.${generation}.${n}`;
 
@@ -121,16 +123,26 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
     /** Null if the website does not exist here. */
     async saveSettings(websiteId: string, input: { name: string; model: string | null; enabled?: boolean | undefined; learn?: boolean | undefined }): Promise<AssistantSettingsRow | null> {
       const flag = (value: boolean | undefined) => (value === undefined ? null : value ? 1 : 0);
-      return d1
-        .prepare(
-          `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, learn, created_at, updated_at)
-           SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), COALESCE(?7, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
-           ON CONFLICT (workspace_id, website_id) DO UPDATE
-              SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), learn = COALESCE(?7, learn), updated_at = excluded.updated_at
-           RETURNING ${SETTINGS_COLUMNS}`,
-        )
-        .bind(w, websiteId, newId('assistant'), input.name, input.model, flag(input.enabled), flag(input.learn))
-        .first<AssistantSettingsRow>();
+      const [saved] = await d1.batch([
+        d1
+          .prepare(
+            `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, learn, created_at, updated_at)
+             SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), COALESCE(?7, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
+             ON CONFLICT (workspace_id, website_id) DO UPDATE
+                SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), learn = COALESCE(?7, learn), updated_at = excluded.updated_at
+             RETURNING ${SETTINGS_COLUMNS}`,
+          )
+          .bind(w, websiteId, newId('assistant'), input.name, input.model, flag(input.enabled), flag(input.learn)),
+        // Published help articles are a source, so the first save brings them in; a later one catches up any missed.
+        d1
+          .prepare(
+            `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)
+             SELECT ?3, ?1, '${HELP_ASSISTANT_SYNC_TOPIC}', ?2, json_object('websiteId', ?2), ${DB_NOW_MS}
+              WHERE EXISTS (SELECT 1 FROM help_articles WHERE workspace_id = ?1 AND website_id = ?2 AND status = 'published')`,
+          )
+          .bind(w, websiteId, newId('outbox')),
+      ]);
+      return (saved!.results[0] as AssistantSettingsRow | undefined) ?? null;
     },
 
     async listSources(websiteId: string): Promise<AssistantSourceRow[]> {
@@ -228,11 +240,30 @@ async function chunksOf(d1: D1Database, workspaceId: string, websiteId: string, 
          SELECT j.value, l.id, l.question, NULL, l.question || char(10) || l.answer, j.key
            FROM json_each(?3) j JOIN assistant_learned l ON l.workspace_id = ?1 AND l.website_id = ?2 AND l.status = 'approved'
                 AND l.indexed_generation IS NOT NULL AND j.value = l.id || '.' || l.indexed_generation || '.0'
+         UNION ALL
+         -- A published help article (ADR-0023 step 4), only at the version in use. Its address is made below.
+         SELECT c.id, a.id, a.title, json_array(w.help_slug, a.language, a.slug), c.content, j.key
+           FROM json_each(?3) j JOIN help_article_chunks c ON c.workspace_id = ?1 AND c.website_id = ?2 AND c.id = j.value
+           JOIN help_articles a ON a.workspace_id = c.workspace_id AND a.id = c.article_id AND a.status = 'published'
+                AND c.id LIKE a.id || '.' || a.indexed_version || '.%'
+           JOIN websites w ON w.workspace_id = a.workspace_id AND w.id = a.website_id
        ) ORDER BY k`,
     )
     .bind(workspaceId, websiteId, JSON.stringify(ids))
     .all<AssistantChunkRow>();
-  return results;
+  const base = results.some((row) => row.id.startsWith('hart_')) ? await installationBase(d1) : null;
+  return results.map((row) => (row.id.startsWith('hart_') ? { ...row, url: helpArticleUrl(base, row.url) } : row));
+}
+
+async function installationBase(d1: D1Database): Promise<string | null> {
+  return (await d1.prepare(`SELECT public_base_url AS url FROM installation LIMIT 1`).first<{ url: string }>())?.url ?? null;
+}
+
+/** An article's public page, from [help slug, language, article slug], or null if the website has no help centre address. */
+function helpArticleUrl(base: string | null, parts: string | null): string | null {
+  const [helpSlug, language, slug] = JSON.parse(parts ?? '[]') as [string | null, string, string];
+  if (!base || !helpSlug) return null;
+  return `${base.replace(/\/+$/, '')}/help/${encodeURIComponent(helpSlug)}/${language.toLowerCase()}/${encodeURIComponent(slug)}`;
 }
 
 async function takeAnswerFor(d1: D1Database, workspaceId: string, limit: number, day: string): Promise<boolean> {

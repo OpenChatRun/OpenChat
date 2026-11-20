@@ -9,6 +9,7 @@ import {
   assistantHistory,
   assistantReplyContext,
   assistantLearningRepository,
+  helpAssistantCounts,
   assistantRepository,
   assistantSourceForIndexing,
   postAssistantMessage,
@@ -192,7 +193,13 @@ export async function getAssistant(deps: AssistantDeps, ctx: WorkspaceContext, w
   await websiteOrNotFound(deps.db, ctx, websiteId);
   const repository = assistantRepository(deps.db, ctx);
   const learning = assistantLearningRepository(deps.db, ctx);
-  const [settings, sources, autoApprove, counts] = await Promise.all([repository.settings(websiteId), repository.listSources(websiteId), learning.autoApprove(), learning.counts(websiteId)]);
+  const [settings, sources, autoApprove, counts, helpArticles] = await Promise.all([
+    repository.settings(websiteId),
+    repository.listSources(websiteId),
+    learning.autoApprove(),
+    learning.counts(websiteId),
+    helpAssistantCounts(deps.db, ctx, websiteId),
+  ]);
   return {
     available: deps.runtime !== null,
     canReply: deps.canReply === true,
@@ -201,6 +208,7 @@ export async function getAssistant(deps: AssistantDeps, ctx: WorkspaceContext, w
     settings: settings ? { name: settings.name, model: settings.model, enabled: settings.enabled === 1, learn: settings.learn === 1 } : null,
     sources: sources.map(toSource),
     learning: { autoApprove, ...counts },
+    helpArticles,
     limits: { sourcesPerWebsite: ASSISTANT_LIMITS.sourcesPerWebsite, pagesPerSource: deps.limits.assistantPagesPerSource, textSourceChars: ASSISTANT_LIMITS.textSourceChars, turnsPerConversation: ASSISTANT_LIMITS.turnsPerConversation },
   };
 }

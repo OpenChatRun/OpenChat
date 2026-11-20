@@ -182,6 +182,12 @@ A collection is deleted in one batch that first takes its articles out of it: a 
 
 **The widget's Help tab** (step 3) adds `conversations.help_article_id`, nullable and without a foreign key, so that deleting an article does not touch conversations: the inbox then says the article was deleted. It is set only on insert, from a subquery that finds a published article of the conversation's website, so a visitor cannot attach another website's ID. Migration 0021 only adds the column.
 
+**The assistant** (step 4) reads published articles as learned answers are read, without an `assistant_sources` row:
+- **`help_article_chunks`** holds an article's text in pieces, deleted by cascade with the article.
+- **`help_articles` gains** `indexed_version` and `indexed_chunks`, which name its vectors `<article>.<version>.<n>`, so that `assistant.vectors_removed` deletes them as it does a source's.
+- **Retrieval** joins the chunks only while the article is published, and builds the link to its page when it reads them, from the website's current help address, so that a new address is never stale. With no address, the chunk has no link.
+- **Migration 0022** only adds the table and the columns.
+
 **Draft with AI** (step 2) adds `help_draft_runs`: one per run.
 - **What it keeps:** the language, an optional collection, whether to read the website, the links, and the names and sizes of the files. The files themselves are never in it.
 - **`status`:** `uploading` (taking files), `queued`, `reading`, `writing`, `done` or `failed`, with an `error_code` when it failed.

@@ -3385,6 +3385,23 @@
               "$ref": "#/components/schemas/AssistantSource"
             }
           },
+          "helpArticles": {
+            "type": "object",
+            "properties": {
+              "published": {
+                "type": "integer"
+              },
+              "inUse": {
+                "type": "integer",
+                "description": "Published articles the assistant answers from, at their current version. The rest are being read."
+              }
+            },
+            "required": [
+              "published",
+              "inUse"
+            ],
+            "description": "The website's published help articles, which are a source as soon as the assistant is set up (ADR-0023)."
+          },
           "learning": {
             "type": "object",
             "properties": {
@@ -3441,6 +3458,7 @@
           "defaultModel",
           "settings",
           "sources",
+          "helpArticles",
           "learning",
           "limits"
         ]

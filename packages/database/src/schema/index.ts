@@ -816,6 +816,27 @@ export const assistantChunks = sqliteTable(
   ],
 );
 
+/** A published help article's text in pieces, for the assistant (ADR-0023 step 4). Vectorize holds the vectors. */
+export const helpArticleChunks = sqliteTable(
+  'help_article_chunks',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    articleId: text('article_id').notNull(),
+    content: text('content').notNull(),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    foreignKey({
+      name: 'help_article_chunks_article_fk',
+      columns: [t.workspaceId, t.articleId],
+      foreignColumns: [helpArticles.workspaceId, helpArticles.id],
+    }).onDelete('cascade'),
+    index('help_article_chunks_article_idx').on(t.workspaceId, t.articleId),
+  ],
+);
+
 /**
  * A question and answer learned from one resolved conversation (ADR-0022, step 3), never its messages. One per
  * conversation, deleted with it by cascade; its vector goes through the outbox in the same batch. Only `approved`
@@ -925,6 +946,12 @@ export const helpArticles = sqliteTable(
     aiDrafted: integer('ai_drafted', { mode: 'boolean' }).notNull().default(false),
     /** The pages and files it was drafted from: [{ title, url }], url null for a file. */
     aiSourcesJson: text('ai_sources_json'),
+    /**
+     * The assistant's copy (ADR-0023 step 4): the version whose chunks are in help_article_chunks, and how many.
+     * Its vectors are `<id>.<indexed version>.<n>`, as a source's are, so the same removal works for them.
+     */
+    indexedVersion: integer('indexed_version'),
+    indexedChunks: integer('indexed_chunks').notNull().default(0),
   },
   (t) => [
     unique('help_articles_tenant_uq').on(t.workspaceId, t.id),

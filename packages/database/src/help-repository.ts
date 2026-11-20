@@ -8,6 +8,7 @@
  */
 import { newId } from '@openchat/shared';
 import type { WorkspaceContext } from './context';
+import { helpArticleUnindexStatements, queueHelpAssistantSync } from './help-assistant';
 import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
 
 export type HelpArticleStatus = 'draft' | 'published';
@@ -344,6 +345,8 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
         d1
           .prepare(`UPDATE websites SET help_version = help_version + 1 WHERE workspace_id = ?1 AND id = (SELECT website_id FROM help_articles WHERE workspace_id = ?1 AND id = ?2)`)
           .bind(w, articleId),
+        // The assistant keeps answering from the version before until this one is indexed.
+        queueHelpAssistantSync(d1, w, articleId, `a.status = 'published'`),
       ]);
       return updated!.meta.changes ? this.article(articleId) : null;
     },
@@ -361,6 +364,8 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
                FROM help_articles WHERE workspace_id = ?1 AND id = ?2 AND ${differs}`,
           )
           .bind(w, articleId, status, newId('audit'), ctx.memberId),
+        // Unpublished: out of the assistant at once. These run before the status changes, while it still differs.
+        ...helpArticleUnindexStatements(d1, w, articleId, `${status === 'draft' ? '1' : '0'} = 1 AND status <> 'draft'`),
         d1
           .prepare(`UPDATE websites SET help_version = help_version + 1 WHERE workspace_id = ?1 AND id = (SELECT website_id FROM help_articles WHERE workspace_id = ?1 AND id = ?2 AND ${differs})`)
           .bind(w, articleId, status),
@@ -371,6 +376,7 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
               WHERE workspace_id = ?1 AND id = ?2 AND ${differs}`,
           )
           .bind(w, articleId, status, ctx.memberId),
+        queueHelpAssistantSync(d1, w, articleId, `a.status = 'published' AND ?3 = 'published'`, status),
       ]);
       return this.article(articleId);
     },
@@ -382,9 +388,11 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
       const results = await d1.batch([
         audit('help.article_deleted', 'help_article', articleId, { title: article.title, language: article.language }),
         bump(article.websiteId),
+        // Its chunks go by cascade.
+        helpArticleUnindexStatements(d1, w, articleId)[0]!,
         d1.prepare(`DELETE FROM help_articles WHERE workspace_id = ?1 AND id = ?2`).bind(w, articleId),
       ]);
-      return results[2]!.meta.changes > 0;
+      return results[3]!.meta.changes > 0;
     },
 
     async assets(websiteId: string): Promise<HelpAssetRow[]> {

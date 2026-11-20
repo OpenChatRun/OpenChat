@@ -51,7 +51,10 @@ export function registerAssistantRoutes(app: App) {
   app.openapi(saveAssistantSettingsRoute, async (c) => {
     const { workspaceId, websiteId } = c.req.valid('param');
     const { deps, ctx } = await scoped(c, workspaceId);
-    return c.json(await saveAssistantSettings(deps, ctx, websiteId, c.req.valid('json')), 200);
+    const settings = await saveAssistantSettings(deps, ctx, websiteId, c.req.valid('json'));
+    // The website's published help articles, into the assistant.
+    dispatchSoon(c, workspaceId, [websiteId]);
+    return c.json(settings, 200);
   });
 
   app.openapi(addAssistantSourceRoute, async (c) => {

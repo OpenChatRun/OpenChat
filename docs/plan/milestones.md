@@ -402,6 +402,23 @@ The widget's Help tab ([ADR-0023](../architecture/decisions/0023-help-centre.md)
 
 Limits: the list is in order, not by most read; the tab can take 30 seconds to appear or change. During setup, publishing an article seconds after the database was created answered 404 once; it worked on retry and did not happen again in 8 tries.
 
+### Help centre step 4 exit check
+
+Published articles in the AI assistant ([ADR-0023](../architecture/decisions/0023-help-centre.md)). Run on a throwaway installation with the assistant on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#help-articles-in-the-assistant-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| Published articles become a source, with a link to their page | Yes, including articles published before the assistant was set up. Answers came in English and German from English articles |
+| Drafts never do | Tests |
+| A change is followed | Yes: the new text answered within 2 minutes, and the old text never again |
+| Unpublishing removes the vectors | Yes: out of answers at once, and 0 vectors left in Vectorize a minute later. Deleting the same |
+| A late job cannot put back an old version | Tests |
+| Without Workers AI nothing changes | Tests: publishing and saving work, and nothing is read |
+
+Limits: for a minute or two after an edit, the article answers nothing, as with sources. The model can add a detail an article does not say. The Help tab still searches by words.
+
+All four steps of ADR-0023 are built. Next: automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)).
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check
