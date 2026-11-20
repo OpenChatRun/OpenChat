@@ -49,6 +49,8 @@ export function toVisitorEvent(event: DomainEvent, options: { showAgentNames?: b
             attachments: message.attachments.map((file) => ({ id: file.id, filename: file.filename, contentType: file.contentType, size: file.size, url: `/api/v1/widget/attachments/${file.id}` })),
             createdAt: message.createdAt,
             ...(message.assistant ? { assistant: { kind: message.assistant.kind } } : {}),
+            // A member's reply sent translated: what they wrote, field by field.
+            ...(message.sender.type === 'member' && message.original ? { original: { language: message.original.language, content: message.original.content } } : {}),
           },
         },
       };

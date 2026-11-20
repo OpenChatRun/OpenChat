@@ -739,6 +739,16 @@ A throwaway installation deployed with `--assistant`, and one member reading Eng
 | In the dashboard | A message sent while its conversation was open showed "Translating…", then its translation 2.7 seconds after sending, without a reload |
 | Erasing the contact | Its messages' translations were gone; other conversations' remained |
 
+## Translated replies on real Cloudflare (2026-11-20)
+
+A throwaway installation deployed with `--assistant`, the default text model (Llama 3.3 70B), and an owner reading English. All of it was deleted afterwards.
+
+| What | Result |
+|---|---|
+| "Your order shipped yesterday… track it at https://example.com/track/A123." to a German visitor | "Ihre Bestellung wurde gestern verschickt und sollte am Freitag ankommen. Sie können diese unter https://example.com/track/A123 verfolgen." 1.4 seconds for the whole request |
+| "It will arrive within 3 business days. Thank you for your patience!" to a Japanese visitor | "3営業日以内に到着します。ご迷惑をおかけしますが、ご了承ください。" 1.4 seconds. The second sentence became an apology, more formal than the English |
+| From the dashboard | Sent and shown as "Sent translated" 1.3 seconds after Send reply. The visitor's widget showed it live, labelled, with Show original |
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)

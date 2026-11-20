@@ -416,6 +416,9 @@
                         "required": [
                           "kind"
                         ]
+                      },
+                      "original": {
+                        "$ref": "#/components/schemas/MessageOriginal"
                       }
                     },
                     "required": [
@@ -916,6 +919,21 @@
           }
         ]
       },
+      "MessageOriginal": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "content"
+        ]
+      },
       "AgentClientFrame": {
         "oneOf": [
           {
@@ -1275,6 +1293,9 @@
                         "required": [
                           "kind"
                         ]
+                      },
+                      "original": {
+                        "$ref": "#/components/schemas/MessageOriginal"
                       }
                     },
                     "required": [
@@ -1739,6 +1760,16 @@
                           "$ref": "#/components/schemas/MessageTranslation"
                         },
                         "description": "Machine translations for the team (ADR-0024). Written by a model, not by anyone in the conversation."
+                      },
+                      "original": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/MessageOriginal"
+                          },
+                          {
+                            "description": "A team reply sent translated: what the team member wrote. `content` is the machine translation the visitor received."
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -2252,6 +2283,9 @@
                     "required": [
                       "kind"
                     ]
+                  },
+                  "original": {
+                    "$ref": "#/components/schemas/MessageOriginal"
                   }
                 },
                 "required": [
@@ -2581,6 +2615,16 @@
               "$ref": "#/components/schemas/MessageTranslation"
             },
             "description": "Machine translations of a visitor's message for the team (ADR-0024), one per language. Absent when there are none."
+          },
+          "original": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MessageOriginal"
+              },
+              {
+                "description": "A reply sent translated (ADR-0024): `content` is what the visitor received, and this is what the member wrote, in their language."
+              }
+            ]
           }
         },
         "required": [
@@ -6652,6 +6696,9 @@
                             "required": [
                               "kind"
                             ]
+                          },
+                          "original": {
+                            "$ref": "#/components/schemas/MessageOriginal"
                           }
                         },
                         "required": [
@@ -6857,6 +6904,9 @@
                       "required": [
                         "kind"
                       ]
+                    },
+                    "original": {
+                      "$ref": "#/components/schemas/MessageOriginal"
                     }
                   },
                   "required": [
@@ -6978,6 +7028,9 @@
                       "required": [
                         "kind"
                       ]
+                    },
+                    "original": {
+                      "$ref": "#/components/schemas/MessageOriginal"
                     }
                   },
                   "required": [
@@ -7522,6 +7575,10 @@
                     },
                     "maxItems": 10,
                     "description": "Files uploaded to this conversation by this member. Content may be empty if there is at least one."
+                  },
+                  "translate": {
+                    "type": "boolean",
+                    "description": "Send a reply translated into the visitor's language when the workspace translates and they read another (ADR-0024). If it cannot be translated, nothing is sent: 409 `translation_unavailable`, 429 `translation_limit`, or 502 `translation_failed`. Send again without it to send the words as written."
                   }
                 },
                 "required": [

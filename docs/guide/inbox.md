@@ -39,6 +39,8 @@ Open a conversation to see its messages, and the visitor's contact card beside t
 
 If your workspace translates visitors' messages, a message in another language shows its translation into your dashboard language, labelled **Translated from …**, with **Show original**. A new message shows **Translating…** for a second or two. If there is no translation, choose **Translate**.
 
+Your replies to that visitor are then translated into their language before they are sent, as the line above the reply box says. You see your own words, labelled **Sent translated**, with **Show what was sent**; the visitor sees the translation, labelled **Translated automatically**, and can see your words. If it cannot be translated, nothing is sent: choose **Try again**, or **Send untranslated** to send your words as you wrote them. Internal notes are never translated.
+
 Under the visitor's name is the **visitor's language**, as their widget or browser gave it. A supervisor can correct it there. The dashboard keeps the language you choose for it in your account too, so a new device starts in it.
 
 At the top of the conversation you can change its **status**, its **priority** (low, normal, high or urgent) and who it is **assigned** to. An agent can assign conversations to themselves, and reassign only their own. A supervisor can assign anyone's.

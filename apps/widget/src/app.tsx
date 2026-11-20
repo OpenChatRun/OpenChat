@@ -83,6 +83,7 @@ function Message({ message, first, state, onRetry, controller }: { message: Chat
   const { S } = useContext(Language);
   const kind = kindOf(message);
   const who = message.senderName ?? S.team;
+  const [shownOriginal, setShownOriginal] = useState(false);
   return (
     <div class={`oc-msg ${kind} ${message.status}${first ? ' first' : ''}`}>
       {kind === 'theirs' && first && (
@@ -99,7 +100,12 @@ function Message({ message, first, state, onRetry, controller }: { message: Chat
           </p>
         </>
       )}
-      {message.content && <div class="oc-bubble" dir="auto">{message.assistant === 'handover' ? S.handover : message.content}</div>}
+      {message.content && <div class="oc-bubble" dir="auto" lang={shownOriginal && message.original ? message.original.language : undefined}>{message.assistant === 'handover' ? S.handover : shownOriginal && message.original ? message.original.content : message.content}</div>}
+      {message.original && (
+        <span class="oc-state">
+          {S.translated} · <button type="button" class="oc-link" onClick={() => setShownOriginal(!shownOriginal)}>{shownOriginal ? S.showTranslation : S.showOriginal}</button>
+        </span>
+      )}
       {message.pendingFile && <div class="oc-file oc-state" dir="auto">{message.pendingFile}</div>}
       {message.attachments.map((file) => <Attachment key={file.id} file={file} controller={controller} />)}
       {message.status === 'failed' ? (

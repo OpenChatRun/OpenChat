@@ -53,6 +53,8 @@ export interface SendMessageInput {
   type: SendableType;
   content: string;
   attachmentIds?: string[];
+  /** What the member wrote, when `content` is its translation for the visitor (ADR-0024). */
+  original?: { language: string; content: string } | undefined;
 }
 
 export interface StoredMessage {
@@ -80,6 +82,9 @@ export interface StoredMessage {
   assistantReason: string | null;
   /** JSON from TRANSLATIONS_JSON, in lists for members only (ADR-0024). */
   translationsJson?: string;
+  /** A member wrote it in this language, and `originalContent` is what they wrote (ADR-0024). */
+  originalLanguage: string | null;
+  originalContent: string | null;
 }
 
 export type AssistantMessageKind = 'answer' | 'handover';
@@ -127,7 +132,7 @@ export interface ContactExportRows {
   tags: string[];
   browsers: { id: string; websiteId: string; firstSeenAt: number; lastSeenAt: number }[];
   conversations: { id: string; websiteId: string; status: string; subject: string | null; createdAt: number }[];
-  messages: { id: string; conversationId: string; senderType: 'visitor' | 'member' | 'system'; type: string; visibility: 'public' | 'internal'; content: string; createdAt: number; translationsJson: string }[];
+  messages: { id: string; conversationId: string; senderType: 'visitor' | 'member' | 'system'; type: string; visibility: 'public' | 'internal'; content: string; createdAt: number; translationsJson: string; originalLanguage: string | null; originalContent: string | null }[];
   files: { messageId: string; filename: string; contentType: string; size: number }[];
   suppressions: { email: string; reason: string; createdAt: number }[];
 }
@@ -192,7 +197,10 @@ export const MESSAGE_SELECT = `SELECT m.id, m.workspace_id AS workspaceId, ${ATT
     m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name, asst.name) AS senderName,
     (sm.removed_at IS NOT NULL OR u.disabled_at IS NOT NULL) AS senderRemoved,
     CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind,
-    CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.reason') END AS assistantReason
+    CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.reason') END AS assistantReason,
+    m.original_language AS originalLanguage,
+    CASE WHEN m.original_language IS NOT NULL THEN (SELECT o.content FROM message_translations o
+      WHERE o.workspace_id = m.workspace_id AND o.message_id = m.id AND o.language = m.original_language) END AS originalContent
   FROM messages m
   LEFT JOIN workspace_members sm ON m.sender_type = 'member' AND sm.workspace_id = m.workspace_id AND sm.id = m.sender_id
   LEFT JOIN users u ON u.id = sm.user_id
@@ -271,7 +279,8 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
           d1
             .prepare(
               `SELECT m.id, m.conversation_id AS conversationId, m.sender_type AS senderType, m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt,
-                      ${TRANSLATIONS_JSON} AS translationsJson
+                      ${TRANSLATIONS_JSON} AS translationsJson, m.original_language AS originalLanguage,
+                      (SELECT o.content FROM message_translations o WHERE o.workspace_id = m.workspace_id AND o.message_id = m.id AND o.language = m.original_language) AS originalContent
                  FROM messages m JOIN conversations c ON c.workspace_id = m.workspace_id AND c.id = m.conversation_id
                 WHERE m.workspace_id = ?1 AND c.contact_id = ?2 ${notes} ORDER BY m.conversation_id, m.seq`,
             )
@@ -579,6 +588,11 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
        * Pattern 1: idempotent insert. Later statements are guarded by the fresh message ID, which
        * exists only if the insert took effect, so a replay or a wrong workspace changes nothing.
        */
+      /** A message already sent with this client ID, so that a retry need not be translated again. */
+      byClientId(conversationId: string, clientMessageId: string): Promise<StoredMessage | null> {
+        return d1.prepare(`${MESSAGE_SELECT} WHERE m.workspace_id = ?1 AND m.conversation_id = ?2 AND m.client_message_id = ?3`).bind(w, conversationId, clientMessageId).first<StoredMessage>();
+      },
+
       async send(input: SendMessageInput): Promise<SendResult> {
         const id = newId('message');
         const c = input.conversationId;

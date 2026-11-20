@@ -6,7 +6,7 @@
 import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { env } from 'cloudflare:workers';
 import { hashPassword } from '@openchat/auth';
-import { translationPrompt } from '@openchat/core';
+import { replyPrompt, translationPrompt } from '@openchat/core';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { handleQueue } from '../src/background';
 import { sweepOutbox } from '../src/dispatch';
@@ -33,8 +33,8 @@ const ai = {
     if (failing) throw new Error('Model unavailable');
     if (model === M2M100) return { translated_text: `[${String(input.target_lang)}] ${String(input.text)}` };
     const messages = input.messages as { role: string; content: string }[];
-    const target = /into ([^.]+?)\. Reply/.exec(messages[0]!.content)?.[1] ?? '?';
-    const text = /<message>\n([\s\S]*)\n<\/message>/.exec(messages[1]!.content)?.[1] ?? '';
+    const target = /into ([^.]+?)\. (?:Reply|Keep)/.exec(messages[0]!.content)?.[1] ?? '?';
+    const text = /<(message|reply)>\n([\s\S]*)\n<\/\1>/.exec(messages[1]!.content)?.[2] ?? '';
     return { response: `${target}: ${text}` };
   },
 };
@@ -272,5 +272,70 @@ describe('privacy', () => {
     expect(exported.conversations[0]!.messages[0]!.machineTranslations).toContainEqual({ language: 'en', content: '[en] Hallo' });
     await env.DB.prepare(`DELETE FROM messages WHERE id = ?1`).bind(messageId).run();
     expect((await env.DB.prepare(`SELECT COUNT(*) AS n FROM message_translations`).first<{ n: number }>())!.n).toBe(0);
+  });
+});
+
+describe("a member's reply (step 3)", () => {
+  const reply = (conversationId: string, body: Record<string, unknown>, token = boss) =>
+    call('POST', `/api/v1/workspaces/${W}/conversations/${conversationId}/messages`, { token, body: { clientMessageId: `reply-${++counter}-x`, type: 'text', ...body } });
+  const visitorSees = async (conversationId: string, visitor: string) =>
+    (await json<{ data: { content: string; sender: { type: string }; original?: { language: string; content: string } }[] }>(await call('GET', `/api/v1/widget/conversations/${conversationId}/messages`, { token: visitor, site: true }))).data.filter((m) => m.sender.type === 'member');
+
+  it("is sent in the visitor's language, with the member's own words kept beside it", async () => {
+    await turnOn();
+    const { conversationId, visitor } = await visitorWrites('Hallo');
+    calls = [];
+    const sent = await reply(conversationId, { content: 'Your order ships tomorrow.', translate: true });
+    expect(sent.status).toBe(201);
+    expect(await json(sent)).toMatchObject({ content: 'German: Your order ships tomorrow.', original: { language: 'en', content: 'Your order ships tomorrow.' } });
+    // The assistant's text model, whatever the workspace chose for visitors' messages.
+    expect(calls.map((c) => c.model)).toEqual([LLAMA]);
+    expect((calls[0]!.input.messages as { content: string }[])[0]!.content).toBe(replyPrompt('en', 'de'));
+    expect(await visitorSees(conversationId, visitor)).toEqual([expect.objectContaining({ content: 'German: Your order ships tomorrow.', original: { language: 'en', content: 'Your order ships tomorrow.' } })]);
+    // For members, the member's words are the original, not a machine translation.
+    const mine = (await messagesOf(conversationId)).find((m) => m.sender.type === 'member')!;
+    expect(mine.translations).toBeUndefined();
+    // And the export says which is which.
+    const contactId = (await env.DB.prepare(`SELECT contact_id AS id FROM conversations WHERE id = ?1`).bind(conversationId).first<{ id: string }>())!.id;
+    const exported = await json<{ conversations: { messages: { from: string; content: string; machineTranslations: unknown[]; original?: unknown }[] }[] }>(await call('GET', `/api/v1/workspaces/${W}/contacts/${contactId}/export`, { token: boss }));
+    expect(exported.conversations[0]!.messages.find((m) => m.from === 'member')).toMatchObject({ content: 'German: Your order ships tomorrow.', machineTranslations: [], original: { language: 'en', content: 'Your order ships tomorrow.' } });
+  });
+
+  it('is sent as written without translate, for a note, or to a visitor who reads the same language', async () => {
+    await turnOn();
+    const { conversationId } = await visitorWrites('Hallo');
+    calls = [];
+    expect(await json(await reply(conversationId, { content: 'As written' }))).not.toHaveProperty('original');
+    expect(await json(await reply(conversationId, { type: 'internal_note', content: 'A note', translate: true }))).toMatchObject({ content: 'A note' });
+    const english = await visitorWrites('Hello', 'en-GB');
+    expect(await json(await reply(english.conversationId, { content: 'Hi there', translate: true }))).toMatchObject({ content: 'Hi there' });
+    expect(calls.filter((c) => c.model === LLAMA)).toEqual([]);
+  });
+
+  it('is not sent when it cannot be translated, and can then be sent as written', async () => {
+    await turnOn();
+    const { conversationId, visitor } = await visitorWrites('Hallo');
+    failing = true;
+    const clientMessageId = `reply-failing-${++counter}`;
+    const refused = await reply(conversationId, { clientMessageId, content: 'Thanks!', translate: true });
+    expect(refused.status).toBe(502);
+    expect((await json(refused)).code).toBe('translation_failed');
+    expect(await visitorSees(conversationId, visitor)).toEqual([]);
+    // The member chooses Send untranslated: the same client ID, without translate.
+    expect(await json(await reply(conversationId, { clientMessageId, content: 'Thanks!' }))).toMatchObject({ content: 'Thanks!' });
+    failing = false;
+    // A retry of a reply already sent costs nothing more.
+    calls = [];
+    expect((await reply(conversationId, { clientMessageId, content: 'Thanks!', translate: true })).status).toBe(200);
+    expect(calls).toEqual([]);
+  });
+
+  it('is refused at the daily limit, or without Workers AI, rather than sent untranslated', async () => {
+    target = envWith({ LIMIT_TRANSLATION_CHARS_PER_WORKSPACE_PER_DAY: '5' });
+    await turnOn();
+    const { conversationId } = await visitorWrites('Hi', 'de');
+    expect((await json(await reply(conversationId, { content: 'A long reply', translate: true }))).code).toBe('translation_limit');
+    target = envWith({ AI: undefined });
+    expect((await json(await reply(conversationId, { content: 'Hi', translate: true }))).code).toBe('translation_unavailable');
   });
 });

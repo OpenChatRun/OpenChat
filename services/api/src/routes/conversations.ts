@@ -111,7 +111,7 @@ export function registerConversationRoutes(app: App) {
   app.openapi(sendMessageRoute, async (c) => {
     const { workspaceId, conversationId } = c.req.valid('param');
     const { db, ctx } = await scoped(c, workspaceId);
-    const { created, message } = await sendMessage(db, ctx, conversationId, c.req.valid('json'));
+    const { created, message } = await sendMessage(db, ctx, conversationId, c.req.valid('json'), { deps: translationDeps(c.env), userId: c.get('principal').userId });
     // A replay too: if the first attempt died before dispatching, this finishes the job.
     dispatchSoon(c, workspaceId, [message.id]);
     return created ? c.json(message, 201) : c.json(message, 200);

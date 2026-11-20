@@ -176,6 +176,13 @@
       "when": 1795182508437,
       "tag": "0024_translations",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1795184818832,
+      "tag": "0025_original_language",
+      "breakpoints": true
     }
   ]
 }

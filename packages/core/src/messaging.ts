@@ -7,6 +7,7 @@ import { repositories, type AssistantHandoverReason, type AttachmentJson, type C
 import { AppError, canonicalLanguage, notFound, toIso } from '@openchat/shared';
 import { toAttachment } from './attachments';
 import type { AuthDeps } from './auth-flows';
+import { translateReply, type TranslationDeps } from './translation';
 import { requireCapability } from './workspaces';
 
 const invalidCursor = () => new AppError(400, 'invalid_cursor', 'This cursor is not valid for these filters');
@@ -50,6 +51,7 @@ export const toMessage = (row: StoredMessage) => ({
   metadata: {},
   ...(row.assistantKind ? { assistant: { kind: row.assistantKind, ...(row.assistantReason ? { reason: row.assistantReason as AssistantHandoverReason } : {}) } } : {}),
   ...(row.translationsJson && row.translationsJson !== '[]' ? { translations: JSON.parse(row.translationsJson) as { language: string; content: string }[] } : {}),
+  ...(row.originalLanguage && row.originalContent !== null ? { original: { language: row.originalLanguage, content: row.originalContent } } : {}),
 });
 
 const SYNC = 'sync';
@@ -155,9 +157,29 @@ export async function listMessages(db: Database, ctx: WorkspaceContext, conversa
   return { data: (await repos.messages.list(conversationId, input)).map(toMessage) };
 }
 
-export async function sendMessage(db: Database, ctx: WorkspaceContext, conversationId: string, input: { clientMessageId: string; type: 'text' | 'internal_note'; content: string; attachmentIds?: string[] | undefined }) {
+/**
+ * `translate` asks for a reply in the visitor's language when the workspace translates (ADR-0024): the request
+ * translates before it commits, so the visitor gets one message, already translated. Notes are never translated.
+ */
+export async function sendMessage(
+  db: Database,
+  ctx: WorkspaceContext,
+  conversationId: string,
+  input: { clientMessageId: string; type: 'text' | 'internal_note'; content: string; attachmentIds?: string[] | undefined; translate?: boolean | undefined },
+  translation?: { deps: TranslationDeps; userId: string },
+) {
   requireCapability(ctx, input.type === 'internal_note' ? 'conversation.note' : 'conversation.reply');
-  const result = await repositories(db, ctx).messages.send({ conversationId, clientMessageId: input.clientMessageId, sender: { type: 'member', id: ctx.memberId }, type: input.type, content: input.content, ...(input.attachmentIds?.length ? { attachmentIds: [...new Set(input.attachmentIds)] } : {}) });
+  const repos = repositories(db, ctx);
+  let reply: { content: string; original?: { language: string; content: string } } = { content: input.content };
+  if (input.translate && input.type === 'text' && translation) {
+    // A retry after a lost response is answered from what was stored, and not translated, or paid for, again.
+    const sent = await repos.messages.byClientId(conversationId, input.clientMessageId);
+    if (sent) return { created: false, message: toMessage(sent) };
+    const conversation = await repos.conversations.get(conversationId);
+    if (!conversation) throw notFound();
+    reply = (await translateReply(translation.deps, ctx, { userId: translation.userId, visitorLanguage: conversation.visitorLanguage, content: input.content })) ?? reply;
+  }
+  const result = await repos.messages.send({ conversationId, clientMessageId: input.clientMessageId, sender: { type: 'member', id: ctx.memberId }, type: input.type, content: reply.content, original: reply.original, ...(input.attachmentIds?.length ? { attachmentIds: [...new Set(input.attachmentIds)] } : {}) });
   if (result.outcome === 'not_found') throw notFound();
   if (result.outcome === 'invalid_attachments') throw invalidAttachments();
   return { created: result.outcome === 'created', message: toMessage(result.message) };
@@ -298,6 +320,8 @@ export async function exportContact(db: Database, ctx: WorkspaceContext, contact
         attachments: (files.get(m.id) ?? []).map(({ filename, contentType, size }) => ({ filename, contentType, size })),
         // Written by a model for the team (ADR-0024), not by anyone in the conversation.
         machineTranslations: JSON.parse(m.translationsJson) as { language: string; content: string }[],
+        // A member's reply sent translated: `content` is what the visitor received, and this is what the member wrote.
+        ...(m.originalLanguage && m.originalContent !== null ? { original: { language: m.originalLanguage, content: m.originalContent } } : {}),
       })),
     })),
     emailSuppressions: rows.suppressions.map((s) => ({ email: s.email, reason: s.reason, createdAt: toIso(s.createdAt) })),

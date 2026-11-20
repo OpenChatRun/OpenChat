@@ -25,6 +25,8 @@ export interface MessageStatementsInput {
   assistant?: { id: string; answersSeq: number; state: 'answering' | 'handed_over'; metadata: Record<string, unknown> };
   /** The visitor's language (ADR-0024), kept only if the conversation has none yet. */
   visitorLanguage?: string | undefined;
+  /** What a member wrote, when `content` is its translation for the visitor (ADR-0024). Kept as a translation. */
+  original?: { language: string; content: string } | undefined;
 }
 
 /** Older than this and the sweep may be deleting it, so that a message can no longer claim it. */
@@ -61,14 +63,14 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
     d1
       .prepare(
         `INSERT INTO messages (id, workspace_id, conversation_id, seq, public_seq, client_message_id,
-                               sender_type, sender_id, message_type, visibility, content, created_at, assistant_id, metadata_json)
+                               sender_type, sender_id, message_type, visibility, content, created_at, assistant_id, metadata_json, original_language)
          SELECT ?1, c.workspace_id, c.id, c.last_message_seq + 1,
                 CASE WHEN ?2 = 'public' THEN c.last_public_seq + 1 END,
                 ?3, ?4, ?5,
                 CASE WHEN ?6 <> 'text' OR json_array_length(?11) = 0 THEN ?6
                      WHEN NOT EXISTS (SELECT 1 FROM attachments a WHERE ${claimable} AND a.content_type NOT LIKE 'image/%') THEN 'image'
                      ELSE 'file' END,
-                ?2, ?7, ${DB_NOW_MS}, ?12, COALESCE(?13, '{}')
+                ?2, ?7, ${DB_NOW_MS}, ?12, COALESCE(?13, '{}'), ?15
            FROM conversations c WHERE c.workspace_id = ?8 AND c.id = ?9 AND (?10 IS NULL OR c.contact_id = ?10)
             AND (SELECT COUNT(*) FROM attachments a WHERE ${claimable}) = json_array_length(?11)
             AND (?12 IS NULL OR (c.last_message_seq = ?14 AND c.assigned_member_id IS NULL
@@ -91,7 +93,15 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
         input.assistant?.id ?? null,
         input.assistant ? JSON.stringify(input.assistant.metadata) : null,
         input.assistant?.answersSeq ?? null,
+        input.original?.language ?? null,
       ),
+    // Only with the message just inserted: a replay's ID matches nothing.
+    d1
+      .prepare(
+        `INSERT INTO message_translations (workspace_id, message_id, language, content, model, created_at)
+         SELECT workspace_id, id, ?2, ?3, 'original', ${DB_NOW_MS} FROM messages WHERE id = ?1 AND ?2 IS NOT NULL`,
+      )
+      .bind(id, input.original?.language ?? null, input.original?.content ?? null),
     d1
       .prepare(
         `UPDATE attachments SET message_id = ?1

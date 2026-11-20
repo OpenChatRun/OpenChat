@@ -55,6 +55,8 @@ const toMessage = (row: VisitorMessageRow, ctx: VisitorContext) => ({
   createdAt: toIso(row.createdAt),
   // The kind only: why it handed over is for the team.
   ...(row.assistantKind ? { assistant: { kind: row.assistantKind } } : {}),
+  // A member's reply, translated for the visitor (ADR-0024): what the member wrote, for Show original.
+  ...(row.senderType === 'member' && row.originalLanguage && row.originalContent !== null ? { original: { language: row.originalLanguage, content: row.originalContent } } : {}),
 });
 
 export const websiteForWidget = (deps: Pick<AuthDeps, 'db'>, websiteKey: string): Promise<PublicWebsite | null> => findWebsiteByKey(deps.db, websiteKey);
