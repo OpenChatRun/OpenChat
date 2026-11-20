@@ -66,11 +66,17 @@ Email has to be set up when OpenChat is deployed; see the [self-hosting guide](.
 
 ## The AI assistant
 
-If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard. For now it is for trying out: visitors do not see it yet.
+If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard.
 
-- **Settings**: the name visitors will see, and the model. The default is chosen by whoever runs the installation.
+- **Settings**: the name visitors will see, the model, and **Answer visitors**. The default model is chosen by whoever runs the installation.
 - **Sources**: what it answers from, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
 - **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
+
+With **Answer visitors** on, it answers new messages in conversations nobody on your team has:
+
+- Every answer is labelled AI, for the visitor and in the inbox, with the name you chose. The inbox marks those conversations **AI answering**.
+- It passes the conversation to your team when the visitor asks for a person, when the sources do not answer, when it is unsure, after 5 answers, at the daily limit, or if the model fails. The visitor is told someone will reply, and your team gets a push notification then, not for each message before.
+- It stops for good in a conversation once someone replies, writes a note, or assigns it.
 
 The assistant can be wrong, even with good sources. Try the questions your customers ask most before you rely on it. A change to a page shows within a few minutes of reading it again.
 

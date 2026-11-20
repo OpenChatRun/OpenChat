@@ -9,6 +9,8 @@
 import { newId } from '@openchat/shared';
 import type { WorkspaceContext } from './context';
 import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
+import { messageStatements } from './internal/message-statements';
+import type { AssistantState } from './repositories';
 
 export type AssistantSourceKind = 'page' | 'text';
 export type AssistantSourceStatus = 'pending' | 'indexing' | 'ready' | 'failed';
@@ -18,6 +20,7 @@ export interface AssistantSettingsRow {
   websiteId: string;
   name: string;
   model: string | null;
+  enabled: number;
   updatedAt: number;
 }
 
@@ -71,7 +74,7 @@ export const VECTORS_REMOVED_TOPIC = 'assistant.vectors_removed';
 
 export const assistantChunkId = (sourceId: string, generation: number, n: number) => `${sourceId}.${generation}.${n}`;
 
-const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, updated_at AS updatedAt`;
+const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, enabled, updated_at AS updatedAt`;
 const SOURCE_COLUMNS = `id, website_id AS websiteId, kind, title, url, status, error_code AS errorCode, generation,
   indexed_generation AS indexedGeneration, chunk_count AS chunkCount, page_count AS pageCount, indexed_at AS indexedAt,
   created_at AS createdAt, updated_at AS updatedAt`;
@@ -115,15 +118,15 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
     },
 
     /** Null if the website does not exist here. */
-    async saveSettings(websiteId: string, input: { name: string; model: string | null }): Promise<AssistantSettingsRow | null> {
+    async saveSettings(websiteId: string, input: { name: string; model: string | null; enabled?: boolean | undefined }): Promise<AssistantSettingsRow | null> {
       return d1
         .prepare(
-          `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, created_at, updated_at)
-           SELECT ?3, ?1, ?2, ?4, ?5, ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
-           ON CONFLICT (workspace_id, website_id) DO UPDATE SET name = excluded.name, model = excluded.model, updated_at = excluded.updated_at
+          `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, created_at, updated_at)
+           SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
+           ON CONFLICT (workspace_id, website_id) DO UPDATE SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), updated_at = excluded.updated_at
            RETURNING ${SETTINGS_COLUMNS}`,
         )
-        .bind(w, websiteId, newId('assistant'), input.name, input.model)
+        .bind(w, websiteId, newId('assistant'), input.name, input.model, input.enabled === undefined ? null : input.enabled ? 1 : 0)
         .first<AssistantSettingsRow>();
     },
 
@@ -199,32 +202,40 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
     },
 
     /** Chunks of this website only, in the order asked. A vector whose chunk is gone is left out. */
-    async chunks(websiteId: string, ids: string[]): Promise<AssistantChunkRow[]> {
-      if (ids.length === 0) return [];
-      const { results } = await d1
-        .prepare(
-          `SELECT c.id, c.source_id AS sourceId, c.title, c.url, c.content
-             FROM json_each(?3) j JOIN assistant_chunks c ON c.workspace_id = ?1 AND c.website_id = ?2 AND c.id = j.value
-            ORDER BY j.key`,
-        )
-        .bind(w, websiteId, JSON.stringify(ids))
-        .all<AssistantChunkRow>();
-      return results;
+    chunks(websiteId: string, ids: string[]): Promise<AssistantChunkRow[]> {
+      return chunksOf(d1, w, websiteId, ids);
     },
 
     /** Counts one answer against today's limit. False, and nothing counted, at the limit. */
-    async takeAnswer(limit: number, day: string): Promise<boolean> {
-      const row = await d1
-        .prepare(
-          `INSERT INTO assistant_usage (workspace_id, day, answers) VALUES (?1, ?2, 1)
-           ON CONFLICT (workspace_id, day) DO UPDATE SET answers = answers + 1 WHERE answers < ?3
-           RETURNING answers`,
-        )
-        .bind(w, day, limit)
-        .first<{ answers: number }>();
-      return row !== null && row.answers <= limit;
+    takeAnswer(limit: number, day: string): Promise<boolean> {
+      return takeAnswerFor(d1, w, limit, day);
     },
   };
+}
+
+async function chunksOf(d1: D1Database, workspaceId: string, websiteId: string, ids: string[]): Promise<AssistantChunkRow[]> {
+  if (ids.length === 0) return [];
+  const { results } = await d1
+    .prepare(
+      `SELECT c.id, c.source_id AS sourceId, c.title, c.url, c.content
+         FROM json_each(?3) j JOIN assistant_chunks c ON c.workspace_id = ?1 AND c.website_id = ?2 AND c.id = j.value
+        ORDER BY j.key`,
+    )
+    .bind(workspaceId, websiteId, JSON.stringify(ids))
+    .all<AssistantChunkRow>();
+  return results;
+}
+
+async function takeAnswerFor(d1: D1Database, workspaceId: string, limit: number, day: string): Promise<boolean> {
+  const row = await d1
+    .prepare(
+      `INSERT INTO assistant_usage (workspace_id, day, answers) VALUES (?1, ?2, 1)
+       ON CONFLICT (workspace_id, day) DO UPDATE SET answers = answers + 1 WHERE answers < ?3
+       RETURNING answers`,
+    )
+    .bind(workspaceId, day, limit)
+    .first<{ answers: number }>();
+  return row !== null && row.answers <= limit;
 }
 
 export type AssistantRepository = ReturnType<typeof assistantRepository>;
@@ -345,4 +356,128 @@ export async function refreshStaleAssistantPages(database: Database, olderThanMs
     if (updated!.meta.changes === 1) refreshed.push({ workspaceId: row.workspaceId, id: row.id });
   }
   return refreshed;
+}
+
+
+// ---------- For the reply job (step 2), which answers one visitor message ----------
+
+/** What the reply job needs to decide whether to answer, read in one query. */
+export interface AssistantReplyContext {
+  conversationId: string;
+  websiteId: string;
+  websiteName: string;
+  /** The message to answer. */
+  messageSeq: number;
+  senderType: 'visitor' | 'member' | 'system';
+  content: string;
+  lastMessageSeq: number;
+  assignedMemberId: string | null;
+  assistantState: AssistantState | null;
+  assistantId: string | null;
+  assistantName: string | null;
+  model: string | null;
+  enabled: number | null;
+  /** Answers the assistant has already given in this conversation. */
+  answers: number;
+}
+
+export async function assistantReplyContext(database: Database, workspaceId: string, messageId: string): Promise<AssistantReplyContext | null> {
+  return rawHandle(database)
+    .prepare(
+      `SELECT m.conversation_id AS conversationId, c.website_id AS websiteId, w.name AS websiteName, m.seq AS messageSeq,
+              m.sender_type AS senderType, m.content, c.last_message_seq AS lastMessageSeq, c.assigned_member_id AS assignedMemberId,
+              c.assistant_state AS assistantState, s.id AS assistantId, s.name AS assistantName, s.model, s.enabled,
+              (SELECT COUNT(*) FROM messages a WHERE a.workspace_id = c.workspace_id AND a.conversation_id = c.id
+                  AND a.assistant_id IS NOT NULL AND COALESCE(json_extract(a.metadata_json, '$.assistant'), 'answer') = 'answer') AS answers
+         FROM messages m
+         JOIN conversations c ON c.workspace_id = m.workspace_id AND c.id = m.conversation_id
+         JOIN websites w ON w.workspace_id = c.workspace_id AND w.id = c.website_id
+         LEFT JOIN assistant_settings s ON s.workspace_id = c.workspace_id AND s.website_id = c.website_id
+        WHERE m.workspace_id = ?1 AND m.id = ?2 AND m.visibility = 'public'`,
+    )
+    .bind(workspaceId, messageId)
+    .first<AssistantReplyContext>();
+}
+
+/**
+ * The visible conversation up to a message, oldest first: what the visitor and the assistant said. Public rows only,
+ * so an internal note can never reach the model; there are no members' messages while the assistant answers.
+ */
+export async function assistantHistory(database: Database, workspaceId: string, conversationId: string, uptoSeq: number, limit: number): Promise<{ from: 'visitor' | 'assistant'; content: string }[]> {
+  const { results } = await rawHandle(database)
+    .prepare(
+      `SELECT CASE WHEN m.sender_type = 'visitor' THEN 'visitor' ELSE 'assistant' END AS "from", m.content
+         FROM messages m
+        WHERE m.workspace_id = ?1 AND m.conversation_id = ?2 AND m.seq <= ?3 AND m.visibility = 'public' AND m.content <> ''
+          AND (m.sender_type = 'visitor' OR (m.assistant_id IS NOT NULL AND COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') = 'answer'))
+        ORDER BY m.seq DESC LIMIT ?4`,
+    )
+    .bind(workspaceId, conversationId, uptoSeq, limit)
+    .all<{ from: 'visitor' | 'assistant'; content: string }>();
+  return results.reverse();
+}
+
+export function assistantChunksForReply(database: Database, workspaceId: string, websiteId: string, ids: string[]): Promise<AssistantChunkRow[]> {
+  return chunksOf(rawHandle(database), workspaceId, websiteId, ids);
+}
+
+export function takeAssistantAnswer(database: Database, workspaceId: string, limit: number, day: string): Promise<boolean> {
+  return takeAnswerFor(rawHandle(database), workspaceId, limit, day);
+}
+
+/**
+ * Whether the assistant will take a visitor's message in this conversation: it is on for the website, nobody has the
+ * conversation, and it has not handed over or been stopped. Push uses it to stay quiet while the assistant answers.
+ */
+export async function assistantAnswersIn(database: Database, workspaceId: string, conversationId: string): Promise<boolean> {
+  const row = await rawHandle(database)
+    .prepare(
+      `SELECT 1 AS yes FROM conversations c JOIN assistant_settings s ON s.workspace_id = c.workspace_id AND s.website_id = c.website_id AND s.enabled = 1
+        WHERE c.workspace_id = ?1 AND c.id = ?2 AND c.assigned_member_id IS NULL AND (c.assistant_state IS NULL OR c.assistant_state = 'answering')`,
+    )
+    .bind(workspaceId, conversationId)
+    .first<{ yes: number }>();
+  return row !== null;
+}
+
+export type AssistantHandoverReason = 'asked' | 'no_sources' | 'unsure' | 'turns' | 'limit' | 'error';
+
+/**
+ * Pattern 1, with the assistant's guard (see messageStatements): one reply per visitor message, however often the job
+ * runs, and none if the conversation moved on. Returns the message's ID, or null if it was not written. The inbox
+ * hears of the conversation's new assistant_state through the outbox, in the same batch.
+ */
+export async function postAssistantMessage(
+  database: Database,
+  workspaceId: string,
+  input: { conversationId: string; assistantId: string; answersMessageId: string; answersSeq: number; content: string } & ({ kind: 'answer' } | { kind: 'handover'; reason: AssistantHandoverReason }),
+): Promise<string | null> {
+  const d1 = rawHandle(database);
+  const id = newId('message');
+  const clientMessageId = `assistant:${input.answersMessageId}`;
+  const metadata = input.kind === 'answer' ? { assistant: 'answer' } : { assistant: 'handover', reason: input.reason };
+  await d1.batch([
+    ...messageStatements(d1, {
+      id,
+      workspaceId,
+      conversationId: input.conversationId,
+      clientMessageId,
+      sender: { type: 'system', id: null },
+      type: 'text',
+      content: input.content,
+      assistant: { id: input.assistantId, answersSeq: input.answersSeq, state: input.kind === 'answer' ? 'answering' : 'handed_over', metadata },
+    }),
+    d1
+      .prepare(
+        `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)
+         SELECT ?1, m.workspace_id, 'conversation.updated', m.conversation_id, json_object('conversationId', m.conversation_id), ${DB_NOW_MS}
+           FROM messages m WHERE m.id = ?2`,
+      )
+      .bind(newId('outbox'), id),
+  ]);
+  const row = await d1
+    .prepare(`SELECT id FROM messages WHERE workspace_id = ?1 AND conversation_id = ?2 AND client_message_id = ?3`)
+    .bind(workspaceId, input.conversationId, clientMessageId)
+    .first<{ id: string }>();
+  return row?.id ?? null;
 }

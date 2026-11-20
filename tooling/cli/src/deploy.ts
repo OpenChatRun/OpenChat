@@ -11,7 +11,7 @@ import { ASSISTANT_EMBEDDING_DIMENSIONS } from '@openchat/shared';
 import { createBackups, databaseName, type RestoreRecord } from './backup';
 import { assertEmail, assertPublicUrl, bootstrapSql, recoverySql, resetLink } from './bootstrap';
 import { formatChecks, hasFailure, isMissingWorkersDev, runPreflight, WORKERS_DEV_HELP } from './preflight';
-import { assistantIndexName, renderConfig, type DeploymentState, mergeLimitFlags, mergeSecurityFlags, mergeSourceFlag } from './render-config';
+import { assistantIndexName, assistantQueueNames, renderConfig, type DeploymentState, mergeLimitFlags, mergeSecurityFlags, mergeSourceFlag } from './render-config';
 import { compareVersions, releaseCheckout, releaseVersion, UNRECORDED_VERSION, UPGRADE_FROM_AT_LEAST } from './releases';
 import { createResource, describeFailure, type RunWrangler, sleep, UUID, wranglerIn } from './wrangler';
 
@@ -145,6 +145,13 @@ export function createDeployer(root: string, deps: DeployerDeps = {}) {
       save(state);
     }
     if (state.assistant) {
+      for (const queue of assistantQueueNames(state.name)) {
+        if (state.queuesCreated.includes(queue)) continue;
+        log(`Creating queue ${queue}`);
+        await create(`Queue ${queue}`, ['queues', 'create', queue]);
+        state.queuesCreated.push(queue);
+        save(state);
+      }
       const index = assistantIndexName(state.name);
       if (!state.vectorizeCreated) {
         log(`Creating Vectorize index ${index}`);

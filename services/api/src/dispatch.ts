@@ -29,6 +29,7 @@ import { sweepFollowUps } from './email/follow-ups';
 import { sweepRetention } from './retention';
 import { pushJobsFor } from './push/fanout';
 import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs';
+import { queueAssistantReply } from './assistant/reply';
 
 const SWEEP_AGE_MS = 60_000;
 const SWEEP_LIMIT = 200;
@@ -53,6 +54,7 @@ async function conversationEvent(db: Database, row: OutboxRow, kind: 'conversati
       lastMessageSeq: c.lastMessageSeq,
       ...(c.lastMessageAt === null ? {} : { lastMessageAt: toIso(c.lastMessageAt) }),
       tags: JSON.parse(c.tagsJson) as { id: string; name: string }[],
+      assistantState: c.assistantState,
       updatedAt: toIso(c.updatedAt),
     },
   };
@@ -75,6 +77,7 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
       const room = env.CONVERSATION_ROOM.getByName(roomName(row.workspaceId, message.conversationId));
       await Promise.all([hub.publish(event), room.publishDomainEvent(event, { showAgentNames: message.showAgentNames })]);
       await pushJobsFor(env, row);
+      await queueAssistantReply(env, row, message.senderType);
       return;
     }
     case 'conversation.created':

@@ -72,7 +72,14 @@ export interface StoredMessage {
   senderName: string | null;
   /** The author was removed from the workspace, or their account was deactivated. Agents only. */
   senderRemoved: number | null;
+  /** Written by the AI assistant (ADR-0022): an answer, or handing the conversation to the team. */
+  assistantKind: AssistantMessageKind | null;
+  /** Why it handed over. */
+  assistantReason: string | null;
 }
+
+export type AssistantMessageKind = 'answer' | 'handover';
+export type AssistantState = 'answering' | 'handed_over' | 'stopped';
 
 export interface NewAttachment {
   id: string;
@@ -141,6 +148,7 @@ export interface ConversationRow {
   lastReadSeq: number;
   createdAt: number;
   updatedAt: number;
+  assistantState: AssistantState | null;
 }
 
 export interface ConversationChange {
@@ -173,13 +181,16 @@ export type AssignResult =
 /** Names come by primary key, so that this stays cheap on the hot path. Agents only: it includes internal notes. */
 export const MESSAGE_SELECT = `SELECT m.id, m.workspace_id AS workspaceId, ${ATTACHMENTS_JSON} AS attachmentsJson, m.conversation_id AS conversationId, m.seq, m.public_seq AS publicSeq,
     m.client_message_id AS clientMessageId, m.sender_type AS senderType, m.sender_id AS senderId,
-    m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name) AS senderName,
-    (sm.removed_at IS NOT NULL OR u.disabled_at IS NOT NULL) AS senderRemoved
+    m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name, asst.name) AS senderName,
+    (sm.removed_at IS NOT NULL OR u.disabled_at IS NOT NULL) AS senderRemoved,
+    CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind,
+    CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.reason') END AS assistantReason
   FROM messages m
   LEFT JOIN workspace_members sm ON m.sender_type = 'member' AND sm.workspace_id = m.workspace_id AND sm.id = m.sender_id
   LEFT JOIN users u ON u.id = sm.user_id
   LEFT JOIN visitors sv ON m.sender_type = 'visitor' AND sv.workspace_id = m.workspace_id AND sv.id = m.sender_id
-  LEFT JOIN contacts ct ON ct.workspace_id = sv.workspace_id AND ct.id = sv.contact_id`;
+  LEFT JOIN contacts ct ON ct.workspace_id = sv.workspace_id AND ct.id = sv.contact_id
+  LEFT JOIN assistant_settings asst ON m.assistant_id IS NOT NULL AND asst.workspace_id = m.workspace_id AND asst.id = m.assistant_id`;
 
 /** ?1 is the calling member, for their read position. */
 const CONTACT_SELECT = `SELECT id, name, email, phone, first_seen_at AS firstSeenAt, last_seen_at AS lastSeenAt FROM contacts`;
@@ -197,7 +208,8 @@ export const CONVERSATION_TAGS_JSON = `(SELECT COALESCE(json_group_array(json_ob
 const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_id AS contactId, k.name AS contactName, k.email AS contactEmail,
     ${CONVERSATION_TAGS_JSON} AS tagsJson, c.assigned_member_id AS assignedMemberId,
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
-    c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt
+    c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
+    c.assistant_state AS assistantState
   FROM conversations c
   JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
   LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id
@@ -428,6 +440,7 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
             .prepare(
               `UPDATE conversations
                   SET assigned_member_id = CASE WHEN ?1 THEN ?2 ELSE assigned_member_id END,
+                      assistant_state = CASE WHEN ?1 AND ?2 IS NOT NULL AND (assistant_state IS NULL OR assistant_state = 'answering') THEN 'stopped' ELSE assistant_state END,
                       status = COALESCE(?3, status), priority = COALESCE(?4, priority),
                       version = version + 1, last_mutation_id = ?5, updated_at = ${DB_NOW_MS}
                 WHERE workspace_id = ?6 AND id = ?7 AND version = ?8

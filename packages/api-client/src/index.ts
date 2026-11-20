@@ -239,8 +239,8 @@ export function createClient(options: ClientOptions) {
     updateFollowUpRule: (workspaceId: string, ruleId: string, change: { name?: string; enabled?: boolean; inactiveMinutes?: number }) => request<FollowUpRule>('PATCH', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`, change),
     deleteFollowUpRule: (workspaceId: string, ruleId: string) => request<void>('DELETE', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`),
     getAssistant: (workspaceId: string, websiteId: string) => get<Assistant>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant`),
-    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null }) =>
-      request<{ name: string; model: string | null }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
+    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean }) =>
+      request<{ name: string; model: string | null; enabled: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
     addAssistantSource: (workspaceId: string, websiteId: string, input: AssistantSourceInput) => request<AssistantSource>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/sources`, input),
     updateAssistantSource: (workspaceId: string, sourceId: string, change: { title?: string; content?: string } = {}) =>
       request<AssistantSource>('PATCH', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`, change),

@@ -57,3 +57,16 @@ describe('newClientMessageId', () => {
     expect(id.length).toBeLessThanOrEqual(64);
   });
 });
+
+describe('the AI assistant', () => {
+  it('shows as a sender with a name, not a system line, and keeps whether it handed over', () => {
+    const [answer, handover, system] = mergeMessages([], [
+      server(1, { sender: { type: 'system', displayName: 'Sam' }, assistant: { kind: 'answer' } }),
+      server(2, { sender: { type: 'system', displayName: 'Sam' }, assistant: { kind: 'handover' } }),
+      server(3, { sender: { type: 'system', displayName: null } }),
+    ]);
+    expect(answer).toMatchObject({ system: false, mine: false, assistant: 'answer', senderName: 'Sam' });
+    expect(handover).toMatchObject({ system: false, assistant: 'handover' });
+    expect(system).toMatchObject({ system: true, assistant: null });
+  });
+});

@@ -7,6 +7,7 @@ import { handleQueue } from '../src/background';
 import { sweepOutbox } from '../src/dispatch';
 import type { Env } from '../src/env';
 import worker from '../src/index';
+import { fakeAssistant } from './assistant-fakes';
 
 const ORIGIN = 'https://chat.example.com';
 const RELAY = 'https://relay.example.org';
@@ -52,7 +53,7 @@ async function call(method: string, path: string, options: { token?: string; bod
   return response;
 }
 
-async function runQueue() {
+async function runQueue(target: Env = withRelay) {
   const outcomes: { job: Job; acked: boolean; delay?: number }[] = [];
   while (queued.length > 0) {
     const jobs = queued;
@@ -62,7 +63,8 @@ async function runQueue() {
       outcomes.push(outcome);
       return { id: crypto.randomUUID(), body, attempts: 1, ack: () => { outcome.acked = true; }, retry: (o?: { delaySeconds?: number }) => { if (o?.delaySeconds !== undefined) outcome.delay = o.delaySeconds; } };
     });
-    await handleQueue({ queue: 'oc-local-notifications', messages } as unknown as MessageBatch, withRelay, { email: { send: () => Promise.reject(new Error('unused')) } });
+    await handleQueue({ queue: 'oc-local-notifications', messages } as unknown as MessageBatch, target, { email: { send: () => Promise.reject(new Error('unused')) } });
+    await sweepOutbox(target, Date.now() + 120_000);
   }
   return outcomes;
 }
@@ -99,7 +101,7 @@ beforeEach(async () => {
     return relayAnswer(url.pathname);
   });
 
-  const tables = ['notification_preferences', 'push_subscriptions', 'outbox', 'audit_log', 'conversation_events', 'messages', 'conversation_read_cursors', 'conversations', 'visitors', 'contacts', 'websites', 'workspace_members', 'auth_tokens', 'auth_sessions', 'workspaces', 'users', 'installation', 'failed_jobs'];
+  const tables = ['assistant_settings', 'notification_preferences', 'push_subscriptions', 'outbox', 'audit_log', 'conversation_events', 'messages', 'conversation_read_cursors', 'conversations', 'visitors', 'contacts', 'websites', 'workspace_members', 'auth_tokens', 'auth_sessions', 'workspaces', 'users', 'installation', 'failed_jobs'];
   await env.DB.batch(tables.map((t) => env.DB.prepare(`DELETE FROM ${t}`)));
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO installation (id, name, public_base_url, created_at, updated_at) VALUES ('inst_test', 'Test', ?1, 1, 1)`).bind(ORIGIN),
@@ -427,6 +429,42 @@ describe('who gets a push', () => {
     await memberSays('one');
     await runQueue();
     expect(recipients()).toEqual([]);
+  });
+
+  describe('while the AI assistant answers (ADR-0022)', () => {
+    const fake = fakeAssistant();
+    const withAssistant = { ...withRelay, ASSISTANT_QUEUE: queue, JOBS_QUEUE: queue, AI: fake.ai, VECTORIZE: fake.vectorize } as unknown as Env;
+    beforeEach(async () => {
+      await env.DB.prepare(`INSERT INTO assistant_settings (id, workspace_id, website_id, name, enabled, created_at, updated_at) VALUES ('asst_a', ?1, 'site_a', 'Sam', 1, 1, 1)`).bind(W).run();
+    });
+
+    it('nobody hears of a visitor until it hands over, and then everyone, with what the visitor wrote', async () => {
+      const visitor = await call('POST', '/api/v1/widget/sessions', { origin: SITE, body: { websiteKey: 'key_a' }, env: withAssistant });
+      const token = ((await visitor.json()) as { accessToken: string }).accessToken;
+      const created = await call('POST', '/api/v1/widget/conversations', { origin: SITE, token, env: withAssistant, body: { clientMessageId: crypto.randomUUID(), content: 'secret words from a visitor' } });
+      const conversationId = ((await created.json()) as { id: string }).id;
+      // No sources at all, so the assistant hands over at once.
+      await runQueue(withAssistant);
+      expect(notifications()).toHaveLength(2);
+      expect(recipients()).toEqual(['mem_one', 'mem_two']);
+      expect(notifications()[0]).toMatchObject({ event: 'new_conversation', conversationId });
+      const { notificationId, payloads } = notifications()[0] as unknown as { notificationId: string; payloads: { subscriptionId: string; ciphertext: string }[] };
+      const opened = await openNotification(phones.get(payloads[0]!.subscriptionId)!, payloads[0]!.ciphertext, { installationId: 'inst_test', workspaceId: W, notificationId, subscriptionId: payloads[0]!.subscriptionId });
+      expect(opened).toMatchObject({ sender: 'Visitor', text: 'secret words from a visitor' });
+      // The visitor's own message was not pushed: only the handover was.
+      const handover = await env.DB.prepare(`SELECT id FROM messages WHERE conversation_id = ?1 AND assistant_id IS NOT NULL`).bind(conversationId).first<{ id: string }>();
+      expect(new Set(notifications().map((n) => n.notificationId)).size).toBe(2);
+      expect(handover).not.toBeNull();
+    });
+
+    it('a visitor is heard as usual where the assistant is off', async () => {
+      await env.DB.prepare(`UPDATE assistant_settings SET enabled = 0`).run();
+      await call('POST', '/api/v1/widget/sessions', { origin: SITE, body: { websiteKey: 'key_a' }, env: withAssistant });
+      await visitorStarts();
+      await runQueue(withAssistant);
+      expect(notifications()[0]).toMatchObject({ event: 'new_conversation' });
+      expect(await env.DB.prepare(`SELECT COUNT(*) AS n FROM messages WHERE assistant_id IS NOT NULL`).first<{ n: number }>()).toEqual({ n: 0 });
+    });
   });
 
   it('a reply in a conversation nobody has goes to nobody', async () => {

@@ -37,6 +37,7 @@ A brand-new account has not been tried yet, so this list comes from Cloudflare's
 | Secrets | `AUTH_SIGNING_KEY`, `TICKET_SIGNING_KEY`, `RELAY_SIGNING_KEY`, `DATA_ENCRYPTION_KEY`, `TURNSTILE_SECRET_KEY`, with the public `TURNSTILE_SITE_KEY` set the same way |
 | Email binding | `EMAIL`, only with `--cloudflare-email`, and able to send only from `--email-from` |
 | Workers AI and Vectorize | `AI` and `VECTORIZE`, index `oc-<name>-assistant`, only with `--assistant`. See [the AI assistant](#the-ai-assistant) |
+| Assistant queue | `ASSISTANT_QUEUE`, queues `oc-<name>-assistant` and `oc-<name>-assistant-dlq`, only with `--assistant` |
 
 The API Worker uses Smart Placement, which moves it near D1 when that is clearly faster. It needs traffic from several locations to decide, and it can take 15 minutes after a deploy. Create the database near your users with `--location`, because a Worker can move and the D1 primary cannot.
 
@@ -170,9 +171,11 @@ Off unless deployed with it ([ADR-0022](../architecture/decisions/0022-ai-assist
 pnpm oc deploy --env production --assistant
 ```
 
-This creates the Vectorize index `oc-<name>-assistant` (1,024 dimensions, cosine) with a metadata index on `websiteId`, and binds it and Workers AI to the Worker. Supervisors then find **Assistant** in the dashboard. Workers AI and Vectorize are billed by Cloudflare by use; the daily limit on answers, `LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY`, caps the main cost ([abuse limits](abuse-limits.md)). `ASSISTANT_MODEL` sets the installation's default model, from the list in `packages/core/src/assistant.ts`.
+This creates the Vectorize index `oc-<name>-assistant` (1,024 dimensions, cosine) with a metadata index on `websiteId`, and the queues `oc-<name>-assistant` and `oc-<name>-assistant-dlq` that answer visitors, and binds them and Workers AI to the Worker. Supervisors then find **Assistant** in the dashboard. Workers AI and Vectorize are billed by Cloudflare by use; the daily limit on answers, `LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY`, caps the main cost ([abuse limits](abuse-limits.md)). `ASSISTANT_MODEL` sets the installation's default model, from the list in `packages/core/src/assistant.ts`.
 
-`--no-assistant` removes the bindings and keeps the index, so turning it back on does not read everything again. To delete the index too: `pnpm exec wrangler vectorize delete oc-<name>-assistant`.
+Without the queue, a supervisor can try the assistant but cannot turn on **Answer visitors**.
+
+`--no-assistant` removes the bindings and keeps the index and queues, so turning it back on does not read everything again. To delete the index too: `pnpm exec wrangler vectorize delete oc-<name>-assistant`.
 
 An installation from the [Deploy button](one-click-deploy.md) has no assistant. To add one, create the index by hand, because the button cannot set its dimensions or metadata index:
 
@@ -181,7 +184,14 @@ pnpm exec wrangler vectorize create <worker-name>-assistant --dimensions 1024 --
 pnpm exec wrangler vectorize create-metadata-index <worker-name>-assistant --propertyName websiteId --type string
 ```
 
-then add `"ai": { "binding": "AI" }` and `"vectorize": [{ "binding": "VECTORIZE", "index_name": "<worker-name>-assistant" }]` to the fork's `wrangler.jsonc`, and deploy.
+To let it answer visitors, also create its queues:
+
+```bash
+pnpm exec wrangler queues create <worker-name>-assistant-dlq
+pnpm exec wrangler queues create <worker-name>-assistant
+```
+
+then add `"ai": { "binding": "AI" }` and `"vectorize": [{ "binding": "VECTORIZE", "index_name": "<worker-name>-assistant" }]` to the fork's `wrangler.jsonc`, with a producer `{ "binding": "ASSISTANT_QUEUE", "queue": "<worker-name>-assistant" }` and a consumer `{ "queue": "<worker-name>-assistant", "max_batch_size": 1, "max_retries": 3, "dead_letter_queue": "<worker-name>-assistant-dlq" }` under `queues`, and deploy.
 
 ## Operations
 

@@ -53,6 +53,8 @@ const toMessage = (row: VisitorMessageRow, ctx: VisitorContext) => ({
   content: row.content,
   attachments: (JSON.parse(row.attachmentsJson) as AttachmentJson[]).map((file) => ({ id: file.id, filename: file.filename, contentType: file.contentType, size: file.size, url: `/api/v1/widget/attachments/${file.id}` })),
   createdAt: toIso(row.createdAt),
+  // The kind only: why it handed over is for the team.
+  ...(row.assistantKind ? { assistant: { kind: row.assistantKind } } : {}),
 });
 
 export const websiteForWidget = (deps: Pick<AuthDeps, 'db'>, websiteKey: string): Promise<PublicWebsite | null> => findWebsiteByKey(deps.db, websiteKey);

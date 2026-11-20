@@ -3,7 +3,7 @@
  * repository, which cannot read internal notes. Write rules: docs/architecture/data-model.md.
  */
 import { canAssignConversation, signTicket, TICKET_TTL_SECONDS, verifyTicket, type TicketClaims } from '@openchat/auth';
-import { repositories, type AttachmentJson, type ContactRow, type ConversationChange, type ConversationRow, type ConversationStatus, type Database, type StoredMessage, type WorkspaceContext } from '@openchat/database';
+import { repositories, type AssistantHandoverReason, type AttachmentJson, type ContactRow, type ConversationChange, type ConversationRow, type ConversationStatus, type Database, type StoredMessage, type WorkspaceContext } from '@openchat/database';
 import { AppError, notFound, toIso } from '@openchat/shared';
 import { toAttachment } from './attachments';
 import type { AuthDeps } from './auth-flows';
@@ -28,6 +28,7 @@ const toConversation = (row: ConversationRow) => ({
   lastReadSeq: row.lastReadSeq,
   createdAt: toIso(row.createdAt),
   updatedAt: toIso(row.updatedAt),
+  assistantState: row.assistantState,
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
@@ -45,6 +46,7 @@ export const toMessage = (row: StoredMessage) => ({
   attachments: (JSON.parse(row.attachmentsJson) as AttachmentJson[]).map((file) => toAttachment(file, `/api/v1/workspaces/${row.workspaceId}/attachments/${file.id}`)),
   createdAt: toIso(row.createdAt),
   metadata: {},
+  ...(row.assistantKind ? { assistant: { kind: row.assistantKind, ...(row.assistantReason ? { reason: row.assistantReason as AssistantHandoverReason } : {}) } } : {}),
 });
 
 const SYNC = 'sync';

@@ -9,6 +9,8 @@ export interface ChatMessage {
   clientMessageId: string | null;
   mine: boolean;
   system: boolean;
+  /** Written by the AI assistant: labelled, and a handover is shown in the visitor's language. */
+  assistant: 'answer' | 'handover' | null;
   senderName: string | null;
   content: string;
   createdAt: string | null;
@@ -25,7 +27,8 @@ export const fromServer = (message: VisitorMessage): ChatMessage => ({
   seq: message.seq,
   clientMessageId: message.clientMessageId,
   mine: message.sender.type === 'visitor',
-  system: message.sender.type === 'system',
+  system: message.sender.type === 'system' && !message.assistant,
+  assistant: message.assistant?.kind ?? null,
   senderName: message.sender.displayName,
   content: message.content,
   createdAt: message.createdAt,
@@ -41,6 +44,7 @@ export const pendingMessage = (clientMessageId: string, content: string, pending
   clientMessageId,
   mine: true,
   system: false,
+  assistant: null,
   senderName: null,
   content,
   createdAt: null,

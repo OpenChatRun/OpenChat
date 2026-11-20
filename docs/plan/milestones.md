@@ -372,6 +372,21 @@ Sources and a test panel, with no visitor-facing behaviour. Run on a throwaway i
 
 Limits: one website tried, so `minScore` may need tuning; translations need native review; not deployed to OpenChat Cloud.
 
+### Assistant step 2 exit check
+
+Answering visitors. Run on a throwaway installation on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#ai-assistant-answering-visitors-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| `oc deploy --assistant` creates the assistant queues, and migration 0017 applies | Yes, after re-running a deploy that met Cloudflare's queue lag |
+| A visitor gets an answer, labelled AI, in their language | Yes, English, German and Japanese, in 2 to 19 seconds |
+| Handover on a request for a person, missing sources, and override attempts | Yes; the team is pushed once, at the handover (tests) |
+| It stops when a member replies, notes or assigns | Yes, on real D1 for a reply; tests for the rest |
+| Writes hold at commit (last message, unassigned, still enabled) | Tests |
+| Widget and dashboard, light and dark | Screenshots checked |
+
+Limits: the apps do not label its messages yet; translations need native review; not offered on OpenChat Cloud.
+
 ## Mapping to spec §20
 
 | Journey step | Milestone |

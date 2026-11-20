@@ -29,6 +29,8 @@ export const CHAT_CSS = `
 .oc-msg.system{align-self:center;align-items:center;max-width:90%;margin:10px 0;color:var(--oc-muted);font-size:12px}
 .oc-ava{position:absolute;left:0;bottom:0;width:28px;height:28px;border-radius:50%;background:var(--oc-primary);color:var(--oc-on-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;text-transform:uppercase}
 .oc-who{font-size:12px;color:var(--oc-muted);margin:0 0 4px 4px}
+.oc-ai{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--oc-muted);border-radius:4px;font-size:10px;font-weight:600;line-height:16px}
+.oc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .oc-bubble{padding:10px 14px;border-radius:18px 18px 18px 4px;background:var(--oc-theirs);white-space:pre-wrap;overflow-wrap:anywhere}
 .mine .oc-bubble{border-radius:18px 18px 4px 18px;background:var(--oc-primary);color:var(--oc-on-primary)}
 .mine.sending .oc-bubble{opacity:.7}

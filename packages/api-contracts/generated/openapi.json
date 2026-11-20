@@ -386,6 +386,32 @@
                       "metadata": {
                         "type": "object",
                         "additionalProperties": {}
+                      },
+                      "assistant": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "answer",
+                              "handover"
+                            ]
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "asked",
+                              "no_sources",
+                              "unsure",
+                              "turns",
+                              "limit",
+                              "error"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
                       }
                     },
                     "required": [
@@ -497,6 +523,18 @@
                           ]
                         }
                       },
+                      "assistantState": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "answering",
+                          "handed_over",
+                          "stopped",
+                          null
+                        ]
+                      },
                       "updatedAt": {
                         "type": "string"
                       }
@@ -597,6 +635,18 @@
                             "name"
                           ]
                         }
+                      },
+                      "assistantState": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "enum": [
+                          "answering",
+                          "handed_over",
+                          "stopped",
+                          null
+                        ]
                       },
                       "updatedAt": {
                         "type": "string"
@@ -1162,6 +1212,21 @@
                       },
                       "createdAt": {
                         "type": "string"
+                      },
+                      "assistant": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "answer",
+                              "handover"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
                       }
                     },
                     "required": [
@@ -2093,6 +2158,21 @@
                   },
                   "createdAt": {
                     "type": "string"
+                  },
+                  "assistant": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "answer",
+                          "handover"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
                   }
                 },
                 "required": [
@@ -2233,6 +2313,19 @@
           },
           "updatedAt": {
             "type": "string"
+          },
+          "assistantState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "answering",
+              "handed_over",
+              "stopped",
+              null
+            ],
+            "description": "The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part."
           }
         },
         "required": [
@@ -2251,7 +2344,8 @@
           "lastMessageAt",
           "lastReadSeq",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "assistantState"
         ]
       },
       "Message": {
@@ -2344,6 +2438,33 @@
           "metadata": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "assistant": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "answer",
+                  "handover"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "asked",
+                  "no_sources",
+                  "unsure",
+                  "turns",
+                  "limit",
+                  "error"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "description": "Present when the AI assistant wrote it, as a system message. `sender.displayName` is its name."
           }
         },
         "required": [
@@ -3184,6 +3305,10 @@
             "type": "boolean",
             "description": "False when the installation has no Workers AI and Vectorize bindings. Sources cannot be added then."
           },
+          "canReply": {
+            "type": "boolean",
+            "description": "True when it can also answer visitors: the assistant's queue is bound as well. It can be turned on only then."
+          },
           "models": {
             "type": "array",
             "items": {
@@ -3219,11 +3344,15 @@
                   "string",
                   "null"
                 ]
+              },
+              "enabled": {
+                "type": "boolean"
               }
             },
             "required": [
               "name",
-              "model"
+              "model",
+              "enabled"
             ]
           },
           "sources": {
@@ -3243,17 +3372,22 @@
               },
               "textSourceChars": {
                 "type": "integer"
+              },
+              "turnsPerConversation": {
+                "type": "integer"
               }
             },
             "required": [
               "sourcesPerWebsite",
               "pagesPerSource",
-              "textSourceChars"
+              "textSourceChars",
+              "turnsPerConversation"
             ]
           }
         },
         "required": [
           "available",
+          "canReply",
           "models",
           "defaultModel",
           "settings",
@@ -5617,6 +5751,21 @@
                           },
                           "createdAt": {
                             "type": "string"
+                          },
+                          "assistant": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "answer",
+                                  "handover"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
                           }
                         },
                         "required": [
@@ -5797,6 +5946,21 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "assistant": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "answer",
+                            "handover"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
                     }
                   },
                   "required": [
@@ -5903,6 +6067,21 @@
                     },
                     "createdAt": {
                       "type": "string"
+                    },
+                    "assistant": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "answer",
+                            "handover"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
                     }
                   },
                   "required": [
@@ -8802,7 +8981,7 @@
           "assistant"
         ],
         "operationId": "saveAssistantSettings",
-        "summary": "Name the assistant and choose its model. For supervisors.",
+        "summary": "Name the assistant, choose its model, and turn answering visitors on or off. For supervisors.",
         "security": [
           {
             "bearerAuth": []
@@ -8845,6 +9024,10 @@
                       "null"
                     ],
                     "maxLength": 100
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Answer visitors in conversations nobody has. Left out, it stays as it was; a new assistant starts off."
                   }
                 },
                 "required": [
@@ -8872,11 +9055,15 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "enabled": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "name",
-                    "model"
+                    "model",
+                    "enabled"
                   ]
                 }
               }

@@ -160,13 +160,15 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 
 ## The AI assistant
 
-[ADR-0022](decisions/0022-ai-assistant.md). In step 1 only supervisors use it (`assistant.manage`), from the dashboard; no visitor reaches it.
+[ADR-0022](decisions/0022-ai-assistant.md). Supervisors set it up (`assistant.manage`). From step 2, a supervisor can let it answer visitors, so a stranger's words reach the model.
 
 **Reading web pages** is a request to the internet on a supervisor's behalf, so it is narrow. The address must be `https`, with no user name, password or port, on the host of one of the website's allowed origins, or a subdomain of it. The reader follows links only on the same origin and under the start page's folder, honours `robots.txt` (RFC 9309) and `noindex` and `nofollow`, stops at 50 pages, 2 MB a page and 10 seconds a request, and identifies itself as `OpenChat-Assistant/1.0 (+https://openchat.run)`. The start page may redirect between the bare domain and `www.`, and nowhere else. Only text is kept.
 
-**Prompts.** Sources are quoted to the model inside `<source>` tags, after removing any such tags from them, and the system prompt says they are material, not instructions. The model must answer from them alone or reply `NO_ANSWER`, which is shown as declining. Links in an answer that do not appear in the sources are removed. This makes misuse harder, not impossible: a page the company publishes can still steer its own assistant. Step 2, which answers visitors, adds a handover to people and labels every answer as AI.
+**Prompts.** Sources are quoted to the model inside `<source>` tags, after removing any such tags from them, and the system prompt says they are material, not instructions. The model must answer from them alone or reply `NO_ANSWER`, which is shown as declining. Links in an answer that do not appear in the sources are removed. This makes misuse harder, not impossible: a page the company publishes can still steer its own assistant.
 
-**Data.** Questions, sources and answers go to Workers AI in the installation's own Cloudflare account. Questions asked in the test panel are not stored. Nothing about the assistant is logged except IDs, counts and outcomes.
+**Visitors.** The model sees the visitor's public messages and the assistant's own answers in the conversation, never notes, members' messages, contact details or other conversations. The rules are repeated after the visitor's words, because on real Workers AI Llama 3.3 obeyed "ignore all previous instructions" without that. Messages that look like an attempt to give it instructions, in English and a few other languages, are handed over without asking the model. A visitor who asks for a person, in the widget's 11 languages, is handed over too. Each answer is labelled AI in the widget and the inbox, and the worst a visitor can make it do is say something wrong to that same visitor, in a conversation the team can read. Answers count towards the daily limit, and a conversation gets at most 5.
+
+**Data.** Questions, sources and answers go to Workers AI in the installation's own Cloudflare account. Questions asked in the test panel are not stored; a visitor's messages and the assistant's answers are stored as messages, like any other. Nothing about the assistant is logged except IDs, counts and outcomes.
 
 ## Privacy
 

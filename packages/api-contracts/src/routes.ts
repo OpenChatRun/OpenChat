@@ -1,7 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi';
 import { NOTIFICATION_EVENTS } from '@openchat/notification-protocol';
 import { page, PaginationQuery, problemResponse } from './common';
-import { ConversationPrioritySchema, ConversationStatusSchema, VisitorWireMessageSchema } from './realtime';
+import { AssistantMessageSchema, AssistantStateSchema, ConversationPrioritySchema, ConversationStatusSchema, VisitorWireMessageSchema } from './realtime';
 
 export const HealthSchema = z.object({ status: z.literal('ok') }).openapi('Health');
 
@@ -568,6 +568,7 @@ export const ConversationSchema = z
     lastReadSeq: z.number().int().openapi({ description: "The caller's read position, for unread counts." }),
     createdAt: z.string(),
     updatedAt: z.string(),
+    assistantState: AssistantStateSchema.nullable().openapi({ description: 'The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part.' }),
   })
   .openapi('Conversation');
 
@@ -589,6 +590,7 @@ export const MessageSchema = z
     attachments: z.array(AttachmentSchema),
     createdAt: z.string(),
     metadata: z.record(z.string(), z.unknown()),
+    assistant: AssistantMessageSchema.optional().openapi({ description: 'Present when the AI assistant wrote it, as a system message. `sender.displayName` is its name.' }),
   })
   .openapi('Message');
 
@@ -1508,11 +1510,12 @@ export const AssistantSourceSchema = z
 export const AssistantSchema = z
   .object({
     available: z.boolean().openapi({ description: 'False when the installation has no Workers AI and Vectorize bindings. Sources cannot be added then.' }),
+    canReply: z.boolean().openapi({ description: "True when it can also answer visitors: the assistant's queue is bound as well. It can be turned on only then." }),
     models: z.array(z.object({ id: z.string(), label: z.string() })),
     defaultModel: z.string(),
-    settings: z.object({ name: z.string(), model: z.string().nullable() }).nullable(),
+    settings: z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean() }).nullable(),
     sources: z.array(AssistantSourceSchema),
-    limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int() }),
+    limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int(), turnsPerConversation: z.number().int() }),
   })
   .openapi('Assistant');
 
@@ -1541,10 +1544,22 @@ export const saveAssistantSettingsRoute = createRoute({
   path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/settings',
   tags: ['assistant'],
   operationId: 'saveAssistantSettings',
-  summary: "Name the assistant and choose its model. For supervisors.",
+  summary: 'Name the assistant, choose its model, and turn answering visitors on or off. For supervisors.',
   security: bearer,
-  request: { params: assistantParams, body: { required: true, ...json(z.strictObject({ name: AssistantName, model: z.string().max(100).nullable() })) } },
-  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable() })) }, default: problemResponse },
+  request: {
+    params: assistantParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          name: AssistantName,
+          model: z.string().max(100).nullable(),
+          enabled: z.boolean().optional().openapi({ description: 'Answer visitors in conversations nobody has. Left out, it stays as it was; a new assistant starts off.' }),
+        }),
+      ),
+    },
+  },
+  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean() })) }, default: problemResponse },
 });
 
 export const addAssistantSourceRoute = createRoute({

@@ -28,6 +28,14 @@ export const AttachmentRefSchema = z.object({
   url: z.string(),
 });
 
+/** ADR-0022. Every assistant message carries this, so that each client can label it as AI. */
+export const AssistantStateSchema = z.enum(['answering', 'handed_over', 'stopped']);
+export const AssistantMessageSchema = z.object({
+  kind: z.enum(['answer', 'handover']),
+  /** Why it handed over. Agents only. */
+  reason: z.enum(['asked', 'no_sources', 'unsure', 'turns', 'limit', 'error']).optional(),
+});
+
 export const WireMessageSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
@@ -42,6 +50,7 @@ export const WireMessageSchema = z.object({
   attachments: z.array(AttachmentRefSchema),
   createdAt: Iso,
   metadata: z.record(z.string(), z.unknown()),
+  assistant: AssistantMessageSchema.optional(),
 });
 
 /** Not a subtype of WireMessage by design: no visibility, no member IDs, no internal_note type. */
@@ -56,6 +65,8 @@ export const VisitorWireMessageSchema = z.object({
   content: z.string(),
   attachments: z.array(AttachmentRefSchema),
   createdAt: Iso,
+  /** Written by the AI assistant: shown with an AI label, and a handover in the visitor's own language. */
+  assistant: z.object({ kind: z.enum(['answer', 'handover']) }).optional(),
 });
 
 export const ConversationPatchSchema = z.object({
@@ -67,6 +78,7 @@ export const ConversationPatchSchema = z.object({
   lastMessageSeq: z.number().int().optional(),
   lastMessageAt: Iso.optional(),
   tags: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+  assistantState: AssistantStateSchema.nullable().optional(),
   updatedAt: Iso,
 });
 

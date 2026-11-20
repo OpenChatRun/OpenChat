@@ -130,11 +130,11 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 ## The AI assistant
 
-[ADR-0022](decisions/0022-ai-assistant.md), step 1. Four tables, each with `workspace_id`, reached only through `assistantRepository`:
+[ADR-0022](decisions/0022-ai-assistant.md), steps 1 and 2. Four tables, each with `workspace_id`, reached only through `assistantRepository`:
 
 | Table | Holds |
 |---|---|
-| `assistant_settings` | One row per website: the name visitors will see, and a model, or NULL for the installation's default |
+| `assistant_settings` | One row per website: the name visitors will see, a model, or NULL for the installation's default, and `enabled`, whether it answers visitors |
 | `assistant_sources` | What the assistant answers from: a web page (`kind='page'`, with `url`) or pasted text (`kind='text'`, with `content`). `status` is `pending`, `indexing`, `ready` or `failed`, with `error_code`. `generation` goes up each time the source changes or is read again; `indexed_generation` is the one the chunks are from |
 | `assistant_chunks` | Passages of a source, about 1,200 characters each. The ID is `<sourceId>.<generation>.<n>`, and is also the vector's ID in Vectorize |
 | `assistant_usage` | Per workspace and UTC day: answers, pages read, and passages written. Answers are counted with `INSERT … ON CONFLICT DO UPDATE … WHERE answers < limit RETURNING`, so the daily limit holds without a read first |
@@ -143,7 +143,20 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 **Vectors live outside D1.** Vectorize has one namespace per workspace, and a metadata index on `websiteId`, so a query sees only one website. Removing a source, or replacing a generation, writes an outbox row, `assistant.vectors_removed`, listing the vector IDs, in the same batch as the D1 change. Dispatch deletes them, and the sweep retries until it is done. On real Vectorize, deletes and upserts took 30 to 60 seconds to show in queries ([validation](cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)).
 
-**Erasure.** Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
+**Answering visitors (step 2).** Two columns, added by migration 0017 with hand-written CHECKs:
+
+- `messages.assistant_id` names the `assistant_settings` row that wrote a message. Such a message has `sender_type = 'system'` (`messages_assistant_ck`), visibility `public`, `metadata_json.assistant` of `answer` or `handover`, and for a handover `metadata_json.reason`: `asked`, `no_sources`, `unsure`, `turns`, `limit` or `error`. Its sender name is the assistant's current name.
+- `conversations.assistant_state`: NULL (never answered), `answering`, `handed_over` or `stopped` (`conversations_assistant_state_ck`).
+
+| From | To | When |
+|---|---|---|
+| NULL or `answering` | `answering` | The assistant answers |
+| NULL or `answering` | `handed_over` | The assistant hands over |
+| NULL or `answering` | `stopped` | A member replies, writes a note, or the conversation is assigned to someone |
+
+`handed_over` and `stopped` are final. An assistant message is a Pattern 1 insert, with `client_message_id = 'assistant:<visitorMessageId>'`, so a retried job writes it once. Its `INSERT … SELECT` also requires, at commit, that the visitor's message is still the conversation's last, that nobody has the conversation, that the state is NULL or `answering`, and that the website's assistant is still enabled. If anything changed while the model was thinking, nothing is written.
+
+**Erasure.** Assistant messages are messages: contact export includes them, and erasure deletes them with the conversation. Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
 
 ## Retention
 

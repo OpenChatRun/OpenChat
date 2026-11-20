@@ -51,6 +51,8 @@ export interface VisitorMessageRow {
   content: string;
   createdAt: number;
   attachmentsJson: string;
+  /** Written by the AI assistant: an answer, or handing over to the team. */
+  assistantKind: 'answer' | 'handover' | null;
 }
 
 export type VisitorSendResult =
@@ -64,13 +66,15 @@ export type VisitorSendResult =
 /** Public rows only, in the visitor's own sequence, for conversations of this contact. ?1 is the contact. */
 const MESSAGE_SELECT = `SELECT m.id, ${ATTACHMENTS_JSON} AS attachmentsJson, m.conversation_id AS conversationId, m.public_seq AS seq,
     CASE WHEN m.sender_type = 'visitor' THEN m.client_message_id END AS clientMessageId,
-    m.sender_type AS senderType, m.message_type AS type, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name) AS senderName
+    m.sender_type AS senderType, m.message_type AS type, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name, asst.name) AS senderName,
+    CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind
   FROM messages m
   JOIN conversations c ON c.workspace_id = m.workspace_id AND c.id = m.conversation_id AND c.contact_id = ?1
   LEFT JOIN workspace_members sm ON m.sender_type = 'member' AND sm.workspace_id = m.workspace_id AND sm.id = m.sender_id
   LEFT JOIN users u ON u.id = sm.user_id
   LEFT JOIN visitors sv ON m.sender_type = 'visitor' AND sv.workspace_id = m.workspace_id AND sv.id = m.sender_id
-  LEFT JOIN contacts ct ON ct.workspace_id = sv.workspace_id AND ct.id = sv.contact_id`;
+  LEFT JOIN contacts ct ON ct.workspace_id = sv.workspace_id AND ct.id = sv.contact_id
+  LEFT JOIN assistant_settings asst ON m.assistant_id IS NOT NULL AND asst.workspace_id = m.workspace_id AND asst.id = m.assistant_id`;
 
 export async function findWebsiteByKey(database: Database, websiteKey: string): Promise<PublicWebsite | null> {
   const row = await rawHandle(database)

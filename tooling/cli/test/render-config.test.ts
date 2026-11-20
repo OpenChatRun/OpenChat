@@ -48,6 +48,10 @@ describe('renderConfig', () => {
     const chosen = renderConfig(source, { ...state, assistant: true }, '../../services/api');
     expect(chosen.ai).toEqual({ binding: 'AI' });
     expect(chosen.vectorize).toEqual([{ binding: 'VECTORIZE', index_name: 'oc-acme-prod-assistant' }]);
+    expect(chosen.queues?.producers).toContainEqual({ binding: 'ASSISTANT_QUEUE', queue: 'oc-acme-prod-assistant' });
+    expect(chosen.queues?.consumers?.find((c) => c.queue === 'oc-acme-prod-assistant')?.dead_letter_queue).toBe('oc-acme-prod-assistant-dlq');
+    expect(chosen.queues?.consumers?.some((c) => c.queue === 'oc-acme-prod-assistant-dlq')).toBe(true);
+    expect(rendered.queues?.producers?.some((p) => p.binding === 'ASSISTANT_QUEUE')).toBe(false);
   });
 
   it('leaves no local resource names behind', () => {
