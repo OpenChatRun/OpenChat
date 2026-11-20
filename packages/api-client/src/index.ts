@@ -191,6 +191,7 @@ export function createClient(options: ClientOptions) {
     requestPasswordReset: (email: string) => request<void>('POST', '/api/v1/auth/password-reset/request', { email }),
     confirmPasswordReset: (token: string, password: string) => request<void>('POST', '/api/v1/auth/password-reset/confirm', { token, password }),
     getMe: () => get<Me>('/api/v1/me'),
+    updateMe: (input: { language: NonNullable<Me['language']> }) => request<Me>('PATCH', '/api/v1/me', input),
 
     listMembers: (workspaceId: string, cursor?: string) => get<MemberPage>(`${workspace(workspaceId)}/members?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
     listPeople: (input: { cursor?: string | undefined; limit?: number; q?: string } = {}) => get<People>(`/api/v1/admin/people${query(input)}`),

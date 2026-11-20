@@ -40,6 +40,7 @@ Every request verifies, in order: identity, membership, permission, resource own
 | Assign to self | Only after joining | Yes | Yes |
 | Assign to others, transfer | Only after joining, as a supervisor | Yes | Own only |
 | Merge contacts, delete tags | Only after joining, as a supervisor | Yes | No |
+| Correct a visitor's language | Only after joining, as a supervisor | Yes | No |
 | Manage canned responses (later) | Only after joining, as a supervisor | Yes | No |
 | Manage people and the admin role, and assign them to workspaces | Yes | No | No |
 | Create and rename workspaces. Manage websites, and later automation and email settings | Yes, without joining | No | No |
@@ -189,6 +190,11 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 - **Same rules as the public pages.** Published articles of the website the key names, from an Origin the website allows, limited per IP. No session is created, so reading leaves no trace of the visitor.
 - **The panel sets one piece of HTML,** an article's `body_html`, which only `renderHelpMarkdown` ever wrote. Message content stays text nodes. The widget's Shadow DOM keeps the article's few tags from the host page's styles.
 - **`helpArticleId` is checked in SQL** on insert: an ID that is not a published article of the visitor's website is stored as null, not refused, so it reveals nothing about other websites.
+
+### Languages
+
+- **A visitor's language is a well-formed BCP 47 tag of at most 35 characters,** checked by the contract and stored in its canonical spelling. Only the conversation's first one is kept, so a visitor cannot change what the team sees after it is set; only a supervisor can (`conversation.language`), and that is recorded as a conversation event.
+- **A member's language** is one of OpenChat's eleven, and each person can change only their own.
 
 ### Draft with AI
 

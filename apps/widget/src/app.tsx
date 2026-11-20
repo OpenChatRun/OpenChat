@@ -7,7 +7,7 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } fro
 import type { HelpArticle, HelpList } from './api';
 import type { ChatState, Controller } from './controller';
 import { hasOlder, unreadCount, type ChatMessage } from './state';
-import { pickLocale, type Locale } from './locale';
+import { pickLocale, visitorLanguage, type Locale } from './locale';
 import { formatSize, TRANSLATIONS, type Strings } from './strings';
 
 /** The language every part of the panel speaks, chosen once in App. */
@@ -325,9 +325,11 @@ export function App({
   const state = useChat(controller);
   const chosen = state.settings?.language;
   const language = useMemo(() => {
-    const locale = pickLocale([pageLocale, chosen === 'auto' ? undefined : chosen, ...pageLanguages]);
+    const candidates = [pageLocale, chosen === 'auto' ? undefined : chosen, ...pageLanguages];
+    const locale = pickLocale(candidates);
+    controller.setLanguage(visitorLanguage(candidates));
     return { locale, S: TRANSLATIONS[locale] };
-  }, [pageLocale, chosen, pageLanguages]);
+  }, [controller, pageLocale, chosen, pageLanguages]);
   const { locale, S } = language;
   const panel = useRef<HTMLDivElement>(null);
   const log = useRef<HTMLDivElement>(null);

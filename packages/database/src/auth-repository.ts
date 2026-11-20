@@ -141,6 +141,16 @@ export function loadPrincipal(database: Database, userId: string, sessionId: str
     .first<Principal>();
 }
 
+/** The language the user reads (ADR-0024), or null if no client has set it. */
+export async function userLanguage(database: Database, userId: string): Promise<string | null> {
+  const row = await rawHandle(database).prepare(`SELECT language FROM users WHERE id = ?1`).bind(userId).first<{ language: string | null }>();
+  return row?.language ?? null;
+}
+
+export async function setUserLanguage(database: Database, userId: string, language: string): Promise<void> {
+  await rawHandle(database).prepare(`UPDATE users SET language = ?2, updated_at = ${DB_NOW_MS} WHERE id = ?1`).bind(userId, language).run();
+}
+
 export interface MembershipRow {
   memberId: string;
   role: Role;

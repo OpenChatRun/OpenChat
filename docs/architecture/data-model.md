@@ -208,6 +208,17 @@ Runs have no foreign key from articles, and a collection a run names is checked 
 
 **Privacy.** Articles and images are the company's content, not visitor data. Contact export, erasure and retention do not touch them.
 
+## Languages
+
+Automatic translation ([ADR-0024](decisions/0024-automatic-translation.md)) needs to know who reads what. Step 1 stores it; nothing is translated yet.
+
+- **`conversations.visitor_language`**, a BCP 47 tag in its usual spelling (`pt-BR`, `zh-Hant`). The widget sends it with the first message and with every later one, and the message's own conversation update keeps it with `COALESCE(visitor_language, ?)`, so the first one sent stays. Conversations from before it was recorded get it from the visitor's next message. A tag that is not well formed is dropped, never refused, so a message is never lost over its language. A supervisor's correction, through the conversation update, is recorded as a `language_changed` event.
+- **`users.language`**, one of OpenChat's eleven languages. It belongs to the person, not the membership: someone reads the same language in every workspace. `PATCH /api/v1/me` writes it.
+
+The ADR has the widget send the language when it creates a session as well. A session has nowhere to keep it, so the widget sends it with messages instead, which also fills in conversations that began before.
+
+Migration 0023 only adds the two columns.
+
 ## Retention
 
 Each workspace has `retention_days`, set by an installation admin under **Workspaces** (`PUT /api/v1/admin/workspaces/{id}/retention`), from 30 days to ten years. NULL, the default, keeps everything. A change is audited as `workspace.retention_changed`, with the old and new values.

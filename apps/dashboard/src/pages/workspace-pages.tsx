@@ -13,7 +13,7 @@ import { CopyableSnippet, WorkspacesAdminPage } from './workspaces-admin-page';
 import { SoftwareFooter } from '../software-footer';
 import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
-import { LanguagePicker } from '../language-picker';
+import { LanguagePicker, useServerLanguage } from '../language-picker';
 import { ThemePicker } from '../theme-picker';
 
 type Membership = Me['memberships'][number];
@@ -119,6 +119,7 @@ function RailButton({ label, icon, current, onClick }: { label: string; icon: Ic
 
 export function WorkspaceApp() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.getMe });
+  useServerLanguage(me.data);
   const [selectedId, setSelectedId] = useState(() => preference.get(WORKSPACE_PREFERENCE));
   const [tab, setTab] = useState<Section>('inbox');
   const [adminPage, setAdminPage] = useState<AdminPage | null>(null);

@@ -28,6 +28,8 @@ import {
   isAuthTokenUsable,
   issueAuthToken,
   listMemberships,
+  setUserLanguage,
+  userLanguage,
   loadPrincipal,
   revokeSession,
   rotateRefreshToken,
@@ -37,7 +39,7 @@ import {
   type Principal,
 } from '@openchat/database';
 import type { EmailProvider } from '@openchat/email';
-import { AppError, DEFAULT_ABUSE_LIMITS, newId, toIso, type AbuseLimits, type JobEnvelope } from '@openchat/shared';
+import { AppError, DEFAULT_ABUSE_LIMITS, newId, toIso, type AbuseLimits, type HelpLanguage, type JobEnvelope } from '@openchat/shared';
 import type { JobQueue } from './index';
 
 export interface RateLimiter {
@@ -209,11 +211,12 @@ export async function authenticate(deps: Pick<AuthDeps, 'db' | 'installationId' 
 }
 
 export async function getMe(deps: Pick<AuthDeps, 'db'>, principal: Principal) {
-  const memberships = await listMemberships(deps.db, principal.userId);
+  const [memberships, language] = await Promise.all([listMemberships(deps.db, principal.userId), userLanguage(deps.db, principal.userId)]);
   return {
     id: principal.userId,
     email: principal.email,
     name: principal.name,
+    language: language as HelpLanguage | null,
     isInstallationAdmin: (await authorizeInstallationAdmin(deps.db, principal.userId)) !== null,
     memberships: memberships.map((m) => ({
       memberId: m.memberId,
@@ -221,6 +224,12 @@ export async function getMe(deps: Pick<AuthDeps, 'db'>, principal: Principal) {
       workspace: { id: m.workspaceId, name: m.workspaceName, slug: m.workspaceSlug, createdAt: toIso(m.workspaceCreatedAt) },
     })),
   };
+}
+
+/** The language the user reads, which translation is into (ADR-0024). The contract allows only OpenChat's own. */
+export async function updateMe(deps: Pick<AuthDeps, 'db'>, principal: Principal, input: { language: HelpLanguage }) {
+  await setUserLanguage(deps.db, principal.userId, input.language);
+  return getMe(deps, principal);
 }
 
 export function passwordResetJob(userId: string): JobEnvelope<{ userId: string }> {

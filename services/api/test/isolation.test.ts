@@ -53,6 +53,7 @@ const CASES: Record<string, Case> = {
   confirmEmailVerification: { kind: 'public', reason: 'Acts only on the user of the presented token' },
   logout: { kind: 'self', reason: 'Revokes the caller’s own session' },
   getMe: { kind: 'self', reason: 'Filtered to the caller’s own memberships. Covered in auth.test.ts' },
+  updateMe: { kind: 'self', reason: 'Changes only the caller’s own language. Covered in languages.test.ts' },
   listPeople: { kind: 'installation' },
   createPerson: { kind: 'installation', body: { name: 'New', email: 'created@example.com' } },
   updatePerson: { kind: 'installation', body: { isInstallationAdmin: true } },

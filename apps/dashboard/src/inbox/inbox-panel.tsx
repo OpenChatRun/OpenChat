@@ -8,6 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { api, errorMessage } from '../app-context';
 import { Icon, Initials } from '../icons';
 import { intlLocale, t, type MessageKey } from '../i18n';
+import { LANGUAGES } from '../i18n/locales';
 import { createRealtime, type Realtime, type RealtimeStatus, type ServerFrame } from '@openchat/api-client/realtime';
 import {
   applyPatch,
@@ -90,6 +91,33 @@ function FromArticle({ workspaceId, articleId }: { workspaceId: string; articleI
     <p className="text-xs text-slate-600 dark:text-slate-400">
       {article.data ? t('fromHelpArticle', { title: article.data.title }) : t('fromHelpArticleGone')}
     </p>
+  );
+}
+
+/** A language tag by its name in the dashboard's language, such as Deutsch's "German" in English. */
+function languageName(tag: string): string {
+  try {
+    return new Intl.DisplayNames([intlLocale()], { type: 'language' }).of(tag) ?? tag;
+  } catch {
+    return tag;
+  }
+}
+
+/** The visitor's language, as their widget gave it (ADR-0024). A supervisor can correct it. */
+function VisitorLanguage({ workspaceId, language, disabled, onChange }: { workspaceId: string; language: string | null; disabled: boolean; onChange: (language: string) => void }) {
+  const me = useQuery({ queryKey: ['me'], queryFn: api.getMe });
+  const supervisor = me.data?.memberships.some((m) => m.workspace.id === workspaceId && m.role === 'supervisor') === true;
+  if (!supervisor) return language ? <p className="text-xs text-slate-600 dark:text-slate-400">{t('visitorLanguage', { language: languageName(language) })}</p> : null;
+  const known = LANGUAGES.some(([code]) => code === language);
+  return (
+    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+      {t('visitorLanguageLabel')}
+      <select className="field w-auto py-1 text-xs" value={language ?? ''} disabled={disabled} onChange={(e) => e.target.value && onChange(e.target.value)}>
+        {!language && <option value="">{t('visitorLanguageUnknown')}</option>}
+        {language && !known && <option value={language}>{languageName(language)}</option>}
+        {LANGUAGES.map(([code, name]) => <option key={code} value={code} lang={code}>{name}</option>)}
+      </select>
+    </label>
   );
 }
 
@@ -700,6 +728,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
           </div>
           {data.assistantState === 'answering' && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{t('assistantAnsweringHelp')}</p>}
           {data.helpArticleId && <FromArticle workspaceId={workspaceId} articleId={data.helpArticleId} />}
+          <VisitorLanguage workspaceId={workspaceId} language={data.visitorLanguage} disabled={update.isPending} onChange={(visitorLanguage) => update.mutate({ visitorLanguage })} />
           <div className="flex flex-wrap gap-2">
             <select className="field w-auto" aria-label={t('conversationStatus')} value={data.status} disabled={update.isPending} onChange={(e) => update.mutate({ status: e.target.value as Conversation['status'] })}>
               {STATUSES.map((option) => <option key={option} value={option}>{t(STATUS_LABEL[option])}</option>)}

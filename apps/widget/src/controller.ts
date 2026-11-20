@@ -254,8 +254,11 @@ export function createController(deps: ControllerDeps) {
   const isTransient = (error: unknown) => !(error instanceof ChallengeFailed) && (!(error instanceof ApiError) || error.status >= 500);
   const isChallengeRefusal = (error: unknown) => error instanceof ChallengeFailed || (error instanceof ApiError && error.code === 'turnstile_failed');
 
+  /** What the visitor reads, for translation (ADR-0024). The app sets it once it knows the widget's language. */
+  let language: string | undefined;
+
   const deliver = async (message: ChatMessage) => {
-    const input = { clientMessageId: message.clientMessageId!, content: message.content };
+    const input = { clientMessageId: message.clientMessageId!, content: message.content, ...(language ? { language } : {}) };
     const upload = outgoing.get(message.key);
     for (let attempt = 0; ; attempt++) {
       try {
@@ -416,6 +419,9 @@ export function createController(deps: ControllerDeps) {
       update({ profile: 'none' });
     },
 
+    setLanguage(tag: string) {
+      language = tag;
+    },
     setView(view: 'chat' | 'help') {
       update({ view });
     },

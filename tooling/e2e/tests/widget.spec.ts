@@ -623,6 +623,24 @@ test.describe('languages', () => {
     await expect(page.getByRole('button', { name: '傳送', exact: true })).toBeVisible();
     await context.close();
   });
+
+  test('a visitor whose language the widget does not speak is known to the team by their own (ADR-0024)', async ({ browser }) => {
+    const context = await visitorContext(browser, undefined, 'ru-RU');
+    const page = await shop(context, WEBSITE_KEY, { lang: '' });
+    await launcher(page).click();
+    await expect(page.getByRole('dialog', { name: 'Chat' })).toHaveAttribute('lang', 'en');
+    const created = page.waitForResponse((r) => r.url().endsWith('/api/v1/widget/conversations') && r.request().method() === 'POST');
+    await say(page, 'Здравствуйте');
+    const { id } = (await (await created).json()) as { id: string };
+
+    const agent = await openInbox(browser);
+    await inboxRow(agent, id).click();
+    // The owner is a supervisor, so may correct it.
+    await expect(agent.getByLabel('Visitor’s language')).toHaveValue('ru-RU');
+    await agent.getByLabel('Visitor’s language').selectOption('de');
+    await expect(agent.getByLabel('Visitor’s language')).toHaveValue('de');
+    await context.close();
+  });
 });
 
 test.describe('the Help tab', () => {

@@ -37,6 +37,8 @@ Open a conversation to see its messages, and the visitor's contact card beside t
 - **Internal note** is seen only by your team. It never reaches the visitor, in the widget or in an email.
 - **Attach a file** to send up to 25 MB: images (PNG, JPEG, GIF, WebP), PDF, ZIP, Word, Excel, PowerPoint, plain text or CSV. Other types, including HTML and SVG, are refused.
 
+Under the visitor's name is the **visitor's language**, as their widget or browser gave it. A supervisor can correct it there. The dashboard keeps the language you choose for it in your account too, so a new device starts in it.
+
 At the top of the conversation you can change its **status**, its **priority** (low, normal, high or urgent) and who it is **assigned** to. An agent can assign conversations to themselves, and reassign only their own. A supervisor can assign anyone's.
 
 If someone else changes a conversation at the same moment as you, your change is refused with "This conversation just changed". Check what changed, and try again.
