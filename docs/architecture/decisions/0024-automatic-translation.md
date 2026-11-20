@@ -1,6 +1,6 @@
 # ADR-0024: Automatic translation between visitors and the team
 
-**Status:** Proposed, 2026-11-20. Waiting for the owner's decisions on the questions at the end.
+**Status:** Accepted, 2026-11-20, by the owner. The owner chose: member replies translated silently on send, without a preview; `m2m100` for visitor messages by default; notes not translated.
 
 ## Context
 
@@ -32,8 +32,8 @@ What makes this harder than it looks:
 ### What is translated
 
 - **Visitor messages**, to the language of each member who reads them, after they are stored. A job on the assistant queue translates a public visitor text message into the languages of the workspace's members who have one different from the visitor's, at most three per message. Members whose language was not covered can ask for it with **Translate**, which runs the same job for one language.
-- **Member replies**, to the visitor's language, when the member sends them. A member writes in their own language, sees a preview of the translation before sending, can edit the translation, and sends both. The original and the translation are stored; the visitor sees the translation.
-- Not translated: internal notes (members can read each other's languages, or ask), system messages, the assistant's answers (already in the visitor's language), attachments' names, and email.
+- **Member replies**, to the visitor's language, when the member sends them. A member writes in their own language and sends, with no preview, so answering is as fast as it is today apart from the model call. The original and the translation are stored; the visitor sees the translation, and the member sees it under their own words once sent.
+- Not translated: internal notes, by the owner's choice, system messages, the assistant's answers (already in the visitor's language), attachments' names, and email.
 
 ### Where translations live
 
@@ -45,7 +45,7 @@ What makes this harder than it looks:
 
 - **Members**: a visitor message in another language shows its translation, labelled **Translated from Deutsch**, with **Show original** one tap away. Until the translation arrives (usually about a second), the original shows with "Translating…".
 - **Visitors**: a member's reply shows in the visitor's language, labelled **Translated automatically**, with **Show original**. The visitor never waits: the member's request translates and stores before it commits, so the reply arrives once, already translated.
-- If translation fails or times out (5 seconds), a member reply is sent as written, after the member is told and chooses to send it untranslated; a visitor message shows the original with **Translate** to try again.
+- If translation fails or times out (5 seconds), a member reply is not sent: the composer keeps the text and offers **Try again** or **Send untranslated**, so nothing reaches the visitor in a language they did not choose without the member knowing. A visitor message shows the original with **Translate** to try again.
 
 ### The model
 
@@ -64,7 +64,7 @@ What makes this harder than it looks:
 
 1. **Languages.** Store the visitor's and members' languages. Useful alone: the inbox shows the visitor's language.
 2. **Visitor messages for members.** Translation job, `message_translations`, labels, Show original, Translate on request.
-3. **Member replies for visitors.** Preview, edit, send translated, widget labels, and the original stored for the member.
+3. **Member replies for visitors.** Send translated, widget labels, and the original stored for the member.
 4. **The apps**, in the private repository, show translations and send translated replies.
 
 ## Consequences
@@ -77,12 +77,7 @@ What makes this harder than it looks:
 ## Alternatives considered
 
 - **Translate on display, never stored.** No new table, but every member opening a conversation pays for a model call, and the visitor's record would not say what they were shown.
+- **A preview before sending.** Lets a member check the translation, but most cannot judge a language they do not read, and it slows every reply. The owner chose silent send.
 - **Send the member's reply first and replace it with the translation.** No wait for the member, but the visitor sees text change under them, and push notifications would carry the untranslated text.
 - **A text model for everything.** Better translations of visitors' messages, but a visitor could steer what members read. Offered as an option, not the default.
 - **An external provider such as DeepL.** Better quality, but a new processor outside Cloudflare, a new secret per installation, and a stack addition. It can be added later behind the same interface, with its own ADR.
-
-## Questions for the owner
-
-1. **Preview before sending a member reply** (proposed), or translate silently on send, which is faster for agents?
-2. **Default model for visitor messages:** `m2m100` (safer, weaker, proposed) or Llama 3.3 (better, can be steered)?
-3. **Translate notes between members?** Proposed: not in this ADR.
