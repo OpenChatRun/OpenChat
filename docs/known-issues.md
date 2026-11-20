@@ -55,7 +55,9 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## Automatic translation
 
-- **Steps 1 to 3 of [ADR-0024](architecture/decisions/0024-automatic-translation.md) are built:** languages are stored, visitors' messages are translated for the team, and the team's replies from the dashboard are translated for visitors. The apps show no translations and send replies as written until step 4.
+- **All 4 steps of [ADR-0024](architecture/decisions/0024-automatic-translation.md) are built:** languages are stored, visitors' messages are translated for the team, and the team's replies are translated for visitors, in the dashboard and the apps. App builds released before this send replies as written and show no translations.
+- **The apps name languages in their own language,** such as "Translated from Deutsch", because their JavaScript engine has no list of language names.
+- **The account's language follows the device used last.** A member whose phone and dashboard are in different languages gets visitors' messages translated into whichever they used last.
 - **A reply waits for its translation,** about a second or two, and up to 15 seconds for a long one before it gives up. A reply with only files is sent as it is; a file's name is not translated.
 - **M2M100, the default, translates plainly and sometimes wrongly,** such as "I gave it up a week ago" for "I placed it a week ago". Llama 3.3 translated the same messages well. Every translation is labelled, with the original one tap away.
 - **M2M100 writes Simplified Chinese** even for a member who reads Traditional Chinese. Choose a text model for that.
