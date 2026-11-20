@@ -204,10 +204,15 @@ export const websites = sqliteTable(
     websiteKey: text('website_key').notNull().unique(),
     allowedOriginsJson: text('allowed_origins_json').notNull().default('[]'),
     settingsJson: json('settings_json'),
+    /** The help centre's address, /help/<slug> (ADR-0023). NULL until a supervisor turns it on. */
+    helpSlug: text('help_slug'),
+    /** Bumped by every change visitors could see, so cached help pages are never served stale. */
+    helpVersion: integer('help_version').notNull().default(1),
+    helpNoindex: integer('help_noindex', { mode: 'boolean' }).notNull().default(false),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
-  (t) => [unique('websites_tenant_uq').on(t.workspaceId, t.id)],
+  (t) => [unique('websites_tenant_uq').on(t.workspaceId, t.id), uniqueIndex('websites_help_slug_uq').on(t.helpSlug).where(sql`${t.helpSlug} IS NOT NULL`)],
 );
 
 export const contacts = sqliteTable(
@@ -850,6 +855,112 @@ export const assistantLearned = sqliteTable(
     }).onDelete('cascade'),
     index('assistant_learned_website_idx').on(t.workspaceId, t.websiteId, t.status),
     check('assistant_learned_status_ck', sql`${t.status} IN ('pending','approved','rejected','discarded')`),
+  ],
+);
+
+// ---------- Help centre (ADR-0023) ----------
+
+/** Groups of articles, in one language. */
+export const helpCollections = sqliteTable(
+  'help_collections',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    language: text('language').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    unique('help_collections_tenant_uq').on(t.workspaceId, t.id),
+    unique('help_collections_slug_uq').on(t.websiteId, t.language, t.slug),
+    index('help_collections_website_idx').on(t.workspaceId, t.websiteId),
+    foreignKey({
+      name: 'help_collections_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * Articles. The Markdown is what a supervisor wrote; the HTML is rendered from it on save, and is all a visitor is
+ * ever sent. search_title and search_text are normalised for LIKE search: no FTS5, because D1 cannot export
+ * virtual tables.
+ */
+export const helpArticles = sqliteTable(
+  'help_articles',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    /** Removed from a collection before the collection is deleted, in the same batch. */
+    collectionId: text('collection_id'),
+    /** Articles that say the same thing in other languages share it. */
+    translationGroupId: text('translation_group_id').notNull(),
+    language: text('language').notNull(),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull().default(''),
+    bodyMarkdown: text('body_markdown').notNull().default(''),
+    bodyHtml: text('body_html').notNull().default(''),
+    searchTitle: text('search_title').notNull().default(''),
+    searchText: text('search_text').notNull().default(''),
+    status: text('status', { enum: ['draft', 'published'] }).notNull().default('draft'),
+    position: integer('position').notNull().default(0),
+    version: integer('version').notNull().default(1),
+    publishedAt: integer('published_at'),
+    updatedByMemberId: text('updated_by_member_id'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [
+    unique('help_articles_tenant_uq').on(t.workspaceId, t.id),
+    unique('help_articles_slug_uq').on(t.websiteId, t.language, t.slug),
+    foreignKey({
+      name: 'help_articles_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'help_articles_collection_fk',
+      columns: [t.workspaceId, t.collectionId],
+      foreignColumns: [helpCollections.workspaceId, helpCollections.id],
+    }),
+    index('help_articles_website_idx').on(t.workspaceId, t.websiteId),
+    index('help_articles_public_idx').on(t.websiteId, t.language, t.status),
+    index('help_articles_collection_idx').on(t.workspaceId, t.collectionId),
+    index('help_articles_group_idx').on(t.workspaceId, t.translationGroupId),
+    check('help_articles_status_ck', sql`${t.status} IN ('draft','published')`),
+    check('help_articles_published_ck', sql`(${t.status} = 'published') = (${t.publishedAt} IS NOT NULL)`),
+  ],
+);
+
+/** Images in articles. The file is in R2 at help/<id>; it is the company's, not a visitor's. */
+export const helpAssets = sqliteTable(
+  'help_assets',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    filename: text('filename').notNull(),
+    createdByMemberId: text('created_by_member_id'),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    unique('help_assets_tenant_uq').on(t.workspaceId, t.id),
+    foreignKey({
+      name: 'help_assets_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+    index('help_assets_website_idx').on(t.workspaceId, t.websiteId),
+    check('help_assets_type_ck', sql`${t.contentType} IN ('image/png','image/jpeg','image/gif','image/webp')`),
   ],
 );
 

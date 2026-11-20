@@ -15,7 +15,10 @@ import { registerEmailRoutes } from './routes/email';
 import { registerPushRoutes } from './routes/push';
 import { registerWorkspaceRoutes } from './routes/workspaces';
 import { registerAssistantRoutes } from './routes/assistant';
+import { registerHelpRoutes } from './routes/help';
+import { registerHelpPublicRoutes } from './routes/help-public';
 import { discoveryRelay } from './push/relay-client';
+import { HSTS } from './app-headers';
 
 const OVERLOAD_RETRY_SECONDS = 2;
 
@@ -24,8 +27,7 @@ function isDatabaseOverload(error: Error): boolean {
   return /D1.*overloaded/i.test(error.message);
 }
 
-/** HTTPS only, for a year, on this host. Not includeSubDomains: the operator's other hosts are not ours to decide. */
-export const HSTS = 'max-age=31536000';
+export { HSTS };
 
 export function createApp() {
   const app = new OpenAPIHono<AppEnv>({
@@ -111,6 +113,7 @@ export function createApp() {
   registerAuthRoutes(app);
   registerWorkspaceRoutes(app);
   registerAssistantRoutes(app);
+  registerHelpRoutes(app);
   registerPushRoutes(app);
   registerEmailRoutes(app);
   registerAdminRoutes(app);
@@ -118,6 +121,7 @@ export function createApp() {
   registerConversationRoutes(app);
   registerWidgetRoutes(app);
   registerRealtimeRoutes(app);
+  registerHelpPublicRoutes(app);
 
   app.get('/api/v1/openapi.json', (c) => c.json(openapi));
 

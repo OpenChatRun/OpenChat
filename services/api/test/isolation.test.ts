@@ -130,10 +130,31 @@ const CASES: Record<string, Case> = {
   decideLearnedAnswer: { kind: 'workspace', body: { status: 'rejected' }, ownerStatus: 200 },
   deleteLearnedAnswer: { kind: 'workspace', ownerStatus: 204 },
   setLearnedAutoApprove: { kind: 'workspace', body: { autoApprove: true }, ownerStatus: 200 },
+  getHelpCentre: { kind: 'workspace', ownerStatus: 200 },
+  saveHelpSettings: { kind: 'workspace', body: { slug: 'taken-over' }, ownerStatus: 200 },
+  createHelpCollection: { kind: 'workspace', body: { language: 'en', name: 'Taken over' }, ownerStatus: 201 },
+  updateHelpCollection: { kind: 'workspace', body: { name: 'Taken over' }, ownerStatus: 200 },
+  deleteHelpCollection: { kind: 'workspace', ownerStatus: 204 },
+  createHelpArticle: { kind: 'workspace', body: { language: 'en', title: 'Taken over' }, ownerStatus: 201 },
+  getHelpArticle: { kind: 'workspace', ownerStatus: 200 },
+  updateHelpArticle: { kind: 'workspace', body: { expectedVersion: 1, title: 'Taken over' }, ownerStatus: 200 },
+  setHelpArticleStatus: { kind: 'workspace', body: { status: 'published' }, ownerStatus: 200 },
+  deleteHelpArticle: { kind: 'workspace', ownerStatus: 204 },
+  uploadHelpAsset: { kind: 'workspace', body: UPLOAD, ownerStatus: 201 },
+  deleteHelpAsset: { kind: 'workspace', ownerStatus: 204 },
 };
 
 /** Served by the app, but not part of the versioned contract. */
-const APP_ROUTES_OUTSIDE_THE_CONTRACT = ['GET /api/v1/openapi.json'];
+/** The help centre's public pages are HTML for people, not API (ADR-0023). They read only published articles. */
+const APP_ROUTES_OUTSIDE_THE_CONTRACT = [
+  'GET /api/v1/openapi.json',
+  'GET /help/{slug}',
+  'GET /help/{slug}/sitemap.xml',
+  'GET /help/{slug}/{lang}',
+  'GET /help/{slug}/{lang}/search',
+  'GET /help/{slug}/{lang}/{article}',
+  'GET /help-assets/{id}',
+];
 
 /** The first test applies this to the real routes, and the second proves that it can fail. */
 function uncovered(routes: readonly { operationId?: string | undefined }[], cases: Record<string, unknown>): string[] {
@@ -199,8 +220,8 @@ const testEnv = { ...env, EMAIL_QUEUE: { send: async (_job: JobEnvelope) => unde
 
 /** Resources in each workspace, by the name of the path parameter that holds them. */
 const RESOURCES: Record<'a' | 'b', Record<string, string>> = {
-  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a' },
-  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b' },
+  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a' },
+  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b' },
 };
 
 function urlFor(path: string, ...sources: Record<string, string>[]): string {
@@ -233,7 +254,7 @@ const request = async (method: string, path: string, token: string | null, body?
   return response;
 };
 
-const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned'];
+const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned', 'help_collections', 'help_articles', 'help_assets'];
 
 /** Every row belonging to workspace A. A refused request must leave this exactly as it was. */
 async function snapshotOfA(): Promise<string> {
@@ -268,6 +289,9 @@ async function seed() {
       env.DB.prepare(`INSERT INTO contacts (id, workspace_id, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?1, ?2, 1, 1, 1, 1)`).bind(`cont_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 1, 1, 1)`).bind(`conv_${w}`, `work_${w}`, `site_${w}`, `cont_${w}`),
       env.DB.prepare(`INSERT INTO assistant_learned (id, workspace_id, website_id, conversation_id, question, answer, status, learned_seq, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 'Q?', 'A.', 'pending', 0, 1, 1)`).bind(`alrn_${w}`, `work_${w}`, `site_${w}`, `conv_${w}`),
+      env.DB.prepare(`INSERT INTO help_collections (id, workspace_id, website_id, language, name, slug, created_at, updated_at) VALUES (?1, ?2, ?3, 'en', 'Basics', 'basics', 1, 1)`).bind(`hcol_${w}`, `work_${w}`, `site_${w}`),
+      env.DB.prepare(`INSERT INTO help_articles (id, workspace_id, website_id, collection_id, translation_group_id, language, slug, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?1, 'en', 'hours', 'Hours', 1, 1)`).bind(`hart_${w}`, `work_${w}`, `site_${w}`, `hcol_${w}`),
+      env.DB.prepare(`INSERT INTO help_assets (id, workspace_id, website_id, content_type, size_bytes, filename, created_at) VALUES (?1, ?2, ?3, 'image/png', 11, 'a.png', 1)`).bind(`hast_${w}`, `work_${w}`, `site_${w}`),
       env.DB.prepare(`INSERT INTO attachments (id, workspace_id, conversation_id, storage_key, filename, content_type, size, status, uploaded_by_type, uploaded_by_id, created_at) VALUES (?1, ?2, ?3, ?4, 'a.png', 'image/png', 11, 'ready', 'member', ?5, 1)`).bind(`att_${w}`, `work_${w}`, `conv_${w}`, `w/work_${w}/c/conv_${w}/att_${w}`, `mem_${w}_agent`),
     ]),
   ]);

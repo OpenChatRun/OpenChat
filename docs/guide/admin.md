@@ -84,6 +84,18 @@ What it learns is listed under **Learned answers**. Nothing is used until a supe
 
 The assistant can be wrong, even with good sources. Try the questions your customers ask most before you rely on it. A change to a page shows within a few minutes of reading it again.
 
+## The help centre
+
+**Help centre**, in the side rail, holds articles your visitors can read and search, one help centre for each website. Every member can read it, drafts included, so that they can find an article to send; supervisors change it.
+
+1. Under **Public address**, choose an address, such as `shop`. Your help centre is then at `https://<your installation>/help/shop`. Until you choose one, nothing is public. **Turn off** takes it down; changing it breaks links to the old address.
+2. Choose a **Language**, and add **Collections**, the sections of your help centre in that language, if you want them.
+3. Under **Articles**, give a title and choose **New article**. Write it in Markdown, with the preview beside it: `#` for a heading, `**bold**`, `_italic_`, `-` or `1.` for lists, `[text](https://…)` for a link, `>` for a quote. HTML is not allowed. Upload images under **Images**, and **Insert** one where the cursor is.
+4. **Save** keeps a draft. **Publish** makes it public at once; **Back to draft** takes it down. Publishing, taking down and deleting are recorded in the audit log.
+5. **Translate into** makes a copy in another language for you to translate. Visitors are offered the other languages of an article, and a visitor who opens your help centre's address is taken to their browser's language, if you have articles in it, or else English.
+
+Visitors search titles, summaries and text. Search ignores capitals and accents, and finds Chinese, Japanese and Korean words without spaces. **Ask search engines not to list it** adds `noindex` and removes the sitemap. A website can have 1,000 articles.
+
 ## Failed jobs
 
 Background work, such as sending a push notification or an email, is retried several times. If it still fails, it is listed here, by kind, with the time and the number of attempts. Fix the cause, for example the email settings, and then **Replay**, or **Dismiss** a job you no longer need. Work a job already finished is not repeated. Some jobs cannot be replayed, because the time they had to run by has passed. Failed jobs are kept for 90 days.

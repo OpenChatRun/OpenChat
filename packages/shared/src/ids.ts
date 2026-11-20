@@ -34,6 +34,9 @@ export const ID_PREFIXES = {
   assistant: 'asst',
   assistantSource: 'asrc',
   assistantLearned: 'alrn',
+  helpCollection: 'hcol',
+  helpArticle: 'hart',
+  helpAsset: 'hast',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;

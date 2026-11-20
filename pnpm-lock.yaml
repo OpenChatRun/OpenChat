@@ -199,6 +199,9 @@ importers:
       '@openchat/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@openchat/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@openchat/ui':
         specifier: workspace:*
         version: link:../../packages/ui

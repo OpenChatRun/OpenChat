@@ -22,6 +22,7 @@ The project runs one relay, for the official app. Its [privacy policy](../legal/
 | Visitors | What they write and send, a name and email address if they give them, whether they allowed follow-up emails, tags your team adds, and an ID for each browser they used. Not their IP address, which is used for rate limits and not stored |
 | Colleagues | Name, email, a password hash, roles, and sessions. Their messages and notes, with their name |
 | Everyone | An audit log of admin actions, which names colleagues but never visitors |
+| Help centre | Articles and images your team writes, which are public once published. Nothing about the visitors who read them: no cookies, and searches are not stored |
 | Learned answers | If the AI assistant learns from conversations: one general question and answer for each resolved conversation, without personal details, linked to the conversation and deleted with it |
 
 Logs hold IDs and error codes, never message content, passwords or tokens.

@@ -43,6 +43,10 @@ import type {
   addAssistantSourceRoute,
   testAssistantRoute,
   listLearnedAnswersRoute,
+  getHelpCentreRoute,
+  getHelpArticleRoute,
+  createHelpArticleRoute,
+  updateHelpArticleRoute,
 } from '@openchat/api-contracts';
 import type { z } from 'zod';
 
@@ -84,6 +88,13 @@ export type AssistantSource = Assistant['sources'][number];
 export type AssistantSourceInput = BodyOf<typeof addAssistantSourceRoute>;
 export type AssistantAnswer = Json200<typeof testAssistantRoute>;
 export type LearnedAnswer = Json200<typeof listLearnedAnswersRoute>['data'][number];
+export type HelpCentre = Json200<typeof getHelpCentreRoute>;
+export type HelpCollection = HelpCentre['collections'][number];
+export type HelpArticleSummary = HelpCentre['articles'][number];
+export type HelpAsset = HelpCentre['assets'][number];
+export type HelpArticle = Json200<typeof getHelpArticleRoute>;
+export type HelpArticleInput = BodyOf<typeof createHelpArticleRoute>;
+export type HelpArticleUpdate = BodyOf<typeof updateHelpArticleRoute>;
 export type CreatedWorkspace = Json201<typeof createWorkspaceRoute>;
 export type Conversation = Json200<typeof getConversationRoute>;
 export type ConversationPage = Json200<typeof listConversationsRoute>;
@@ -254,6 +265,29 @@ export function createClient(options: ClientOptions) {
       request<LearnedAnswer>('PATCH', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`, input),
     deleteLearnedAnswer: (workspaceId: string, learnedId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`),
     setLearnedAutoApprove: (workspaceId: string, autoApprove: boolean) => request<{ autoApprove: boolean }>('PUT', `${workspace(workspaceId)}/assistant/learning`, { autoApprove }),
+    getHelpCentre: (workspaceId: string, websiteId: string) => get<HelpCentre>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help`),
+    saveHelpSettings: (workspaceId: string, websiteId: string, input: { slug: string | null; noindex?: boolean }) =>
+      request<{ slug: string | null; noindex: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help/settings`, input),
+    createHelpCollection: (workspaceId: string, websiteId: string, input: { language: string; name: string }) =>
+      request<HelpCollection>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help/collections`, input),
+    updateHelpCollection: (workspaceId: string, collectionId: string, change: { name?: string; slug?: string; position?: number }) =>
+      request<HelpCollection>('PATCH', `${workspace(workspaceId)}/help/collections/${encodeURIComponent(collectionId)}`, change),
+    deleteHelpCollection: (workspaceId: string, collectionId: string) => request<void>('DELETE', `${workspace(workspaceId)}/help/collections/${encodeURIComponent(collectionId)}`),
+    getHelpArticle: (workspaceId: string, articleId: string) => get<HelpArticle>(`${workspace(workspaceId)}/help/articles/${encodeURIComponent(articleId)}`),
+    createHelpArticle: (workspaceId: string, websiteId: string, input: HelpArticleInput) =>
+      request<HelpArticle>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help/articles`, input),
+    updateHelpArticle: (workspaceId: string, articleId: string, change: HelpArticleUpdate) => request<HelpArticle>('PATCH', `${workspace(workspaceId)}/help/articles/${encodeURIComponent(articleId)}`, change),
+    setHelpArticleStatus: (workspaceId: string, articleId: string, status: 'draft' | 'published') =>
+      request<HelpArticle>('PUT', `${workspace(workspaceId)}/help/articles/${encodeURIComponent(articleId)}/status`, { status }),
+    deleteHelpArticle: (workspaceId: string, articleId: string) => request<void>('DELETE', `${workspace(workspaceId)}/help/articles/${encodeURIComponent(articleId)}`),
+    uploadHelpAsset: async (workspaceId: string, websiteId: string, file: File): Promise<HelpAsset> =>
+      (await (
+        await checked('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help/assets?filename=${encodeURIComponent(file.name)}`, undefined, {
+          data: file,
+          type: file.type || 'application/octet-stream',
+        })
+      ).json()) as HelpAsset,
+    deleteHelpAsset: (workspaceId: string, assetId: string) => request<void>('DELETE', `${workspace(workspaceId)}/help/assets/${encodeURIComponent(assetId)}`),
     createRealtimeTicket: (workspaceId: string) => request<RealtimeTicket>('POST', `${workspace(workspaceId)}/realtime/tickets`),
   };
 }
