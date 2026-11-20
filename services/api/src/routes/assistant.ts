@@ -10,6 +10,7 @@ import {
 import { addAssistantSource, deleteAssistantSource, getAssistant, saveAssistantSettings, testAssistant, updateAssistantSource, workspaceContext, type AssistantDeps } from '@openchat/core';
 import { readAbuseLimits } from '@openchat/shared';
 import type { Context } from 'hono';
+import { assistantCanReply } from '../assistant/reply';
 import { assistantRuntime } from '../assistant/runtime';
 import { authDeps, type App, type AppEnv } from '../context';
 import { dispatchSoon } from '../dispatch';
@@ -17,7 +18,7 @@ import { dispatchSoon } from '../dispatch';
 async function scoped(c: Context<AppEnv>, workspaceId: string): Promise<{ deps: AssistantDeps; ctx: Awaited<ReturnType<typeof workspaceContext>> }> {
   const { db } = await authDeps(c.env);
   return {
-    deps: { db, runtime: assistantRuntime(c.env), limits: readAbuseLimits(c.env), defaultModel: c.env.ASSISTANT_MODEL },
+    deps: { db, runtime: assistantRuntime(c.env), limits: readAbuseLimits(c.env), defaultModel: c.env.ASSISTANT_MODEL, canReply: assistantCanReply(c.env) },
     ctx: await workspaceContext(db, c.get('principal'), workspaceId),
   };
 }

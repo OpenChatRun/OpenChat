@@ -17,6 +17,12 @@ export interface MessageStatementsInput {
   ownerContactId?: string;
   /** Unique. Files this sender uploaded to this conversation, and not yet on a message. */
   attachmentIds?: string[];
+  /**
+   * The AI assistant writing, as a system message (ADR-0022). The insert applies only if, at commit, the message it
+   * answers is still the conversation's last, nobody has it, the assistant is still answering in it, and the
+   * website's assistant is still on. `state` is what the conversation's assistant_state becomes.
+   */
+  assistant?: { id: string; answersSeq: number; state: 'answering' | 'handed_over'; metadata: Record<string, unknown> };
 }
 
 /** Older than this and the sweep may be deleting it, so that a message can no longer claim it. */
@@ -53,19 +59,37 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
     d1
       .prepare(
         `INSERT INTO messages (id, workspace_id, conversation_id, seq, public_seq, client_message_id,
-                               sender_type, sender_id, message_type, visibility, content, created_at)
+                               sender_type, sender_id, message_type, visibility, content, created_at, assistant_id, metadata_json)
          SELECT ?1, c.workspace_id, c.id, c.last_message_seq + 1,
                 CASE WHEN ?2 = 'public' THEN c.last_public_seq + 1 END,
                 ?3, ?4, ?5,
                 CASE WHEN ?6 <> 'text' OR json_array_length(?11) = 0 THEN ?6
                      WHEN NOT EXISTS (SELECT 1 FROM attachments a WHERE ${claimable} AND a.content_type NOT LIKE 'image/%') THEN 'image'
                      ELSE 'file' END,
-                ?2, ?7, ${DB_NOW_MS}
+                ?2, ?7, ${DB_NOW_MS}, ?12, COALESCE(?13, '{}')
            FROM conversations c WHERE c.workspace_id = ?8 AND c.id = ?9 AND (?10 IS NULL OR c.contact_id = ?10)
             AND (SELECT COUNT(*) FROM attachments a WHERE ${claimable}) = json_array_length(?11)
+            AND (?12 IS NULL OR (c.last_message_seq = ?14 AND c.assigned_member_id IS NULL
+                 AND (c.assistant_state IS NULL OR c.assistant_state = 'answering')
+                 AND EXISTS (SELECT 1 FROM assistant_settings s WHERE s.workspace_id = c.workspace_id AND s.id = ?12 AND s.website_id = c.website_id AND s.enabled = 1)))
          ON CONFLICT (workspace_id, conversation_id, client_message_id) DO NOTHING`,
       )
-      .bind(id, visibility, input.clientMessageId, input.sender.type, input.sender.id, input.type, input.content, w, c, input.ownerContactId ?? null, attachmentIds),
+      .bind(
+        id,
+        visibility,
+        input.clientMessageId,
+        input.sender.type,
+        input.sender.id,
+        input.type,
+        input.content,
+        w,
+        c,
+        input.ownerContactId ?? null,
+        attachmentIds,
+        input.assistant?.id ?? null,
+        input.assistant ? JSON.stringify(input.assistant.metadata) : null,
+        input.assistant?.answersSeq ?? null,
+      ),
     d1
       .prepare(
         `UPDATE attachments SET message_id = ?1
@@ -80,6 +104,14 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
           WHERE workspace_id = ?4 AND id = ?5 AND status <> 'open' AND ?6 = 'visitor' AND ${inserted}`,
       )
       .bind(id, newId('event'), input.sender.id, w, c, input.sender.type),
+    // Before the update below changes it: a colleague stepping in ends the assistant's part, and the inbox hears.
+    d1
+      .prepare(
+        `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)
+         SELECT ?2, workspace_id, 'conversation.updated', id, json_object('conversationId', id), ${DB_NOW_MS} FROM conversations
+          WHERE workspace_id = ?3 AND id = ?4 AND assistant_state = 'answering' AND ?5 = 'member' AND ${inserted}`,
+      )
+      .bind(id, newId('outbox'), w, c, input.sender.type),
     d1
       .prepare(
         `UPDATE conversations
@@ -90,11 +122,14 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
                 last_agent_message_at = CASE WHEN ?3 = 'member' AND ?2 = 'public' THEN ${DB_NOW_MS} ELSE last_agent_message_at END,
                 next_automation_at = CASE WHEN ?2 = 'public' THEN ${DB_NOW_MS} + ${SHORTEST_FOLLOW_UP_WAIT_MS} ELSE next_automation_at END,
                 status = CASE WHEN ?3 = 'visitor' THEN 'open' ELSE status END,
+                assistant_state = CASE WHEN ?6 IS NOT NULL THEN ?6
+                                       WHEN ?3 = 'member' AND (assistant_state IS NULL OR assistant_state = 'answering') THEN 'stopped'
+                                       ELSE assistant_state END,
                 version = version + 1,
                 updated_at = ${DB_NOW_MS}
           WHERE workspace_id = ?4 AND id = ?5 AND ${inserted}`,
       )
-      .bind(id, visibility, input.sender.type, w, c),
+      .bind(id, visibility, input.sender.type, w, c, input.assistant?.state ?? null),
     d1
       .prepare(
         `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)

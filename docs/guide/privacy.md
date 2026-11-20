@@ -55,4 +55,4 @@ Sent only to visitors who gave an address and ticked the box to allow it, which 
 
 ## Your privacy notice
 
-Tell visitors, in your website's privacy notice, that the chat is run by your company, what it keeps, for how long, and who to ask about it. If push is used, mention the relay. The [legal drafts](../legal/README.md) for the project's own relay may help, but are not in force.
+Tell visitors, in your website's privacy notice, that the chat is run by your company, what it keeps, for how long, and who to ask about it. If push is used, mention the relay. If the AI assistant answers visitors, say that an AI may answer, using Cloudflare Workers AI in your company's account. The [legal drafts](../legal/README.md) for the project's own relay may help, but are not in force.

@@ -302,6 +302,12 @@ export const conversations = sqliteTable(
     version: integer('version').notNull().default(1),
     /** Guards follow-up statements in a batch. See data-model.md, Pattern 2. */
     lastMutationId: text('last_mutation_id'),
+    /**
+     * The AI assistant here (ADR-0022): NULL until it or a member acts, 'answering', 'handed_over', or 'stopped'.
+     * Added with ALTER TABLE, so its CHECK is in migration 0017 and not declared below: declaring it would make
+     * Drizzle rebuild this table, which D1 cannot do in time on a large installation.
+     */
+    assistantState: text('assistant_state', { enum: ['answering', 'handed_over', 'stopped'] }),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
@@ -360,6 +366,11 @@ export const messages = sqliteTable(
     content: text('content').notNull().default(''),
     metadataJson: json('metadata_json'),
     createdAt: ts('created_at'),
+    /**
+     * Set when the AI assistant wrote it (ADR-0022), with sender_type 'system'. A CHECK in migration 0017 holds
+     * that; it is not declared here, for the reason given on conversations.assistant_state.
+     */
+    assistantId: text('assistant_id'),
   },
   (t) => [
     unique('messages_tenant_uq').on(t.workspaceId, t.id),
@@ -710,6 +721,8 @@ export const assistantSettings = sqliteTable(
     name: text('name').notNull(),
     /** A Workers AI text model from ASSISTANT_MODELS. NULL means the installation's default. */
     model: text('model'),
+    /** Answers visitors. Off until a supervisor turns it on. */
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

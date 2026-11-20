@@ -142,6 +142,7 @@ Your welcome message, and your team's replies, are shown as written. The transla
 - A button, and a panel with your welcome message.
 - One conversation per visitor in that browser. They come back to it on their next visit, unless `data-consent="pending"` was never granted.
 - Your team's replies, as they are written, and whether someone is typing. Names only if the website shows them. Never internal notes.
+- If the [AI assistant](admin.md#the-ai-assistant) answers visitors, its answers under its name with an **AI** label, and a message when it passes them to your team.
 - If the website asks for an email, a field for it, and a box to allow follow-up emails, unticked.
 - Files they attach, up to 25 MB, of the types the [inbox](inbox.md#answering) accepts.
 

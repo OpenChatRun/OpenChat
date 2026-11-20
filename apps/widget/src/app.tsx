@@ -84,10 +84,18 @@ function Message({ message, first, state, onRetry, controller }: { message: Chat
       {kind === 'theirs' && first && (
         <>
           <span class="oc-ava" aria-hidden="true">{Array.from(who.trim())[0] ?? ''}</span>
-          <p class="oc-who">{who}</p>
+          <p class="oc-who">
+            {who}
+            {message.assistant && (
+              <span class="oc-ai" title={S.aiTitle}>
+                <span aria-hidden="true">{S.ai}</span>
+                <span class="oc-sr">{S.aiTitle}</span>
+              </span>
+            )}
+          </p>
         </>
       )}
-      {message.content && <div class="oc-bubble" dir="auto">{message.content}</div>}
+      {message.content && <div class="oc-bubble" dir="auto">{message.assistant === 'handover' ? S.handover : message.content}</div>}
       {message.pendingFile && <div class="oc-file oc-state" dir="auto">{message.pendingFile}</div>}
       {message.attachments.map((file) => <Attachment key={file.id} file={file} controller={controller} />)}
       {message.status === 'failed' ? (
@@ -328,7 +336,8 @@ export function App({
         )}
         {state.messages.map((message, index) => {
           const before = state.messages[index - 1];
-          const first = !before || kindOf(before) !== kindOf(message) || before.senderName !== message.senderName;
+          // Each of the assistant's messages carries its own AI label, not only the first in a run.
+          const first = !before || kindOf(before) !== kindOf(message) || before.senderName !== message.senderName || message.assistant !== null;
           return <Message key={message.key} message={message} first={first} state={stateOf(message)} onRetry={() => void controller.retry(message.key)} controller={controller} />;
         })}
       </div>

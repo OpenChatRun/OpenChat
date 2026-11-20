@@ -32,8 +32,9 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
   const client = useQueryClient();
   const [name, setName] = useState(assistant.settings?.name ?? t('sectionAssistant'));
   const [model, setModel] = useState(assistant.settings?.model ?? '');
+  const [enabled, setEnabled] = useState(assistant.settings?.enabled ?? false);
   const save = useMutation({
-    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: model || null }),
+    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: model || null, enabled }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
   });
   const defaultLabel = assistant.models.find((m) => m.id === assistant.defaultModel)?.label ?? assistant.defaultModel;
@@ -50,6 +51,15 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
             <option value="">{t('assistantDefaultModel', { model: defaultLabel })}</option>
             {assistant.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
           </select>
+        </label>
+        <label className="flex w-full items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-0.5" checked={enabled} disabled={!assistant.canReply && !enabled} onChange={(event) => setEnabled(event.target.checked)} aria-describedby="assistant-enabled-help" />
+          <span>
+            <span className="font-medium">{t('assistantEnabled')}</span>
+            <span id="assistant-enabled-help" className={`block ${quiet}`}>
+              {assistant.canReply ? t('assistantEnabledHelp', { count: String(assistant.limits.turnsPerConversation) }) : t('assistantCannotReply')}
+            </span>
+          </span>
         </label>
         <button className="button" disabled={save.isPending}>{t('saveSettings')}</button>
       </form>

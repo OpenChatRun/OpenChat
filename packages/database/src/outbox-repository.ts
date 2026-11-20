@@ -3,7 +3,7 @@
  * so each query filters on an ID from an outbox row. See docs/architecture/background-jobs.md.
  */
 import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
-import { CONVERSATION_TAGS_JSON, MESSAGE_SELECT, type ConversationPriority, type ConversationStatus, type StoredMessage } from './repositories';
+import { CONVERSATION_TAGS_JSON, MESSAGE_SELECT, type AssistantState, type ConversationPriority, type ConversationStatus, type StoredMessage } from './repositories';
 
 export interface OutboxRow {
   id: string;
@@ -67,7 +67,7 @@ export function conversationForDispatch(database: Database, workspaceId: string,
   return rawHandle(database)
     .prepare(
       `SELECT id, version, status, priority, assigned_member_id AS assignedMemberId, last_message_seq AS lastMessageSeq,
-              last_message_at AS lastMessageAt, updated_at AS updatedAt, ${CONVERSATION_TAGS_JSON} AS tagsJson
+              last_message_at AS lastMessageAt, updated_at AS updatedAt, ${CONVERSATION_TAGS_JSON} AS tagsJson, assistant_state AS assistantState
          FROM conversations c WHERE workspace_id = ?1 AND id = ?2`,
     )
     .bind(workspaceId, conversationId)
@@ -81,6 +81,7 @@ export function conversationForDispatch(database: Database, workspaceId: string,
       lastMessageAt: number | null;
       updatedAt: number;
       tagsJson: string;
+      assistantState: AssistantState | null;
     }>();
 }
 

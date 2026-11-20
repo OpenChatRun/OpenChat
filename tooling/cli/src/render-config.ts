@@ -39,7 +39,7 @@ interface Template {
   r2_buckets?: { binding: string; bucket_name: string }[];
   queues?: {
     producers?: { binding: string; queue: string }[];
-    consumers?: { queue: string; dead_letter_queue?: string }[];
+    consumers?: { queue: string; dead_letter_queue?: string; [setting: string]: unknown }[];
   };
   analytics_engine_datasets?: { binding: string; dataset: string }[];
   [key: string]: unknown;
@@ -120,6 +120,8 @@ export function parseTemplate(source: string): Template {
 }
 
 export const assistantIndexName = (name: string) => `oc-${name}-assistant`;
+/** The assistant's replies, and its dead letters. Created by `--assistant` alone, like the index. */
+export const assistantQueueNames = (name: string) => [`oc-${name}-assistant-dlq`, `oc-${name}-assistant`];
 
 const renameResource = (value: string, name: string) => value.replace(/^oc-local/, `oc-${name}`);
 
@@ -161,6 +163,14 @@ export function renderConfig(templateSource: string, state: DeploymentState, rel
   if (state.assistant) {
     t.ai = { binding: 'AI' };
     t.vectorize = [{ binding: 'VECTORIZE', index_name: assistantIndexName(state.name) }];
+    const [dlq, queue] = assistantQueueNames(state.name) as [string, string];
+    t.queues ??= {};
+    (t.queues.producers ??= []).push({ binding: 'ASSISTANT_QUEUE', queue });
+    // One reply at a time per invocation, many at once: a model call takes seconds, and a batch would queue behind it.
+    (t.queues.consumers ??= []).push(
+      { queue, max_batch_size: 1, max_batch_timeout: 1, max_retries: 3, max_concurrency: 20, dead_letter_queue: dlq },
+      { queue: dlq, max_batch_size: 25, max_batch_timeout: 30, max_retries: 3, max_concurrency: 1 },
+    );
   }
   if (state.cloudflareEmailFrom) t.send_email = [{ name: 'EMAIL', allowed_sender_addresses: [state.cloudflareEmailFrom] }];
   return t;

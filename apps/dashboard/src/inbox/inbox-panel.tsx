@@ -245,6 +245,7 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
                   {row.subject && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.subject}</span>}
                   {row.tags.length > 0 && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.tags.map((tag) => tag.name).join(', ')}</span>}
                 </span>
+                {row.assistantState === 'answering' && <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">{t('assistantAnswering')}</span>}
                 {row.priority === 'urgent' || row.priority === 'high' ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300">{t(PRIORITY_LABEL[row.priority])}</span> : null}
                 {unread > 0 && <span className="min-w-5 rounded-full bg-brand-600 px-1.5 text-center text-xs leading-5 font-semibold text-white">{unread}<span className="sr-only"> {t('unread')}</span></span>}
               </button>
@@ -309,15 +310,42 @@ function AttachmentView({ file }: { file: Message['attachments'][number] }) {
   );
 }
 
+const HANDOVER_REASON: Record<NonNullable<NonNullable<Message['assistant']>['reason']>, MessageKey> = {
+  asked: 'handoverAsked',
+  no_sources: 'handoverNoSources',
+  unsure: 'handoverUnsure',
+  turns: 'handoverTurns',
+  limit: 'handoverLimit',
+  error: 'handoverError',
+};
+
 function MessageBubble({ message }: { message: Message }) {
-  const note = message.visibility === 'internal';
-  const fromTeam = message.sender.type === 'member';
   const shown = message.sender.displayName ?? t('agent');
-  const sender = message.sender.type === 'visitor' ? t('visitor') : message.sender.type === 'system' ? t('system') : message.sender.removed ? t('removedPerson', { name: shown }) : shown;
+  if (message.assistant?.kind === 'handover') {
+    return (
+      <li className="text-center text-xs text-slate-600 dark:text-slate-400" data-seq={message.seq}>
+        <span className="mr-1.5 rounded border border-slate-400 px-1 font-semibold dark:border-slate-500">{t('aiLabel')}</span>
+        {t('assistantHandedOver', { name: shown, reason: t(HANDOVER_REASON[message.assistant.reason ?? 'unsure']) })}
+      </li>
+    );
+  }
+  const note = message.visibility === 'internal';
+  // The assistant speaks for the team, so it sits on the team's side, set apart from people by its colour and label.
+  const ai = message.assistant?.kind === 'answer';
+  const fromTeam = message.sender.type === 'member' || ai;
+  const sender = ai ? shown : message.sender.type === 'visitor' ? t('visitor') : message.sender.type === 'system' ? t('system') : message.sender.removed ? t('removedPerson', { name: shown }) : shown;
+  const look = note
+    ? 'border border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
+    : ai
+      ? 'rounded-br-md border border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+      : fromTeam
+        ? 'rounded-br-md bg-brand-600 text-white'
+        : 'rounded-bl-md bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100';
   return (
     <li className={`flex ${fromTeam ? 'justify-end' : 'justify-start'}`} data-seq={message.seq}>
-      <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${note ? 'border border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100' : fromTeam ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100'}`}>
+      <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${look}`}>
         <div className="mb-1 text-xs opacity-85">
+          {ai && <span className="mr-1.5 rounded border border-current px-1 font-semibold">{t('aiLabel')}</span>}
           {note ? t('internalNoteFrom', { name: sender }) : sender} · <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString(intlLocale(), { hour: '2-digit', minute: '2-digit' })}</time>
         </div>
         {message.content && <div className="break-words whitespace-pre-wrap">{message.content}</div>}
@@ -658,6 +686,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
               </span>
             </h2>
           </div>
+          {data.assistantState === 'answering' && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{t('assistantAnsweringHelp')}</p>}
           <div className="flex flex-wrap gap-2">
             <select className="field w-auto" aria-label={t('conversationStatus')} value={data.status} disabled={update.isPending} onChange={(e) => update.mutate({ status: e.target.value as Conversation['status'] })}>
               {STATUSES.map((option) => <option key={option} value={option}>{t(STATUS_LABEL[option])}</option>)}

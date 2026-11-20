@@ -23,7 +23,11 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## The AI assistant
 
-- **Step 1 only.** Supervisors can add sources and try it in the dashboard; it does not answer visitors yet ([ADR-0022](architecture/decisions/0022-ai-assistant.md)).
+- **Steps 1 and 2.** It answers visitors from sources; learning from your team's answers is step 3 ([ADR-0022](architecture/decisions/0022-ai-assistant.md)).
+- **The iPhone and Android apps do not label its messages yet.** They show them as system messages. The dashboard and widget label them AI.
+- **A rare missed push.** A visitor's message is not pushed while the assistant answers. If its job fails three times, or the assistant is turned off at that moment, that message gets no push; the conversation still shows in the inbox.
+- **Spotting a request for a person, or an attempt to steer it, uses word lists.** Other phrasings reach the model, which is told to decline.
+- **Its widget text was machine-translated**, and needs a native speaker's review.
 - **Not offered on OpenChat Cloud** until its privacy documents cover Workers AI.
 - **It can be wrong.** The threshold for a relevant passage, 0.45, was set from one website in four languages ([validation](architecture/cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)).
 - **Changes take up to a minute to show**, because Vectorize applies writes in the background.

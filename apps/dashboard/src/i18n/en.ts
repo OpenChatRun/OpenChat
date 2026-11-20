@@ -318,7 +318,7 @@ export const en = {
   // The AI assistant
   sectionAssistant: 'Assistant',
   supervisorAssistant: 'A supervisor sets up the AI assistant.',
-  assistantIntro: 'The AI assistant will answer visitors from what you give it here, and pass them to your team when it cannot. Visitors do not see it yet: try it below first.',
+  assistantIntro: 'The AI assistant answers visitors from what you give it here, and passes them to your team when it cannot. Try it below before you turn it on.',
   assistantUnavailable: 'This installation has no AI assistant. Its operator can add one with oc deploy --assistant.',
   assistantWebsite: 'Website',
   assistantSettings: 'Settings',
@@ -355,6 +355,19 @@ export const en = {
   outcomeLimit: 'The assistant has answered as many questions as it can today. It would pass this to your team.',
   usedSources: 'From these sources',
   aiLabel: 'AI',
+  assistantEnabled: 'Answer visitors',
+  assistantEnabledHelp: 'In conversations nobody on the team has. It stops in a conversation once someone replies, adds a note, or assigns it, and after {count} answers. Visitors see that its replies come from an AI.',
+  assistantCannotReply: 'To answer visitors, this installation needs to be deployed again with oc deploy --assistant.',
+  assistantAnswering: 'AI answering',
+  assistantAnsweringHelp: 'The AI assistant is answering. Reply, add a note, or assign the conversation to take over.',
+  assistantHandedOver: '{name} passed this to the team: {reason}.',
+  handoverAsked: 'the visitor asked for a person',
+  handoverNoSources: 'nothing in its sources matched',
+  handoverUnsure: 'it was not sure',
+  handoverTurns: 'it had answered as often as it may in one conversation',
+  handoverLimit: 'the daily limit on answers was reached',
+  handoverError: 'the model did not answer',
+  jobAssistantReply: 'Answer a visitor with the assistant',
   jobAssistantIndex: 'Read an assistant source',
 };
 

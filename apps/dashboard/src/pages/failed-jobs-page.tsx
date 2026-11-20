@@ -15,6 +15,7 @@ const JOB_NAMES: Record<string, MessageKey> = {
   'auth.password_reset_email': 'jobPasswordReset',
   'auth.new_account_email': 'jobNewAccount',
   'assistant.index_source': 'jobAssistantIndex',
+  'assistant.reply': 'jobAssistantReply',
 };
 
 function Failure({ error }: { error: unknown }) {

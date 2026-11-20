@@ -107,7 +107,8 @@ A job lives for one hour, by `notAfter`. Each step may run twice, because `notif
 
 | Event | Who gets a push | Type |
 |---|---|---|
-| A visitor's message | Whoever has the conversation, or every member if nobody does | `new_conversation` for the first message, otherwise `new_message` |
+| A visitor's message | Whoever has the conversation, or every member if nobody does. Nobody while the AI assistant answers the conversation | `new_conversation` for the first message, otherwise `new_message` |
+| The AI assistant handing over | Whoever has the conversation, or every member if nobody does, with the visitor's message it could not answer | `new_conversation` |
 | A member's reply or internal note | Whoever has the conversation, unless they wrote it. Nobody, if nobody has it | `new_message` |
 | An assignment | The person assigned, unless they did it themselves or it has changed since | `conversation_assigned` |
 | A system message, or any other change | Nobody | |
@@ -141,6 +142,10 @@ Sweeps from overlapping cron runs are harmless, because each action is idempoten
 `assistant.index_source` ([ADR-0022](decisions/0022-ai-assistant.md)) reads one source at one generation: it fetches the pages, splits the text, embeds it with Workers AI, writes vectors to Vectorize, and then ends in one guarded batch (see [data model](data-model.md#the-ai-assistant)). Its idempotency key is `assistant.index_source:<sourceId>:<generation>`, and vector IDs carry the generation, so a retry overwrites what it wrote before. A page that cannot be read marks the source `failed` with a reason, and is not retried; a platform error is.
 
 Two outbox topics: `assistant.source_changed` queues the job, and `assistant.vectors_removed` deletes vectors, 1,000 per call. Both are dispatched straight after the request or job that wrote them, and by the sweep if that fails.
+
+`assistant.reply` (step 2) runs on its own queue, `oc-<name>-assistant`, one message per batch and 3 retries, so a slow model does not hold up push or email. Dispatch of `message.created` queues it for every visitor message on an installation with the queue, with the idempotency key `assistant.reply:<messageId>`; the job decides when it runs. It skips unless the website's assistant is enabled, the message is still the conversation's last, nobody has the conversation, and the state is NULL or `answering`. Otherwise it shows the assistant as typing, then answers or hands over: on a request for a person, an attempt to give it instructions, after 5 answers, at the daily limit, when the sources do not answer, or when the model fails. The write is guarded as the [data model](data-model.md#the-ai-assistant) describes, and its `message.created` is dispatched straight away.
+
+A visitor message's push is held back while the assistant answers the conversation, and sent with the handover instead. If the job dead-letters, or a supervisor turns the assistant off between the two, nobody gets a push for that message. The conversation is still in the inbox, unassigned, with **AI answering** on it.
 
 ## What email is for
 

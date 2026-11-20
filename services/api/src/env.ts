@@ -56,6 +56,8 @@ export interface Env {
   /** Optional, both together: without them this installation has no AI assistant. `oc deploy --assistant` adds them. See ADR-0022. */
   AI?: Ai;
   VECTORIZE?: Vectorize;
+  /** The assistant's replies (ADR-0022), on their own queue. Bound only with `oc deploy --assistant`. */
+  ASSISTANT_QUEUE?: Queue;
   /** Optional. The Workers AI text model the assistant uses, from ASSISTANT_MODELS in @openchat/core. */
   ASSISTANT_MODEL?: string;
   /** Optional: Analytics Engine has to be enabled per account. See tooling/cli/src/render-config.ts. */

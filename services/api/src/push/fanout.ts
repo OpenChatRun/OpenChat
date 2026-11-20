@@ -3,6 +3,7 @@
  * Every step may run twice: the relay drops a repeated notificationId. See docs/architecture/background-jobs.md.
  */
 import {
+  assistantAnswersIn,
   conversationAssignee,
   deleteMemberSubscriptions,
   getInstallation,
@@ -16,6 +17,7 @@ import {
 import { toBase64Url, type NotificationEvent } from '@openchat/notification-protocol';
 import { newId, type JobEnvelope } from '@openchat/shared';
 import type { Env } from '../env';
+import { assistantCanReply } from '../assistant/reply';
 import { relayConfig, relayRequest, sendNotifications, type NotificationText, type RelayConfig, type UnsealedNotification } from './relay-client';
 
 export const FANOUT_JOB = 'notification.fanout';
@@ -77,7 +79,9 @@ const ASSIGNED_TEXT: NotificationText = { sender: '', text: 'Conversation assign
 
 /**
  * Decided from what is true now. A visitor's message goes to whoever has the conversation, or to everyone if nobody
- * does. A colleague's reply or note goes only to the person who has it. A system message goes to nobody.
+ * does, unless the AI assistant is answering it (ADR-0022): then nobody hears until it hands over, and the handover
+ * goes out as a new conversation, with the visitor's last message. A colleague's reply or note goes only to the
+ * person who has it. Any other system message, including the assistant's answers, goes to nobody.
  */
 async function decide(
   env: Env,
@@ -95,7 +99,15 @@ async function decide(
   const conversation = await conversationAssignee(db, workspaceId, message.conversationId);
   if (!conversation) return null;
   const base = { eventId: message.id, conversationId: message.conversationId, onlyMemberId: conversation.assignedMemberId, text: messageText(message) };
-  if (message.senderType === 'visitor') return { ...base, event: message.seq === 1 ? 'new_conversation' : 'new_message', exceptMemberId: null };
+  if (message.senderType === 'visitor') {
+    if (assistantCanReply(env) && (await assistantAnswersIn(db, workspaceId, message.conversationId))) return null;
+    return { ...base, event: message.seq === 1 ? 'new_conversation' : 'new_message', exceptMemberId: null };
+  }
+  if (message.assistantKind === 'handover') {
+    // The client message ID names the visitor's message it followed.
+    const answered = message.clientMessageId?.startsWith('assistant:') ? await messageForDispatch(db, workspaceId, message.clientMessageId.slice('assistant:'.length)) : null;
+    return { ...base, event: 'new_conversation', exceptMemberId: null, text: answered ? messageText(answered) : base.text };
+  }
   if (message.senderType !== 'member' || !conversation.assignedMemberId) return null;
   return { ...base, event: 'new_message', exceptMemberId: message.senderId };
 }

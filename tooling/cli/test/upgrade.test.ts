@@ -177,6 +177,8 @@ describe('oc deploy --assistant', () => {
   it('creates the index and its websiteId filter once, and binds both', async () => {
     const { deployer, calls, state, root } = setup({ state: { version: '0.2.0', r2Created: true, queuesCreated: ['notifications', 'email', 'jobs'].flatMap((q) => [`oc-acme-${q}-dlq`, `oc-acme-${q}`]) } });
     await deployer.deploy({ name: 'acme', assistant: true });
+    expect(calls).toContain('queues create oc-acme-assistant-dlq');
+    expect(calls).toContain('queues create oc-acme-assistant');
     expect(calls).toContain('vectorize create oc-acme-assistant --dimensions 1024 --metric cosine');
     expect(calls).toContain('vectorize create-metadata-index oc-acme-assistant --propertyName websiteId --type string');
     expect(state()).toMatchObject({ assistant: true, vectorizeCreated: true, vectorizeFilterCreated: true });
@@ -186,7 +188,7 @@ describe('oc deploy --assistant', () => {
 
     calls.length = 0;
     await deployer.deploy({ name: 'acme' });
-    expect(calls.filter((c) => c.startsWith('vectorize'))).toEqual([]);
+    expect(calls.filter((c) => c.startsWith('vectorize') || c.startsWith('queues create'))).toEqual([]);
   });
 
   it('can be taken out again, keeping the index', async () => {

@@ -11,6 +11,7 @@ import { RETIRED_HANDLERS } from './email/delivery';
 import { FOLLOW_UP_HANDLERS } from './email/follow-ups';
 import { DISPATCH_JOB, NOTIFICATION_HANDLERS } from './push/fanout';
 import { ASSISTANT_INDEX_JOB, runIndexJob } from './assistant/jobs';
+import { ASSISTANT_REPLY_JOB, runReplyJob } from './assistant/reply';
 import { RelayError } from './push/relay-client';
 import type { Env } from './env';
 
@@ -87,6 +88,7 @@ const HANDLERS: Record<string, Handler> = {
   ...RETIRED_HANDLERS,
   ...FOLLOW_UP_HANDLERS,
   [ASSISTANT_INDEX_JOB]: (job, env) => runIndexJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
+  [ASSISTANT_REPLY_JOB]: (job, env) => runReplyJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
   // Queued by a Worker from before ADR-0016. Its link would lead nowhere, so it is acknowledged and dropped. Remove after one release.
   'workspace.invitation_email': async () => undefined,
 };
