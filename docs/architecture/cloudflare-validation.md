@@ -662,6 +662,22 @@ Tested on a throwaway `oc-ai-test2`, deployed with `pnpm oc deploy --assistant`,
 
 Teardown without `oc destroy`: remove each queue's consumer before deleting the Worker (error 10064 otherwise), and pipe `yes` to `queues delete`.
 
+## Help centre on real Cloudflare (2026-11-20)
+
+Tested on a throwaway `oc-help-test`, deployed with `pnpm oc deploy` on the first try, then deleted ([ADR-0023](decisions/0023-help-centre.md), step 1).
+
+| Check | Result |
+|---|---|
+| Migration 0019 on D1 | Applied |
+| `run_worker_first` with `/help/*` and `/help-assets/*` | The Worker answered both; the dashboard's single-page fallback did not take them |
+| Language | `Accept-Language: ja-JP` was sent to `/help/<slug>/ja`, and `fr`, with no French articles, to English |
+| Pages | 0.14 to 0.19 s from the test machine. `ETag` with `If-None-Match` answered 304. The policy header and no cookies, as designed |
+| Search | `return` and `RETURNS` found the English article, `zuruck` the German one titled "zurück", and `返品`, `返金` and `カード番号` the Japanese ones, which have no spaces. About 0.2 s |
+| Search at the limit | 1,000 published articles of 19,900 characters each on one website, 20 MB of `search_text`, loaded with `wrangler d1 execute --file` (60 MB of SQL, 17 s). A rare word, a common word, two words and a missing word took 38 to 55 ms in D1 (`meta.duration`, 1,001 to 1,004 rows read) and 0.19 to 0.30 s end to end. So the limit of 1,000 stands |
+| Images | A 69 KB PNG was served as `image/png`, `immutable`, with `default-src 'none'; sandbox`, and shown in the article |
+| Sitemap | Listed each language's home and every published article |
+| Dashboard and public pages, light, dark and phone width | Screenshots checked. A full-page screenshot can be taken before a lazy image loads; in a browser it loads |
+
 ## AI assistant learning on real Cloudflare (2026-11-20)
 
 Tested on a throwaway `oc-ai-test3`, deployed with `pnpm oc deploy --assistant` on the first try, then deleted ([ADR-0022](decisions/0022-ai-assistant.md), step 3). Llama 3.3 70B, five conversations resolved by a member:

@@ -66,6 +66,14 @@ export function describeAudit(entry: AuditEntry): [MessageKey, Record<string, st
       return ['auditJobDismissed', { job }];
     case 'assistant.auto_approve_changed':
       return [m.autoApprove === 1 || m.autoApprove === true ? 'auditAutoApproveOn' : 'auditAutoApproveOff', { target }];
+    case 'help.article_published':
+      return ['auditHelpPublished', { title: String(m.title ?? '') }];
+    case 'help.article_unpublished':
+      return ['auditHelpUnpublished', { title: String(m.title ?? '') }];
+    case 'help.article_deleted':
+      return ['auditHelpDeleted', { title: String(m.title ?? '') }];
+    case 'help.address_changed':
+      return ['auditHelpAddress', { target, to: typeof m.to === 'string' ? `/help/${m.to}` : t('helpAddressNone') }];
     case 'contact.erased':
       return ['auditContactErased', { target }];
     case 'conversations.expired':

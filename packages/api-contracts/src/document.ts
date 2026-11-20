@@ -97,6 +97,18 @@ import {
   decideLearnedAnswerRoute,
   deleteLearnedAnswerRoute,
   setLearnedAutoApproveRoute,
+  getHelpCentreRoute,
+  saveHelpSettingsRoute,
+  createHelpCollectionRoute,
+  updateHelpCollectionRoute,
+  deleteHelpCollectionRoute,
+  createHelpArticleRoute,
+  getHelpArticleRoute,
+  updateHelpArticleRoute,
+  setHelpArticleStatusRoute,
+  deleteHelpArticleRoute,
+  uploadHelpAssetRoute,
+  deleteHelpAssetRoute,
 } from './routes';
 
 /** Every route must be listed here so that it reaches the published document. */
@@ -196,6 +208,18 @@ export const ALL_ROUTES = [
   decideLearnedAnswerRoute,
   deleteLearnedAnswerRoute,
   setLearnedAutoApproveRoute,
+  getHelpCentreRoute,
+  saveHelpSettingsRoute,
+  createHelpCollectionRoute,
+  updateHelpCollectionRoute,
+  deleteHelpCollectionRoute,
+  createHelpArticleRoute,
+  getHelpArticleRoute,
+  updateHelpArticleRoute,
+  setHelpArticleStatusRoute,
+  deleteHelpArticleRoute,
+  uploadHelpAssetRoute,
+  deleteHelpAssetRoute,
 ] as const;
 
 export function buildOpenApiDocument() {
@@ -224,6 +248,7 @@ export function buildOpenApiDocument() {
       { name: 'workspaces', description: 'Workspaces and their members.' },
       { name: 'websites', description: 'Websites that embed the widget.' },
       { name: 'assistant', description: 'The AI assistant that answers from a website\'s sources (ADR-0022).' },
+      { name: 'help', description: 'The help centre: articles visitors read at /help/<slug> (ADR-0023).' },
     ],
     servers: [{ url: '/' }],
   });

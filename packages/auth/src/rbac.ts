@@ -19,6 +19,7 @@ const CAPABILITIES = {
   'suppression.manage': SUPERVISORS,
   'automation.manage': SUPERVISORS,
   'assistant.manage': SUPERVISORS,
+  'help.manage': SUPERVISORS,
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Capability = keyof typeof CAPABILITIES;

@@ -172,6 +172,16 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 
 **Data.** Questions, sources and answers go to Workers AI in the installation's own Cloudflare account. Questions asked in the test panel are not stored; a visitor's messages and the assistant's answers are stored as messages, like any other. Nothing about the assistant is logged except IDs, counts and outcomes.
 
+## The help centre
+
+[ADR-0023](decisions/0023-help-centre.md). The only pages an installation serves without sign-in apart from the widget, at `/help/<slug>`, so they are narrow.
+
+- **Only published articles.** Every public query names the website found by its slug and requires `status = 'published'`. A website without a slug has no public pages. Drafts are readable by any member, so that an agent can find an article to link, and changed only by supervisors (`help.manage`).
+- **No HTML from writers.** Articles are a fixed Markdown subset, rendered on save by `renderHelpMarkdown` in `@openchat/shared`, which escapes every character of the source and builds the few tags it allows. Links must be `https`, `mailto`, or a path under `/help/`; external links get `rel="noopener nofollow ugc"`. Images must be `/help-assets/<id>`. The dashboard's preview uses the same function.
+- **Pages have no script.** `Content-Security-Policy: default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`, and no cookies. Search results are `noindex`.
+- **Images** are checked as attachments are: the declared type must be an image and agree with the first bytes, and the name with the type; SVG is refused. They are served with `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`, and are public at an ID that cannot be guessed, including images used only in drafts. Deleting one removes it.
+- **Load.** A cached page costs one indexed read of the website. Anything else, including every search, is limited per IP (300 a minute). Search terms are not stored or logged.
+
 ## Privacy
 
 Customers are the controllers of visitor data. For GDPR and similar laws, the product needs:

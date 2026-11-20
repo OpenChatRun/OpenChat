@@ -1695,3 +1695,235 @@ export const setLearnedAutoApproveRoute = createRoute({
   request: { params: workspaceParams, body: { required: true, ...json(z.strictObject({ autoApprove: z.boolean() })) } },
   responses: { 200: { description: 'Setting', ...json(z.object({ autoApprove: z.boolean() })) }, default: problemResponse },
 });
+
+// ---------- Help centre (ADR-0023) ----------
+
+const HELP_LANGUAGE = z.enum(['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ja', 'ko', 'zh-Hans', 'zh-Hant']);
+const helpCollectionParams = workspaceParams.extend({ collectionId: z.string() });
+const helpArticleParams = workspaceParams.extend({ articleId: z.string() });
+const helpAssetParams = workspaceParams.extend({ assetId: z.string() });
+const HelpSlug = z.string().min(1).max(80).openapi({ description: 'Letters and digits in any script, joined by hyphens.' });
+
+export const HelpCollectionSchema = z
+  .object({ id: z.string(), language: z.string(), name: z.string(), slug: z.string(), position: z.number().int(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() })
+  .openapi('HelpCollection');
+
+const helpArticleSummaryFields = {
+  id: z.string(),
+  collectionId: z.string().nullable(),
+  translationGroupId: z.string().openapi({ description: 'Shared by the same article in other languages.' }),
+  language: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  status: z.enum(['draft', 'published']),
+  position: z.number().int(),
+  version: z.number().int(),
+  publishedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+};
+export const HelpArticleSummarySchema = z.object(helpArticleSummaryFields).openapi('HelpArticleSummary');
+export const HelpArticleSchema = z
+  .object({ ...helpArticleSummaryFields, bodyMarkdown: z.string(), bodyHtml: z.string().openapi({ description: 'Rendered by the server from an allow-list. What visitors are sent.' }) })
+  .openapi('HelpArticle');
+
+export const HelpAssetSchema = z
+  .object({ id: z.string(), contentType: z.string(), sizeBytes: z.number().int(), filename: z.string(), url: z.string().openapi({ description: 'Where it is served, for use in Markdown: ![text](url)' }), createdAt: z.iso.datetime() })
+  .openapi('HelpAsset');
+
+export const HelpCentreSchema = z
+  .object({
+    websiteId: z.string(),
+    websiteName: z.string(),
+    slug: z.string().nullable().openapi({ description: 'The public address is /help/<slug>. Null while the help centre is off.' }),
+    noindex: z.boolean(),
+    languages: z.array(z.string()),
+    collections: z.array(HelpCollectionSchema),
+    articles: z.array(HelpArticleSummarySchema),
+    assets: z.array(HelpAssetSchema),
+    limits: z.object({ articlesPerWebsite: z.number().int(), titleChars: z.number().int(), summaryChars: z.number().int(), bodyChars: z.number().int(), collectionNameChars: z.number().int(), assetBytes: z.number().int() }),
+  })
+  .openapi('HelpCentre');
+
+export const getHelpCentreRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help',
+  tags: ['help'],
+  operationId: 'getHelpCentre',
+  summary: "A website's help centre: its address, collections, articles and images. For every member.",
+  security: bearer,
+  request: { params: websiteParams },
+  responses: { 200: { description: 'Help centre', ...json(HelpCentreSchema) }, default: problemResponse },
+});
+
+export const saveHelpSettingsRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/settings',
+  tags: ['help'],
+  operationId: 'saveHelpSettings',
+  summary: 'Turn the public help centre on with an address, move it, or turn it off. For supervisors.',
+  description: 'A change of address is recorded in the audit log.',
+  security: bearer,
+  request: {
+    params: websiteParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          slug: z.string().max(50).nullable().openapi({ description: 'Lower-case letters, digits and hyphens. Null turns the public help centre off.' }),
+          noindex: z.boolean().optional().openapi({ description: 'Ask search engines not to list it. Left out, it stays as it was.' }),
+        }),
+      ),
+    },
+  },
+  responses: { 200: { description: 'Settings', ...json(z.object({ slug: z.string().nullable(), noindex: z.boolean() })) }, default: problemResponse },
+});
+
+export const createHelpCollectionRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/collections',
+  tags: ['help'],
+  operationId: 'createHelpCollection',
+  summary: 'Add a collection of articles, in one language. For supervisors.',
+  security: bearer,
+  request: { params: websiteParams, body: { required: true, ...json(z.strictObject({ language: HELP_LANGUAGE, name: z.string().min(1).max(100) })) } },
+  responses: { 201: { description: 'Collection', ...json(HelpCollectionSchema) }, default: problemResponse },
+});
+
+export const updateHelpCollectionRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/help/collections/{collectionId}',
+  tags: ['help'],
+  operationId: 'updateHelpCollection',
+  summary: 'Rename or move a collection. For supervisors.',
+  security: bearer,
+  request: {
+    params: helpCollectionParams,
+    body: { required: true, ...json(z.strictObject({ name: z.string().min(1).max(100).optional(), slug: HelpSlug.optional(), position: z.number().int().min(0).max(10_000).optional() })) },
+  },
+  responses: { 200: { description: 'Collection', ...json(HelpCollectionSchema) }, default: problemResponse },
+});
+
+export const deleteHelpCollectionRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/help/collections/{collectionId}',
+  tags: ['help'],
+  operationId: 'deleteHelpCollection',
+  summary: 'Delete a collection. Its articles stay, outside any collection. For supervisors.',
+  security: bearer,
+  request: { params: helpCollectionParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+export const createHelpArticleRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/articles',
+  tags: ['help'],
+  operationId: 'createHelpArticle',
+  summary: 'Write an article, as a draft. For supervisors.',
+  security: bearer,
+  request: {
+    params: websiteParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          language: HELP_LANGUAGE,
+          title: z.string().min(1).max(200),
+          summary: z.string().max(500).optional(),
+          bodyMarkdown: z.string().max(20_000).optional().openapi({ description: 'Markdown: headings, paragraphs, bold, italic, lists, links, code, quotes and images. No HTML.' }),
+          collectionId: z.string().nullable().optional(),
+          translationOf: z.string().optional().openapi({ description: 'An article this one translates. They are then offered as each other in other languages.' }),
+        }),
+      ),
+    },
+  },
+  responses: { 201: { description: 'Article', ...json(HelpArticleSchema) }, default: problemResponse },
+});
+
+export const getHelpArticleRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/help/articles/{articleId}',
+  tags: ['help'],
+  operationId: 'getHelpArticle',
+  summary: 'An article, with its Markdown. For every member.',
+  security: bearer,
+  request: { params: helpArticleParams },
+  responses: { 200: { description: 'Article', ...json(HelpArticleSchema) }, default: problemResponse },
+});
+
+export const updateHelpArticleRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/help/articles/{articleId}',
+  tags: ['help'],
+  operationId: 'updateHelpArticle',
+  summary: 'Change an article. For supervisors.',
+  description: 'A published article changes for visitors at once.',
+  security: bearer,
+  request: {
+    params: helpArticleParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          expectedVersion: z.number().int(),
+          title: z.string().min(1).max(200).optional(),
+          summary: z.string().max(500).optional(),
+          bodyMarkdown: z.string().max(20_000).optional(),
+          slug: HelpSlug.optional(),
+          collectionId: z.string().nullable().optional(),
+          position: z.number().int().min(0).max(100_000).optional(),
+        }),
+      ),
+    },
+  },
+  responses: { 200: { description: 'Article', ...json(HelpArticleSchema) }, default: problemResponse },
+});
+
+export const setHelpArticleStatusRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/workspaces/{workspaceId}/help/articles/{articleId}/status',
+  tags: ['help'],
+  operationId: 'setHelpArticleStatus',
+  summary: 'Publish an article, or take it back to a draft. For supervisors.',
+  description: 'Recorded in the audit log.',
+  security: bearer,
+  request: { params: helpArticleParams, body: { required: true, ...json(z.strictObject({ status: z.enum(['draft', 'published']) })) } },
+  responses: { 200: { description: 'Article', ...json(HelpArticleSchema) }, default: problemResponse },
+});
+
+export const deleteHelpArticleRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/help/articles/{articleId}',
+  tags: ['help'],
+  operationId: 'deleteHelpArticle',
+  summary: 'Delete an article. For supervisors.',
+  description: 'Recorded in the audit log.',
+  security: bearer,
+  request: { params: helpArticleParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+export const uploadHelpAssetRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/assets',
+  tags: ['help'],
+  operationId: 'uploadHelpAsset',
+  summary: 'Upload an image for articles: PNG, JPEG, GIF or WebP, up to 5 MB. For supervisors.',
+  description: 'The body is the image, with its type in Content-Type and its size in Content-Length. It is public at its url, which cannot be guessed.',
+  security: bearer,
+  request: { params: websiteParams, query: FilenameQuery, body: BinaryBody },
+  responses: { 201: { description: 'Stored', ...json(HelpAssetSchema) }, default: problemResponse },
+});
+
+export const deleteHelpAssetRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/help/assets/{assetId}',
+  tags: ['help'],
+  operationId: 'deleteHelpAsset',
+  summary: 'Delete an image. Articles that show it show nothing there. For supervisors.',
+  security: bearer,
+  request: { params: helpAssetParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});

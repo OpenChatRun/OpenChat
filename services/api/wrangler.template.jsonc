@@ -13,7 +13,7 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     // /__scheduled is the local cron trigger from --test-scheduled. In production the Worker answers it with a 404.
-    "run_worker_first": ["/api/*", "/health", "/health/*", "/.well-known/*", "/__scheduled"]
+    "run_worker_first": ["/api/*", "/health", "/health/*", "/.well-known/*", "/__scheduled", "/help/*", "/help-assets/*"]
   },
   "d1_databases": [
     { "binding": "DB", "database_name": "oc-local", "database_id": "local", "migrations_dir": "../../packages/database/migrations" }

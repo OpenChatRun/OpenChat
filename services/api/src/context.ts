@@ -31,12 +31,15 @@ async function loadKeys(secret: string | undefined): Promise<LoadedKeys> {
 // The installation's identity never changes once set, so one read per isolate is enough.
 let installationId: string | undefined;
 
-function limiterFor(env: Env): RateLimiter {
+export function limiterFor(env: Env): RateLimiter {
   return {
     consume: (key, limit, windowSeconds) => env.AUTH_GUARD.getByName(key).consume(limit, windowSeconds),
     reset: (key) => env.AUTH_GUARD.getByName(key).reset(),
   };
 }
+
+/** For pages anyone may read, such as the help centre: no installation check, no keys. */
+export const publicDatabase = (env: Env) => openDatabase(env.DB);
 
 /** Needs neither an installation nor the signing key, because setup is what a new deployment does first. */
 export const setupDeps = (env: Env): SetupDeps => ({ db: openDatabase(env.DB), limiter: limiterFor(env), limits: readAbuseLimits(env), setupCode: env.SETUP_CODE });

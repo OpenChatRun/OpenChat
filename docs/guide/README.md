@@ -11,6 +11,7 @@ This guide is for the people who use it. To set up an installation, see the [sel
 | Answering customers | [The inbox](inbox.md), on the web and on iPhone |
 | Running the installation for your company | [Administration](admin.md) |
 | Putting the chat button on a website or in a mobile app | [The website widget](widget.md) |
+| Writing help articles for visitors | [Administration: the help centre](admin.md#the-help-centre) |
 | Responsible for privacy, or answering a person's request about their data | [Privacy and data](privacy.md) |
 
 Before relying on OpenChat, read the [known issues](../known-issues.md).
@@ -25,7 +26,7 @@ Before relying on OpenChat, read the [known issues](../known-issues.md).
 | Role | Can |
 |---|---|
 | Agent | Read and answer conversations, write internal notes, tag, and assign conversations to themselves. Reassign only their own |
-| Supervisor | All of that, and assign anyone's conversations, and set up follow-up emails |
+| Supervisor | All of that, and assign anyone's conversations, set up follow-up emails, the AI assistant, and the help centre |
 | Installation admin | Add and remove people, create workspaces, add websites and change their settings, set retention, and read the audit log. An account setting, not a workspace role: an admin sees no conversations until they add themselves to the workspace, which the audit log records |
 
 There is no sign-up page and there are no invitations. An installation admin creates each account, and OpenChat emails that person a link to choose a password.

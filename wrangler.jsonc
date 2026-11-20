@@ -24,7 +24,9 @@
       "/health",
       "/health/*",
       "/.well-known/*",
-      "/__scheduled"
+      "/__scheduled",
+      "/help/*",
+      "/help-assets/*"
     ]
   },
   "d1_databases": [

@@ -356,6 +356,22 @@ Spec Phase 6 list, plus search (FTS5), webhooks, inbound email, and signed visit
 
 The first, the AI assistant from the README's roadmap, is designed in [ADR-0022](../architecture/decisions/0022-ai-assistant.md), accepted on 19 November 2026, in three steps, each with its own exit check. All three are built.
 
+### Help centre step 1 exit check
+
+Articles and the public page ([ADR-0023](../architecture/decisions/0023-help-centre.md)). Run on a throwaway installation on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#help-centre-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| A supervisor publishes articles in two languages | Yes, in English, German and Japanese, with collections, an image and translations linked |
+| A visitor finds them by search, including in Japanese | Yes |
+| Drafts never reach visitors | Tests: pages, search and the sitemap read only published articles |
+| Nothing a writer types runs on a visitor's page | Tests: the renderer escapes HTML and drops unsafe links and outside images; pages have no script |
+| A change shows at once, though pages are cached | Yes; tests include an address passing to another website |
+| Search stays fast at the limit | 38 to 55 ms in D1 over 1,000 articles of 20,000 characters |
+| Tenancy | Isolation harness covers the 12 new routes |
+
+Limits: search matches words, not meaning; no custom domain; translations need native review.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

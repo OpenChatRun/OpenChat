@@ -164,6 +164,26 @@ Its foreign key to the conversation cascades. Erasure and the retention sweep ad
 
 **Erasure.** Assistant messages are messages: contact export includes them, and erasure deletes them with the conversation. Learned answers go with their conversation, as above. They hold no personal data by design, so contact export leaves them out. Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
 
+## The help centre
+
+[ADR-0023](decisions/0023-help-centre.md), step 1. Three tables, each with `workspace_id`, reached by members only through `helpRepository`, and by visitors only through `publicHelpRepository`, which reads `published` articles of the website a slug names:
+
+| Table | What it holds |
+|---|---|
+| `help_collections` | Groups of articles in one language, with a slug unique per website and language |
+| `help_articles` | `body_markdown` as written; `body_html`, rendered from it on save from an allow-list, which is all a visitor is sent; `search_title` and `search_text`, normalised for search; `status` `draft` or `published`, with `published_at` set only when published (`help_articles_published_ck`); `version`, for compare-and-set edits; and `translation_group_id`, shared by the same article in other languages |
+| `help_assets` | Images, PNG, JPEG, GIF or WebP, whose files are in the attachments bucket at `help/<id>` |
+
+`websites` gains `help_slug` (the public address, unique where set), `help_version` and `help_noindex`. Every change a visitor could see bumps `help_version` in the same batch as the change, and public pages are cached under the website's ID and that version, so nothing stale is served. Versions only grow, and the key carries the website because an address can pass to another website.
+
+**Search** reads no FTS5 table, because `wrangler d1 export` refuses databases with virtual tables. `search_text` is the title, U+0001, the summary, U+0002, and the body as plain text, each lower-cased with accents folded from Latin, Greek and Cyrillic letters. A query becomes words, or overlapping pairs of characters in Chinese, Japanese and Korean, at most 12; every one must appear (`instr`), and results rank by matches in the title, then the summary, then the body. It scans one website's published articles in one language, so a website has at most 1,000 articles of 20,000 characters.
+
+A collection is deleted in one batch that first takes its articles out of it: a composite foreign key cannot `SET NULL`. Websites cascade to all three tables. An image's row is deleted before its file, so a failure leaves a file that nothing points to, never a broken row.
+
+**Audit.** `help.address_changed` (with `from` and `to`), `help.article_published`, `help.article_unpublished` and `help.article_deleted` (with the title and language). Writing and editing are not audited: they change nothing visitors see until publishing does.
+
+**Privacy.** Articles and images are the company's content, not visitor data. Contact export, erasure and retention do not touch them.
+
 ## Retention
 
 Each workspace has `retention_days`, set by an installation admin under **Workspaces** (`PUT /api/v1/admin/workspaces/{id}/retention`), from 30 days to ten years. NULL, the default, keeps everything. A change is audited as `workspace.retention_changed`, with the old and new values.

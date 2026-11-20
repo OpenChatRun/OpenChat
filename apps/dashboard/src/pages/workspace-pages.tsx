@@ -5,6 +5,7 @@ import { api, errorMessage, preference, queryClient, session } from '../app-cont
 import { InboxPanel } from '../inbox/inbox-panel';
 import { FollowUpRulesPanel, SuppressionsPanel } from './email-panels';
 import { AssistantPage } from './assistant-page';
+import { HelpPage } from './help-page';
 import { AuditLogPage } from './audit-log-page';
 import { FailedJobsPage } from './failed-jobs-page';
 import { PeoplePage } from './people-page';
@@ -94,6 +95,7 @@ const SECTIONS = [
   ['members', 'sectionMembers', 'members'],
   ['email', 'sectionEmail', 'email'],
   ['assistant', 'sectionAssistant', 'assistant'],
+  ['help', 'sectionHelp', 'help'],
 ] as const satisfies readonly (readonly [string, MessageKey, IconName])[];
 const ADMIN_PAGES = [
   ['people', 'adminPeople', 'people'],
@@ -132,7 +134,7 @@ export function WorkspaceApp() {
   const title = adminPage ? t(ADMIN_PAGES.find(([page]) => page === adminPage)![1]) : current ? t(SECTIONS.find(([name]) => name === tab)![1]) : 'OpenChat';
   const wide = tab === 'inbox' && !adminPage;
   // Lists of people and their workspaces read better with more room than a form page.
-  const width = wide ? '' : adminPage === 'people' || adminPage === 'audit' ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl';
+  const width = wide ? '' : adminPage === 'people' || adminPage === 'audit' || (!adminPage && tab === 'help') ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl';
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
@@ -185,7 +187,7 @@ export function WorkspaceApp() {
           {current && !adminPage && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'inbox' ? <InboxWithMembers membership={current} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'inbox' ? <InboxWithMembers membership={current} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>

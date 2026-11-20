@@ -35,6 +35,15 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **Changes take up to a minute to show**, because Vectorize applies writes in the background.
 - **Its dashboard text was machine-translated**, like the rest.
 
+## The help centre
+
+- **Step 1 of [ADR-0023](architecture/decisions/0023-help-centre.md) is built:** articles, collections, images and the public pages with search. Drafting articles with AI, a Help tab in the widget, and the AI assistant answering from articles are the next steps.
+- **Search matches words, not meaning.** It ranks by where the words appear, and every word must be there, so "refund" does not find "money back".
+- **Only on the installation's own address**, `/help/<slug>`. A custom domain such as `help.example.com` is not offered.
+- **Images are public at their link**, including those used only in drafts, though the link cannot be guessed.
+- **Its text was machine-translated**, on the public pages and in the dashboard.
+- **Changing an address breaks the old links**, with no redirect.
+
 ## The widget
 
 - **One conversation per visitor.** The widget shows one, though the API allows more.
