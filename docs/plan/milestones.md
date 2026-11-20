@@ -462,6 +462,20 @@ Members' replies translated for visitors ([ADR-0024](../architecture/decisions/0
 
 Limits: the apps send replies as written and show no labels until step 4. A file's name is not translated. A long reply waits up to 15 seconds.
 
+### Translation step 4 exit check
+
+The iPhone and Android apps (OpenChat-private #25, on this repository at 24217e0). Checked on 20 November 2026:
+
+| Criterion | Result |
+|---|---|
+| Visitors' messages shown in the member's language, labelled, with the original a tap away | Yes, in the iOS simulator in light, dark and Japanese, with sample messages; "Translating…" and Translate as in the dashboard |
+| Replies sent translated, and nothing sent if they cannot be | The app sends `translate: true` under the dashboard's rules, and offers Try again or Send untranslated. The server's side was verified on real Cloudflare in step 3 |
+| The member's own replies show their words | Yes, "Sent translated" with Show what was sent |
+| The account's language follows the device | `PATCH /me` on start when it differs |
+| Older installations unaffected | Translation settings answer 404 there, and the app behaves as before |
+
+Limits: not yet tried on a phone against a real installation; that comes with the next TestFlight and Play builds. Language names are shown in their own language in the apps.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check
