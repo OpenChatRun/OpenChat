@@ -24,7 +24,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 ## The AI assistant
 
 - **Steps 1 and 2.** It answers visitors from sources; learning from your team's answers is step 3 ([ADR-0022](architecture/decisions/0022-ai-assistant.md)).
-- **The iPhone and Android apps do not label its messages yet.** They show them as system messages. The dashboard and widget label them AI.
+- **The iPhone and Android apps label its messages from their next release.** Until then they show its answers as if a visitor wrote them. The dashboard and widget label them AI.
 - **A rare missed push.** A visitor's message is not pushed while the assistant answers. If its job fails three times, or the assistant is turned off at that moment, that message gets no push; the conversation still shows in the inbox.
 - **Spotting a request for a person, or an attempt to steer it, uses word lists.** Other phrasings reach the model, which is told to decline.
 - **Its widget text was machine-translated**, and needs a native speaker's review.

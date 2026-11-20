@@ -385,7 +385,7 @@ Answering visitors. Run on a throwaway installation on real Cloudflare on 20 Nov
 | Writes hold at commit (last message, unassigned, still enabled) | Tests |
 | Widget and dashboard, light and dark | Screenshots checked |
 
-Limits: the apps do not label its messages yet; translations need native review; not offered on OpenChat Cloud.
+Limits: the apps label its messages only from their next release; translations need native review; not offered on OpenChat Cloud.
 
 ## Mapping to spec §20
 
