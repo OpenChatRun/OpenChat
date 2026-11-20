@@ -6,7 +6,8 @@ import { t, tn, tNode } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 
 /** The OpenChat project's own relay, whose terms an installation accepts by using it. Another relay has its own terms. */
-const MANAGED_RELAY_URL = 'https://openchat-relay.orangolabs.com';
+// The managed relay answers at both addresses; relay.openchat.run is the new one.
+const MANAGED_RELAY_URLS = new Set(['https://relay.openchat.run', 'https://openchat-relay.orangolabs.com']);
 const RELAY_TERMS_URL = 'https://github.com/OrangoLabsLtd/OpenChat/blob/main/docs/legal/relay-terms.md';
 
 const parseOrigins = (text: string) => text.split(/[\s,]+/).filter(Boolean);
@@ -309,7 +310,7 @@ function RelayPanel() {
           <p className="text-xs text-slate-600 dark:text-slate-400">
             {t('relayHolds')}
           </p>
-          {relay.relay?.url === MANAGED_RELAY_URL && (
+          {MANAGED_RELAY_URLS.has(relay.relay?.url ?? '') && (
             <p className="text-xs text-slate-600 dark:text-slate-400">
               {tNode('relayTerms', {
                 terms: (
