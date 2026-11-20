@@ -398,6 +398,8 @@ export const ko: Messages = {
   helpImagesHelp: 'PNG, JPEG, GIF, WebP, 최대 5MB. 게시된 문서처럼 링크가 있으면 누구나 이미지를 볼 수 있습니다.',
   helpUpload: '이미지 업로드',
   helpInsert: '삽입',
+  fromHelpArticle: '도움말 문서 “{title}”에서 왔습니다',
+  fromHelpArticleGone: '이후 삭제된 도움말 문서에서 왔습니다',
   helpDraftTitle: 'AI로 초안 작성',
   helpDraftIntro: 'AI가 웹사이트와 그 페이지, 업로드한 파일을 읽고 문서를 계획한 뒤 각각을 초안으로 씁니다. 확인한 다음 게시하세요. 회사 자체 자료만 올리고 고객 데이터는 올리지 마세요. 파일은 끝나면 삭제됩니다.',
   helpDraftReadWebsite: '웹사이트 읽기',

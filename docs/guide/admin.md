@@ -96,6 +96,8 @@ The assistant can be wrong, even with good sources. Try the questions your custo
 
 **Draft with AI**, if your installation has Workers AI, writes drafts for you. Tick **Read the website**, add links to pages on your website, or choose files: PDF, Word, OpenDocument, HTML, Markdown or text. Then choose **Draft articles**. It writes in the language chosen at the top of the page, whatever the language of the material. It plans up to 20 articles and writes them one by one; they appear as drafts marked **Drafted by AI**, with the pages and files each came from. Check every fact before you publish: the label goes once you change the words. Only your own website's pages can be read, files are deleted when it finishes, and a workspace can start 5 runs a day. Upload your company's own material only, never customer data.
 
+**In the widget.** Once a website has a published article, its chat widget gains a **Help** tab, where visitors search and read articles in their language without leaving the page. **Still need help?** takes them to the chat, and the conversation shows which article they came from.
+
 Visitors search titles, summaries and text. Search ignores capitals and accents, and finds Chinese, Japanese and Korean words without spaces. **Ask search engines not to list it** adds `noindex` and removes the sitemap. A website can have 1,000 articles.
 
 ## Failed jobs

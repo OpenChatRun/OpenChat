@@ -61,6 +61,32 @@ export const CHAT_CSS = `
 .oc-form label{display:flex;flex-direction:column;gap:4px;font-size:12px}
 .oc-form label.oc-check{flex-direction:row;align-items:flex-start;gap:6px}
 .oc-actions{display:flex;gap:12px;align-items:center}
+.oc-tabs{display:flex;gap:4px;margin:-12px 16px 0;position:relative;z-index:2;padding:4px;border-radius:12px;background:var(--oc-bg);box-shadow:0 1px 4px rgba(14,26,79,.12)}
+.oc-tabs button{flex:1;min-height:36px;border:0;border-radius:9px;background:none;color:var(--oc-muted);font:inherit;font-weight:600;cursor:pointer}
+.oc-tabs button.on{background:var(--oc-soft);color:var(--oc-fg)}
+.oc-tabs button:focus-visible,.oc-articles button:focus-visible,.oc-article:focus-visible{outline:2px solid var(--oc-primary);outline-offset:1px}
+.oc-tabs~.oc-log{margin-top:0;padding-top:12px}
+.oc-help form,.oc-help form .oc-input{width:100%}
+.oc-help{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.oc-group{margin:6px 0 0;font-size:12px;font-weight:600;color:var(--oc-muted);text-transform:uppercase;letter-spacing:.04em}
+.oc-articles{list-style:none;margin:0;padding:0;border:1px solid var(--oc-line);border-radius:12px;overflow:hidden}
+.oc-articles li+li{border-top:1px solid var(--oc-line)}
+.oc-articles button{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 12px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.oc-articles button:hover{background:var(--oc-soft)}
+.oc-articles span{font-size:12px;color:var(--oc-muted)}
+.oc-back{align-self:flex-start;font-size:13px;text-decoration:none}
+.oc-small{font-size:12px;color:var(--oc-muted)}
+.oc-article{overflow-wrap:anywhere}
+.oc-article h3{margin:0 0 8px;font-size:17px}
+.oc-article h2,.oc-article h4{font-size:15px;margin:14px 0 6px}
+.oc-article p,.oc-article ul,.oc-article ol,.oc-article pre,.oc-article blockquote{margin:0 0 10px}
+.oc-article ul,.oc-article ol{padding-left:20px}
+.oc-article img{max-width:100%;height:auto;border-radius:8px}
+.oc-article a{color:inherit}
+.oc-article pre{overflow-x:auto;padding:8px;border-radius:8px;background:var(--oc-soft)}
+.oc-article blockquote{padding-left:10px;border-left:3px solid var(--oc-line);color:var(--oc-muted)}
+.oc-still{margin-top:auto;padding:12px;border-radius:12px;background:var(--oc-soft);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.oc-still p{margin:0;font-weight:600}
 @media (max-width:640px),(max-height:500px){
 .oc-panel{inset:0;width:auto;height:100%;border-radius:0;box-shadow:none;z-index:2147483001;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .oc-head{padding-top:calc(16px + env(safe-area-inset-top))}

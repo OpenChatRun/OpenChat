@@ -4,7 +4,7 @@
  */
 import { expect, test, type Browser, type BrowserContext, type Page, type WebSocketRoute } from '@playwright/test';
 import { BASE_URL } from '../playwright.config';
-import { OWNER, SITE_ORIGIN, STYLED_WEBSITE_KEY, TURNSTILE_WEBSITE_KEY, WEBSITE_KEY } from './fixtures';
+import { HELP_ARTICLE, HELP_WEBSITE_KEY, OWNER, SITE_ORIGIN, STYLED_WEBSITE_KEY, TURNSTILE_WEBSITE_KEY, WEBSITE_KEY } from './fixtures';
 import { nextIp, signIn } from './helpers';
 
 const NONCE = 'test-nonce';
@@ -621,6 +621,31 @@ test.describe('languages', () => {
     await launcher(page).click();
     await expect(page.getByRole('dialog', { name: '聊天' })).toHaveAttribute('lang', 'zh-Hant');
     await expect(page.getByRole('button', { name: '傳送', exact: true })).toBeVisible();
+    await context.close();
+  });
+});
+
+test.describe('the Help tab', () => {
+  test('a visitor reads an article, then asks the team, who see which article they came from', async ({ browser }) => {
+    const context = await visitorContext(browser);
+    const page = await shop(context, HELP_WEBSITE_KEY);
+    await launcher(page).click();
+    // No conversation yet, and there are articles: the panel opens on Help.
+    await expect(page.getByRole('tab', { name: 'Help' })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('searchbox', { name: 'Search for answers' }).fill('return');
+    await page.getByRole('searchbox', { name: 'Search for answers' }).press('Enter');
+    await page.getByRole('button', { name: new RegExp(HELP_ARTICLE.title) }).click();
+    await expect(page.getByRole('heading', { name: HELP_ARTICLE.title })).toBeVisible();
+    await expect(page.getByText('print the label')).toBeVisible();
+    await page.getByRole('button', { name: 'Chat with us' }).click();
+    await expect(page.getByRole('tab', { name: 'Chat' })).toHaveAttribute('aria-selected', 'true');
+    const created = page.waitForResponse((r) => r.url().endsWith('/api/v1/widget/conversations') && r.request().method() === 'POST');
+    await say(page, 'The label will not print');
+    const { id } = (await (await created).json()) as { id: string };
+
+    const agent = await openInbox(browser);
+    await inboxRow(agent, id).click();
+    await expect(agent.getByText(`Came from the help article “${HELP_ARTICLE.title}”`)).toBeVisible();
     await context.close();
   });
 });

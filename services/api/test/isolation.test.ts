@@ -80,6 +80,8 @@ const CASES: Record<string, Case> = {
   listWebsites: { kind: 'workspace', ownerStatus: 200 },
   widgetBootstrap: { kind: 'public', reason: 'Public configuration. Only ever the named website' },
   createVisitorSession: { kind: 'public', reason: 'Creates a new anonymous visitor, or resumes the one holding the token' },
+  widgetHelp: { kind: 'public', reason: 'Published help articles of the named website only. Covered in widget-help.test.ts' },
+  widgetHelpArticle: { kind: 'public', reason: 'A published article of the named website only. Covered in widget-help.test.ts' },
   updateVisitorProfile: { kind: 'visitor', body: { name: 'Taken over' }, ownerStatus: 204 },
   listVisitorConversations: { kind: 'visitor', ownerStatus: 200 },
   createVisitorConversation: { kind: 'visitor', body: { clientMessageId: 'isolation-2', content: 'New' }, ownerStatus: 201 },

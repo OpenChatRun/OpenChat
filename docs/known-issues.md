@@ -37,7 +37,9 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## The help centre
 
-- **Steps 1 and 2 of [ADR-0023](architecture/decisions/0023-help-centre.md) are built:** articles, collections, images, the public pages with search, and Draft with AI. A Help tab in the widget, and the AI assistant answering from articles, are the next steps.
+- **Steps 1 to 3 of [ADR-0023](architecture/decisions/0023-help-centre.md) are built:** articles, collections, images, the public pages with search, Draft with AI, and the widget's Help tab. The AI assistant answering from articles is the next step.
+- **The widget's Help tab lists articles in order, not the most read,** because views are not counted. It appears up to 30 seconds after the first article is published.
+- **Only the first conversation records the article.** Still need help? from an article, when the visitor already has a conversation, takes them back to it without noting the article.
 - **Draft with AI can be wrong.** It writes from the material only, but a model can still misread it. Every article is a draft for a person to check.
 - **Draft with AI reads the website from its first allowed origin's home page**, following links, as the assistant does. It does not read a sitemap, and it reads at most 50 pages.
 - **Scanned PDFs** have no text for it to read, and images in files are ignored.

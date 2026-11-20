@@ -22,6 +22,17 @@ Both live in a Shadow DOM, so the host page's styles cannot reach them and their
 
 `window.OpenChat` also has `open()` and `close()`.
 
+## The Help tab
+
+[ADR-0023](decisions/0023-help-centre.md), step 3. When the website has published help articles, the bootstrap lists their languages in `helpLanguages`, and the panel shows **Chat** and **Help** tabs. It opens on Help until the visitor has a conversation.
+
+- **Reading needs no session.** `GET /api/v1/widget/help` (list, or search with `q`) and `GET /api/v1/widget/help/articles/{id}` take the website key, check the Origin as the bootstrap does, and are limited per IP with the public help centre (300 a minute). A visitor who only reads never becomes a visitor row or a contact.
+- **Language.** The widget asks in its own language. The server answers in that language if it has articles, else English, else the language with most.
+- **The list** is the first 100 published articles by position, grouped by collection, as on the help centre's home page; not the most read, because views are not counted. Search reaches the rest. The list and articles are cached for 30 seconds by website key, as the bootstrap is; searches are not cached.
+- **An article is the one HTML the panel sets.** It is `body_html`, rendered from an allow-list on save, with `/help-assets/` images and `/help/` links made absolute on the installation, and help links opening in a new tab.
+- **Still need help?** switches to Chat. If the visitor has no conversation yet, the first message sends `helpArticleId`, which is kept on the conversation only if it names a published article of the same website. The inbox shows "Came from the help article …".
+- **Freshness.** The tab appears or goes with the bootstrap, which is cached for 30 seconds.
+
 ## Languages
 
 The widget speaks English, Spanish, French, German, Italian, Portuguese, Dutch, Japanese, Korean, Simplified Chinese, and Traditional Chinese. It chooses the first of these that it speaks:

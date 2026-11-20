@@ -569,6 +569,7 @@ export const ConversationSchema = z
     createdAt: z.string(),
     updatedAt: z.string(),
     assistantState: AssistantStateSchema.nullable().openapi({ description: 'The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part.' }),
+    helpArticleId: z.string().nullable().openapi({ description: 'The help article the visitor was reading when they started it, from "Still need help?" in the widget. It may since have been deleted.' }),
   })
   .openapi('Conversation');
 
@@ -728,6 +729,7 @@ export const WidgetBootstrapSchema = z
     availability: z.enum(['online', 'offline']),
     turnstileSiteKey: z.string().optional().openapi({ description: 'Present when this website requires Turnstile for a new visitor.' }),
     messageMaxChars: z.number().int().openapi({ description: "The longest message this installation accepts from a visitor. A longer one is refused with `message_too_long`." }),
+    helpLanguages: z.array(z.string()).openapi({ description: 'Languages with published help articles, most articles first. Empty: the widget shows no Help tab.' }),
   })
   .openapi('WidgetBootstrap');
 
@@ -804,7 +806,18 @@ export const createVisitorConversationRoute = createRoute({
   operationId: 'createVisitorConversation',
   summary: 'Start a conversation with a first message',
   security: visitor,
-  request: { body: { required: true, ...json(z.strictObject({ clientMessageId: ClientMessageId, content: VisitorContent })) } },
+  request: {
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          clientMessageId: ClientMessageId,
+          content: VisitorContent,
+          helpArticleId: z.string().max(64).optional().openapi({ description: 'The help article the visitor came from. Kept only if it is a published article of this website.' }),
+        }),
+      ),
+    },
+  },
   responses: {
     201: { description: 'Created', ...json(VisitorConversationStartedSchema) },
     200: { description: 'A replay of an existing clientMessageId. Returns the same conversation.', ...json(VisitorConversationStartedSchema) },
@@ -2002,4 +2015,49 @@ export const startHelpDraftRunRoute = createRoute({
   security: bearer,
   request: { params: helpDraftParams },
   responses: { 200: { description: 'Run', ...json(HelpDraftRunSchema) }, default: problemResponse },
+});
+
+// ---------- The widget's Help tab (ADR-0023, step 3) ----------
+
+const WidgetHelpArticleSummarySchema = z.object({ id: z.string(), title: z.string(), summary: z.string(), collectionId: z.string().nullable() }).openapi('WidgetHelpArticleSummary');
+
+export const WidgetHelpSchema = z
+  .object({
+    language: z.string().nullable().openapi({ description: 'The language shown: the one asked for if it has articles, else English, else the language with most. Null if there are none.' }),
+    collections: z.array(z.object({ id: z.string(), name: z.string() })).openapi({ description: 'Empty for search results.' }),
+    articles: z.array(WidgetHelpArticleSummarySchema),
+  })
+  .openapi('WidgetHelp');
+
+export const WidgetHelpArticleSchema = z
+  .object({
+    id: z.string(),
+    language: z.string(),
+    title: z.string(),
+    summary: z.string(),
+    bodyHtml: z.string().openapi({ description: "Rendered on save from an allow-list. Images and help-centre links are absolute, on the installation's address." }),
+    url: z.string().nullable().openapi({ description: 'The article on the public help centre, if the website has one.' }),
+  })
+  .openapi('WidgetHelpArticle');
+
+export const widgetHelpRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/widget/help',
+  tags: ['widget'],
+  operationId: 'widgetHelp',
+  summary: "A website's published help articles in a language, or those matching a search. No session needed; the Origin must be allowed.",
+  security: [],
+  request: { query: z.object({ websiteKey: z.string().max(128), language: z.string().max(16).optional(), q: z.string().max(200).optional() }) },
+  responses: { 200: { description: 'Articles', ...json(WidgetHelpSchema) }, default: problemResponse },
+});
+
+export const widgetHelpArticleRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/widget/help/articles/{articleId}',
+  tags: ['widget'],
+  operationId: 'widgetHelpArticle',
+  summary: 'One published help article, to read in the widget. No session needed; the Origin must be allowed.',
+  security: [],
+  request: { params: z.object({ articleId: z.string() }), query: z.object({ websiteKey: z.string().max(128) }) },
+  responses: { 200: { description: 'Article', ...json(WidgetHelpArticleSchema) }, default: problemResponse },
 });

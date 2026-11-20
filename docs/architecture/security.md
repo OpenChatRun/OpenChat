@@ -182,6 +182,12 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 - **Images** are checked as attachments are: the declared type must be an image and agree with the first bytes, and the name with the type; SVG is refused. They are served with `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`, and are public at an ID that cannot be guessed, including images used only in drafts. Deleting one removes it.
 - **Load.** A cached page costs one indexed read of the website. Anything else, including every search, is limited per IP (300 a minute). Search terms are not stored or logged.
 
+### The widget's Help tab
+
+- **Same rules as the public pages.** Published articles of the website the key names, from an Origin the website allows, limited per IP. No session is created, so reading leaves no trace of the visitor.
+- **The panel sets one piece of HTML,** an article's `body_html`, which only `renderHelpMarkdown` ever wrote. Message content stays text nodes. The widget's Shadow DOM keeps the article's few tags from the host page's styles.
+- **`helpArticleId` is checked in SQL** on insert: an ID that is not a published article of the visitor's website is stored as null, not refused, so it reveals nothing about other websites.
+
 ### Draft with AI
 
 - **It reads only the company's own pages.** Links follow the assistant's rules: `https`, on the host of one of the website's allowed origins, no credentials or ports, robots.txt respected, size and time limits, and redirects checked. Reading the website starts at the first allowed origin.

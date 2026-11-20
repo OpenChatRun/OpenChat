@@ -387,6 +387,21 @@ Draft with AI ([ADR-0023](../architecture/decisions/0023-help-centre.md)). Run o
 
 Limits: AI can be wrong, and every draft needs checking; titles in some languages read poorly; scanned PDFs have no text to read.
 
+### Help centre step 3 exit check
+
+The widget's Help tab ([ADR-0023](../architecture/decisions/0023-help-centre.md)). Run on a throwaway installation on real Cloudflare on 20 November 2026, with the real widget in Chromium on a page at an allowed origin:
+
+| Criterion | Result |
+|---|---|
+| Visitors search and read articles in the widget, in their language | Yes: a Japanese browser saw the Japanese article, an English one the English articles grouped by collection, and French fell back to English. Search found words in both |
+| Still need help? starts a conversation the team can trace | Yes: the inbox showed "Came from the help article “How returns work”". A made-up article ID was stored as nothing |
+| Only published articles of this website, from allowed pages | Yes: another origin got 403. Tests: drafts and another website's articles are 404 |
+| Article HTML is safe in the panel | It is the allow-list HTML from step 1; links and images are made absolute on the installation |
+| Phone, dark mode, accessibility | Seen on a 390-pixel phone in dark mode. axe finds nothing in the list or an article, in light and dark |
+| Within budget | `chat.js` is 28,114 bytes gzipped, of 40,960 |
+
+Limits: the list is in order, not by most read; the tab can take 30 seconds to appear or change. During setup, publishing an article seconds after the database was created answered 404 once; it worked on retry and did not happen again in 8 tries.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

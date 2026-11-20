@@ -6,11 +6,15 @@ import type {
   VisitorConversationSchema,
   VisitorWireMessageSchema,
   WidgetBootstrapSchema,
+  WidgetHelpArticleSchema,
+  WidgetHelpSchema,
 } from '@openchat/api-contracts';
 
 export type Bootstrap = (typeof WidgetBootstrapSchema)['_output'];
 export type VisitorConversation = (typeof VisitorConversationSchema)['_output'];
 export type VisitorMessage = (typeof VisitorWireMessageSchema)['_output'];
+export type HelpList = (typeof WidgetHelpSchema)['_output'];
+export type HelpArticle = (typeof WidgetHelpArticleSchema)['_output'];
 
 export class ApiError extends Error {
   constructor(
@@ -129,7 +133,19 @@ export function createApi(deps: ApiDeps) {
     async listConversations(): Promise<VisitorConversation[]> {
       return ((await (await authed('GET', '/api/v1/widget/conversations')).json()) as { data: VisitorConversation[] }).data;
     },
-    async createConversation(input: { clientMessageId: string; content: string }): Promise<VisitorConversation & { message: VisitorMessage }> {
+    /** No session: a visitor who only reads articles never becomes one. */
+    async help(language: string, q: string): Promise<HelpList> {
+      const params = new URLSearchParams({ websiteKey: deps.websiteKey, language, ...(q ? { q } : {}) });
+      const response = await request('GET', `/api/v1/widget/help?${params}`, null);
+      if (!response.ok) throw await failure(response);
+      return (await response.json()) as HelpList;
+    },
+    async helpArticle(id: string): Promise<HelpArticle> {
+      const response = await request('GET', `/api/v1/widget/help/articles/${encodeURIComponent(id)}?websiteKey=${encodeURIComponent(deps.websiteKey)}`, null);
+      if (!response.ok) throw await failure(response);
+      return (await response.json()) as HelpArticle;
+    },
+    async createConversation(input: { clientMessageId: string; content: string; helpArticleId?: string }): Promise<VisitorConversation & { message: VisitorMessage }> {
       return (await (await authed('POST', '/api/v1/widget/conversations', input)).json()) as VisitorConversation & { message: VisitorMessage };
     },
     async uploadAttachment(conversationId: string, file: File): Promise<{ id: string }> {

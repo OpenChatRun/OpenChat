@@ -24,6 +24,7 @@ const conversation = (id: string, over: Partial<Conversation> = {}): Conversatio
   contactName: null,
   contactEmail: null,
   assistantState: null,
+  helpArticleId: null,
   tags: [],
   assignedMemberId: null,
   status: 'open',

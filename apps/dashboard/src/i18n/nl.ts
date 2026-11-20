@@ -398,6 +398,8 @@ export const nl: Messages = {
   helpImagesHelp: 'PNG, JPEG, GIF of WebP, tot 5 MB. Iedereen met de link kan een afbeelding zien, net als een gepubliceerd artikel.',
   helpUpload: 'Afbeelding uploaden',
   helpInsert: 'Invoegen',
+  fromHelpArticle: 'Kwam van het helpartikel ‘{title}’',
+  fromHelpArticleGone: 'Kwam van een helpartikel dat inmiddels is verwijderd',
   helpDraftTitle: 'Concept met AI',
   helpDraftIntro: 'AI leest je website, pagina’s daarop en bestanden die je uploadt, plant artikelen en schrijft elk als concept dat jij controleert en publiceert. Upload alleen materiaal van je eigen bedrijf, nooit klantgegevens. Bestanden worden daarna verwijderd.',
   helpDraftReadWebsite: 'De website lezen',

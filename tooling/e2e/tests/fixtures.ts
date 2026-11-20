@@ -7,6 +7,9 @@ export const SITE_ORIGIN = 'https://shop.example';
 export const STYLED_WEBSITE_KEY = 'key_e2e_styled';
 export const STYLED_WEBSITE_SETTINGS = { welcomeMessage: 'Welcome to the shop', primaryColor: '#fde047', collectEmail: 'required', showAgentNames: true };
 export const TURNSTILE_WEBSITE_KEY = 'key_e2e_turnstile';
+/** A website with a published help article, so its widget has a Help tab. */
+export const HELP_WEBSITE_KEY = 'key_e2e_help';
+export const HELP_ARTICLE = { id: 'hart_e2e_returns', title: 'How returns work', summary: 'Send it back within 30 days', bodyHtml: '<p>Pack the item and <strong>print the label</strong>.</p>' };
 /** Cloudflare's published test keys, which always pass. The local Worker really asks Cloudflare about them. */
 export const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
 export const TURNSTILE_TEST_SECRET = '1x0000000000000000000000000000000AA';

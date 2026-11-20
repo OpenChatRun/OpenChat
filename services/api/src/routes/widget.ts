@@ -10,6 +10,8 @@ import {
   sendVisitorMessageRoute,
   updateVisitorProfileRoute,
   widgetBootstrapRoute,
+  widgetHelpArticleRoute,
+  widgetHelpRoute,
 } from '@openchat/api-contracts';
 import {
   beginVisitorUpload,
@@ -24,13 +26,19 @@ import {
   markVisitorConversationRead,
   sendVisitorMessage,
   updateVisitorProfile,
+  enforce,
+  limitKeyForIp,
+  publishedHelpLanguages,
   websiteForWidget,
+  widgetHelp,
+  widgetHelpArticle,
   type VisitorContext,
 } from '@openchat/core';
 import { AppError, notFound, readAbuseLimits } from '@openchat/shared';
 import type { Context, MiddlewareHandler } from 'hono';
 import { hubName } from '@openchat/realtime';
-import { authDeps, type App, type AppEnv } from '../context';
+import { authDeps, limiterFor, publicDatabase, type App, type AppEnv } from '../context';
+import { HELP_PAGE_LIMIT } from './help-public';
 import { receiveUpload, sendFile } from '../attachments';
 import { dispatchSoon, publishRead, socketUrl } from '../dispatch';
 
@@ -82,6 +90,8 @@ interface CachedBootstrap {
   settings?: Record<string, unknown>;
   allowedOrigins?: string[];
   availability?: 'online' | 'offline';
+  /** Languages with published help articles: the Help tab shows if there are any. */
+  helpLanguages?: string[];
 }
 
 /** Cached with the rest, so that page views on a busy site do not wake the hub. */
@@ -100,7 +110,30 @@ async function loadBootstrap(c: Context<AppEnv>, websiteKey: string): Promise<Ca
   const hit = await cache.match(key);
   if (hit) return (await hit.json()) as CachedBootstrap;
   const website = await websiteForWidget(await authDeps(c.env), websiteKey);
-  const value: CachedBootstrap = website ? { found: true, availability: await availabilityOf(c, website.workspaceId, website.settings.availabilityMode), websiteId: website.id, settings: website.settings, allowedOrigins: website.allowedOrigins } : { found: false };
+  const value: CachedBootstrap = website
+    ? {
+        found: true,
+        availability: await availabilityOf(c, website.workspaceId, website.settings.availabilityMode),
+        websiteId: website.id,
+        settings: website.settings,
+        allowedOrigins: website.allowedOrigins,
+        helpLanguages: await publishedHelpLanguages(publicDatabase(c.env), website.id),
+      }
+    : { found: false };
+  await cache.put(key, new Response(JSON.stringify(value), { headers: { 'cache-control': `public, max-age=${BOOTSTRAP_TTL_SECONDS}` } }));
+  return value;
+}
+
+/**
+ * The Help tab's list and articles, cached as the bootstrap is: keyed by website key, so a change shows within the
+ * same 30 seconds as the tab itself. Searches are not cached.
+ */
+async function cachedHelp<T>(name: string, produce: () => Promise<T | null>): Promise<T | null> {
+  const cache = caches.default;
+  const key = new Request(`https://widget-help.invalid/${name}`);
+  const hit = await cache.match(key);
+  if (hit) return (await hit.json()) as T | null;
+  const value = await produce();
   await cache.put(key, new Response(JSON.stringify(value), { headers: { 'cache-control': `public, max-age=${BOOTSTRAP_TTL_SECONDS}` } }));
   return value;
 }
@@ -118,7 +151,34 @@ export function registerWidgetRoutes(app: App) {
     if (!bootstrap.found) throw notFound();
     const origin = c.req.header('origin');
     if (origin !== undefined && !bootstrap.allowedOrigins!.includes(origin)) throw new AppError(403, 'bad_origin', 'This website does not allow requests from this origin');
-    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
+    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [], ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
+  });
+
+  /** The Help tab reads with no session, so it is limited per address, as the public help centre is. */
+  const helpWebsite = async (c: Context<AppEnv>, websiteKey: string) => {
+    await enforce(limiterFor(c.env), await limitKeyForIp({ limits: readAbuseLimits(c.env) }, 'help-page-ip', clientIp(c)), HELP_PAGE_LIMIT);
+    const bootstrap = await loadBootstrap(c, websiteKey);
+    if (!bootstrap.found) throw notFound();
+    const origin = c.req.header('origin');
+    if (origin !== undefined && !bootstrap.allowedOrigins!.includes(origin)) throw new AppError(403, 'bad_origin', 'This website does not allow requests from this origin');
+    return bootstrap.websiteId!;
+  };
+
+  app.openapi(widgetHelpRoute, async (c) => {
+    const { websiteKey, language, q } = c.req.valid('query');
+    const websiteId = await helpWebsite(c, websiteKey);
+    const read = () => widgetHelp(publicDatabase(c.env), websiteId, { language, q });
+    return c.json(q?.trim() ? await read() : (await cachedHelp(`${encodeURIComponent(websiteKey)}/list/${encodeURIComponent(language ?? '')}`, read))!, 200);
+  });
+
+  app.openapi(widgetHelpArticleRoute, async (c) => {
+    const websiteId = await helpWebsite(c, c.req.valid('query').websiteKey);
+    const { articleId } = c.req.valid('param');
+    const article = await cachedHelp(`${encodeURIComponent(c.req.valid('query').websiteKey)}/article/${encodeURIComponent(articleId)}`, () =>
+      widgetHelpArticle(publicDatabase(c.env), websiteId, articleId, new URL(c.req.url).origin),
+    );
+    if (!article) throw notFound();
+    return c.json(article, 200);
   });
 
   app.openapi(createVisitorSessionRoute, async (c) => {

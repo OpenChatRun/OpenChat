@@ -7,7 +7,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateSerializedKey, hashPassword } from '@openchat/auth';
-import { AGENT, OWNER, PASSWORD, SITE_ORIGIN, STYLED_WEBSITE_KEY, STYLED_WEBSITE_SETTINGS, TURNSTILE_TEST_SECRET, TURNSTILE_TEST_SITE_KEY, TURNSTILE_WEBSITE_KEY, WEBSITE_KEY, WORKSPACE_ID } from './tests/fixtures';
+import { AGENT, OWNER, PASSWORD, SITE_ORIGIN, STYLED_WEBSITE_KEY, STYLED_WEBSITE_SETTINGS, HELP_ARTICLE, HELP_WEBSITE_KEY, TURNSTILE_TEST_SECRET, TURNSTILE_TEST_SITE_KEY, TURNSTILE_WEBSITE_KEY, WEBSITE_KEY, WORKSPACE_ID } from './tests/fixtures';
 
 const api = resolve(dirname(fileURLToPath(import.meta.url)), '../../services/api');
 const state = '.wrangler/e2e';
@@ -33,7 +33,10 @@ INSERT INTO websites (id, workspace_id, name, website_key, allowed_origins_json,
   ('site_e2e', ${quote(WORKSPACE_ID)}, 'Shop', ${quote(WEBSITE_KEY)}, ${quote(JSON.stringify([SITE_ORIGIN]))}, 1, 1);
 INSERT INTO websites (id, workspace_id, name, website_key, allowed_origins_json, settings_json, created_at, updated_at) VALUES
   ('site_styled', ${quote(WORKSPACE_ID)}, 'Styled', ${quote(STYLED_WEBSITE_KEY)}, ${quote(JSON.stringify([SITE_ORIGIN]))}, ${quote(JSON.stringify(STYLED_WEBSITE_SETTINGS))}, 1, 1),
-  ('site_turnstile', ${quote(WORKSPACE_ID)}, 'Checked', ${quote(TURNSTILE_WEBSITE_KEY)}, ${quote(JSON.stringify([SITE_ORIGIN]))}, '{"requireTurnstile":true}', 1, 1);
+  ('site_turnstile', ${quote(WORKSPACE_ID)}, 'Checked', ${quote(TURNSTILE_WEBSITE_KEY)}, ${quote(JSON.stringify([SITE_ORIGIN]))}, '{"requireTurnstile":true}', 1, 1),
+  ('site_help', ${quote(WORKSPACE_ID)}, 'Helpful', ${quote(HELP_WEBSITE_KEY)}, ${quote(JSON.stringify([SITE_ORIGIN]))}, '{}', 1, 1);
+INSERT INTO help_articles (id, workspace_id, website_id, translation_group_id, language, slug, title, summary, body_html, search_title, search_text, status, published_at, created_at, updated_at) VALUES
+  (${quote(HELP_ARTICLE.id)}, ${quote(WORKSPACE_ID)}, 'site_help', ${quote(HELP_ARTICLE.id)}, 'en', 'returns', ${quote(HELP_ARTICLE.title)}, ${quote(HELP_ARTICLE.summary)}, ${quote(HELP_ARTICLE.bodyHtml)}, 'how returns work', 'how returns work send it back within 30 days pack the item', 'published', 1, 1, 1);
 INSERT INTO failed_jobs (id, workspace_id, queue, job_type, idempotency_key, attempts, envelope_json, failed_at) VALUES
   ('fjob_e2e_check', ${quote(WORKSPACE_ID)}, 'oc-local-jobs-dlq', 'automation.evaluate', 'automation.evaluate:conv_gone:1', 5,
    ${quote(JSON.stringify({ v: 1, type: 'automation.evaluate', id: 'job_e2e_check', idempotencyKey: 'automation.evaluate:conv_gone:1', workspaceId: WORKSPACE_ID, occurredAt: '2026-01-01T00:00:00.000Z', payload: { conversationId: 'conv_gone' } }))}, 2),
