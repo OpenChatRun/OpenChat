@@ -45,6 +45,7 @@ import type {
   listLearnedAnswersRoute,
   getHelpCentreRoute,
   getHelpArticleRoute,
+  createHelpDraftRunRoute,
   createHelpArticleRoute,
   updateHelpArticleRoute,
 } from '@openchat/api-contracts';
@@ -95,6 +96,8 @@ export type HelpAsset = HelpCentre['assets'][number];
 export type HelpArticle = Json200<typeof getHelpArticleRoute>;
 export type HelpArticleInput = BodyOf<typeof createHelpArticleRoute>;
 export type HelpArticleUpdate = BodyOf<typeof updateHelpArticleRoute>;
+export type HelpDraftRun = HelpCentre['drafting']['runs'][number];
+export type HelpDraftInput = BodyOf<typeof createHelpDraftRunRoute>;
 export type CreatedWorkspace = Json201<typeof createWorkspaceRoute>;
 export type Conversation = Json200<typeof getConversationRoute>;
 export type ConversationPage = Json200<typeof listConversationsRoute>;
@@ -288,6 +291,16 @@ export function createClient(options: ClientOptions) {
         })
       ).json()) as HelpAsset,
     deleteHelpAsset: (workspaceId: string, assetId: string) => request<void>('DELETE', `${workspace(workspaceId)}/help/assets/${encodeURIComponent(assetId)}`),
+    createHelpDraftRun: (workspaceId: string, websiteId: string, input: HelpDraftInput) =>
+      request<HelpDraftRun>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help/drafts`, input),
+    uploadHelpDraftFile: async (workspaceId: string, runId: string, file: File): Promise<HelpDraftRun> =>
+      (await (
+        await checked('POST', `${workspace(workspaceId)}/help/drafts/${encodeURIComponent(runId)}/files?filename=${encodeURIComponent(file.name)}`, undefined, {
+          data: file,
+          type: file.type || 'application/octet-stream',
+        })
+      ).json()) as HelpDraftRun,
+    startHelpDraftRun: (workspaceId: string, runId: string) => request<HelpDraftRun>('POST', `${workspace(workspaceId)}/help/drafts/${encodeURIComponent(runId)}/start`),
     createRealtimeTicket: (workspaceId: string) => request<RealtimeTicket>('POST', `${workspace(workspaceId)}/realtime/tickets`),
   };
 }

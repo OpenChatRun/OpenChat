@@ -5,7 +5,7 @@
  * The preview is the server's own renderer, from @openchat/shared, so what a writer sees is what a visitor gets. It
  * builds HTML from an allow-list and escapes everything else, which is why it may be set as HTML here.
  */
-import type { HelpArticle, HelpArticleInput, HelpArticleSummary, HelpCentre } from '@openchat/api-client';
+import type { HelpArticle, HelpArticleInput, HelpArticleSummary, HelpCentre, HelpDraftInput, HelpDraftRun } from '@openchat/api-client';
 import { renderHelpMarkdown } from '@openchat/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -25,6 +25,95 @@ function StatusBadge({ status }: { status: HelpArticleSummary['status'] }) {
     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">{t('helpStatusPublished')}</span>
   ) : (
     <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">{t('helpStatusDraft')}</span>
+  );
+}
+
+function AiBadge() {
+  return <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-300">{t('helpAiDrafted')}</span>;
+}
+
+const OPEN_RUN = new Set(['uploading', 'queued', 'reading', 'writing']);
+export const draftRunning = (help: HelpCentre | undefined) => help?.drafting.runs.some((run) => OPEN_RUN.has(run.status) && run.status !== 'uploading') ?? false;
+
+function runText(run: HelpDraftRun): string {
+  if (run.status === 'queued' || run.status === 'reading') return t('helpDraftReading');
+  if (run.status === 'writing') return t('helpDraftWriting', { written: String(run.written), planned: String(run.planned) });
+  if (run.status === 'done') return `${t('helpDraftDone', { written: String(run.written) })}${run.failed > 0 ? ` · ${t('helpDraftSkipped', { failed: String(run.failed) })}` : ''}`;
+  if (run.status === 'uploading' || run.errorCode === 'timed_out') return t('helpDraftTimedOut');
+  return run.errorCode === 'no_outline' ? t('helpDraftNoOutline') : t('helpDraftNoMaterial');
+}
+
+const DRAFT_FILE_TYPES = '.pdf,.docx,.odt,.html,.htm,.md,.markdown,.txt';
+
+function DraftCard({ workspaceId, help, language }: { workspaceId: string; help: HelpCentre; language: string }) {
+  const client = useQueryClient();
+  const [readWebsite, setReadWebsite] = useState(true);
+  const [links, setLinks] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [collectionId, setCollectionId] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  const start = useMutation({
+    mutationFn: async () => {
+      const run = await api.createHelpDraftRun(workspaceId, help.websiteId, {
+        language: language as HelpDraftInput['language'],
+        collectionId: collectionId || null,
+        readWebsite,
+        links: links.split(/\s+/).map((l) => l.trim()).filter(Boolean),
+      });
+      for (const file of files) await api.uploadHelpDraftFile(workspaceId, run.id, file);
+      return api.startHelpDraftRun(workspaceId, run.id);
+    },
+    onSuccess: () => { setLinks(''); setFiles([]); },
+    onSettled: () => client.invalidateQueries({ queryKey: ['help', workspaceId, help.websiteId] }),
+  });
+  const running = draftRunning(help);
+  const nothing = !readWebsite && !links.trim() && files.length === 0;
+  return (
+    <section className="card space-y-3" aria-label={t('helpDraftTitle')}>
+      <h2 className="font-medium">{t('helpDraftTitle')}</h2>
+      <p className={quiet}>{t('helpDraftIntro')}</p>
+      <Failure error={start.error} />
+      <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); start.mutate(); }}>
+        <fieldset className="space-y-3" disabled={running || start.isPending}>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={readWebsite} onChange={(event) => setReadWebsite(event.target.checked)} />
+            {t('helpDraftReadWebsite')}
+          </label>
+          <label className="block text-sm">{t('helpDraftLinks')}
+            <textarea className="field min-h-20 font-mono text-xs" value={links} onChange={(event) => setLinks(event.target.value)} placeholder="https://" />
+          </label>
+          <div className="space-y-1 text-sm">
+            <div>{t('helpDraftFiles')}</div>
+            <input ref={input} type="file" multiple className="sr-only" accept={DRAFT_FILE_TYPES} onChange={(event) => { setFiles([...(event.target.files ?? [])].slice(0, 10)); event.target.value = ''; }} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="button-quiet" onClick={() => input.current?.click()}>{t('helpDraftChooseFiles')}</button>
+              {files.map((file) => <span key={file.name} className={quiet}>{file.name}</span>)}
+            </div>
+          </div>
+          <label className="block text-sm">{t('helpCollection')}
+            <select className="field" value={collectionId} onChange={(event) => setCollectionId(event.target.value)}>
+              <option value="">{t('helpDraftCollectionAuto')}</option>
+              {help.collections.filter((c) => c.language === language).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <p className={quiet}>{t('helpDraftLanguageNote', { language: languageName(language) })}</p>
+          <button className="button" disabled={nothing}>{t('helpDraftStart')}</button>
+        </fieldset>
+      </form>
+      {help.drafting.runs.length > 0 && (
+        <div className="space-y-1 border-t border-slate-200 pt-3 text-sm dark:border-slate-800">
+          <div className="font-medium">{t('helpDraftRecent')}</div>
+          <ul className="space-y-1" aria-live="polite">
+            {help.drafting.runs.map((run) => (
+              <li key={run.id} className="flex flex-wrap gap-2">
+                <span className={quiet}>{new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(run.createdAt))} · {languageName(run.language)}</span>
+                <span>{runText(run)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -57,9 +146,9 @@ function AddressCard({ workspaceId, help, canEdit }: { workspaceId: string; help
         <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); save.mutate(slug.trim() || null); }}>
           <label className="block text-sm">
             <span className="sr-only">{t('helpAddress')}</span>
-            <span className="mt-1 flex items-center gap-1">
-              <span className={`${quiet} shrink-0`}>{location.origin}/help/</span>
-              <input className="field" required maxLength={50} pattern="[a-z0-9](?:[a-z0-9\-]{0,48}[a-z0-9])?" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} aria-describedby="help-address-help" />
+            <span className="mt-1 flex flex-wrap items-center gap-1">
+              <span className={`${quiet} min-w-0 break-all`}>{location.origin}/help/</span>
+              <input className="field min-w-40 flex-1" required maxLength={50} pattern="[a-z0-9](?:[a-z0-9\-]{0,48}[a-z0-9])?" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} aria-describedby="help-address-help" />
             </span>
             <span id="help-address-help" className={`block ${quiet}`}>{t('helpAddressHelp')}</span>
           </label>
@@ -196,12 +285,25 @@ function Editor({ workspaceId, help, articleId, canEdit, onClose }: { workspaceI
           <button type="button" className="button-quiet" onClick={onClose}>← {t('helpAllArticles')}</button>
           <span className="flex-1" />
           <span className={quiet}>{languageName(current.language)}</span>
+          {current.aiDrafted && <AiBadge />}
           <StatusBadge status={current.status} />
           {current.status === 'published' && help.slug && (
             <a className="text-sm text-brand-600 underline dark:text-brand-300" href={publicUrl(help.slug, current.language, current.slug)} target="_blank" rel="noreferrer">{t('helpView')}</a>
           )}
         </div>
         <Failure error={save.error ?? status.error ?? remove.error ?? translate.error} />
+        {current.aiDrafted && (
+          <div className="rounded-md border border-violet-200 bg-violet-50 p-3 text-sm dark:border-violet-900 dark:bg-violet-950/40">
+            <p>{t('helpAiCheck')}</p>
+            <ul className="mt-1 list-disc pl-5">
+              {current.aiSources.map((source) => (
+                <li key={`${source.title}-${source.url ?? ''}`} className="break-words">
+                  {source.url ? <a className="underline" href={source.url} target="_blank" rel="noreferrer noopener">{source.title}</a> : source.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <fieldset className="space-y-3" disabled={!canEdit}>
           <label className="block text-sm">{t('helpTitle')}
             <input className="field" required maxLength={help.limits.titleChars} value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
@@ -293,6 +395,7 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
                 <span className="block font-medium break-words">{article.title}</span>
                 <span className={quiet}>{article.collectionId ? collections.get(article.collectionId) : t('helpNoCollection')} · {date.format(new Date(article.updatedAt))}</span>
               </span>
+              {article.aiDrafted && <AiBadge />}
               <StatusBadge status={article.status} />
             </button>
           </li>
@@ -322,7 +425,13 @@ export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; i
     window.addEventListener('oc-help-open', listener);
     return () => window.removeEventListener('oc-help-open', listener);
   }, []);
-  const help = useQuery({ queryKey: ['help', workspaceId, current?.id], queryFn: () => api.getHelpCentre(workspaceId, current!.id), enabled: current !== undefined });
+  const help = useQuery({
+    queryKey: ['help', workspaceId, current?.id],
+    queryFn: () => api.getHelpCentre(workspaceId, current!.id),
+    enabled: current !== undefined,
+    // While Draft with AI writes, its articles appear as they come.
+    refetchInterval: (query) => (draftRunning(query.state.data) ? 4000 : false),
+  });
 
   return (
     <div className="space-y-6">
@@ -358,6 +467,7 @@ export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; i
             <>
               <AddressCard workspaceId={workspaceId} help={help.data} canEdit={isSupervisor} />
               <ArticlesCard workspaceId={workspaceId} help={help.data} language={language} canEdit={isSupervisor} onOpen={setOpen} />
+              {isSupervisor && help.data.drafting.available && <DraftCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
               {isSupervisor && <CollectionsCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
               {isSupervisor && <ImagesCard workspaceId={workspaceId} help={help.data} onInsert={null} />}
             </>

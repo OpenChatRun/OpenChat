@@ -1720,17 +1720,38 @@ const helpArticleSummaryFields = {
   position: z.number().int(),
   version: z.number().int(),
   publishedAt: z.iso.datetime().nullable(),
+  aiDrafted: z.boolean().openapi({ description: 'Written by Draft with AI and not changed by a person since.' }),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 };
 export const HelpArticleSummarySchema = z.object(helpArticleSummaryFields).openapi('HelpArticleSummary');
 export const HelpArticleSchema = z
-  .object({ ...helpArticleSummaryFields, bodyMarkdown: z.string(), bodyHtml: z.string().openapi({ description: 'Rendered by the server from an allow-list. What visitors are sent.' }) })
+  .object({ ...helpArticleSummaryFields, bodyMarkdown: z.string(), bodyHtml: z.string().openapi({ description: 'Rendered by the server from an allow-list. What visitors are sent.' }),
+    aiSources: z.array(z.object({ title: z.string(), url: z.string().nullable() })).openapi({ description: 'For an article Draft with AI wrote: the pages (with url) and files (url null) it came from.' }),
+  })
   .openapi('HelpArticle');
 
 export const HelpAssetSchema = z
   .object({ id: z.string(), contentType: z.string(), sizeBytes: z.number().int(), filename: z.string(), url: z.string().openapi({ description: 'Where it is served, for use in Markdown: ![text](url)' }), createdAt: z.iso.datetime() })
   .openapi('HelpAsset');
+
+export const HelpDraftRunSchema = z
+  .object({
+    id: z.string(),
+    language: z.string(),
+    collectionId: z.string().nullable(),
+    readWebsite: z.boolean(),
+    links: z.array(z.string()),
+    files: z.array(z.object({ name: z.string(), sizeBytes: z.number().int() })),
+    status: z.enum(['uploading', 'queued', 'reading', 'writing', 'done', 'failed']).openapi({ description: 'uploading takes files until it is started.' }),
+    errorCode: z.string().nullable().openapi({ description: 'For failed: no_material, no_outline or timed_out.' }),
+    planned: z.number().int().openapi({ description: 'Articles in the outline.' }),
+    written: z.number().int(),
+    failed: z.number().int().openapi({ description: 'Outlined articles the model could not write from the material.' }),
+    createdAt: z.iso.datetime(),
+    finishedAt: z.iso.datetime().nullable(),
+  })
+  .openapi('HelpDraftRun');
 
 export const HelpCentreSchema = z
   .object({
@@ -1742,6 +1763,10 @@ export const HelpCentreSchema = z
     collections: z.array(HelpCollectionSchema),
     articles: z.array(HelpArticleSummarySchema),
     assets: z.array(HelpAssetSchema),
+    drafting: z.object({
+      available: z.boolean().openapi({ description: 'False on an installation without Workers AI: Draft with AI is not offered.' }),
+      runs: z.array(HelpDraftRunSchema).openapi({ description: 'The latest, newest first.' }),
+    }),
     limits: z.object({ articlesPerWebsite: z.number().int(), titleChars: z.number().int(), summaryChars: z.number().int(), bodyChars: z.number().int(), collectionNameChars: z.number().int(), assetBytes: z.number().int() }),
   })
   .openapi('HelpCentre');
@@ -1926,4 +1951,55 @@ export const deleteHelpAssetRoute = createRoute({
   security: bearer,
   request: { params: helpAssetParams },
   responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+const helpDraftParams = workspaceParams.extend({ runId: z.string() });
+
+export const createHelpDraftRunRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/drafts',
+  tags: ['help'],
+  operationId: 'createHelpDraftRun',
+  summary: 'Begin a Draft with AI: the website, links on it, or files, in one language. For supervisors.',
+  description:
+    'Links must be https, on the host of one of the website\'s allowed origins. The run takes files (uploadHelpDraftFile) until it is started (startHelpDraftRun). One run at a time per website, and a daily limit per workspace (429 draft_limit_reached). 409 drafting_unavailable on an installation without Workers AI.',
+  security: bearer,
+  request: {
+    params: websiteParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          language: HELP_LANGUAGE,
+          collectionId: z.string().nullable().optional().openapi({ description: 'All its articles go in this collection. Otherwise the model groups them, in collections it finds or makes.' }),
+          readWebsite: z.boolean().optional().openapi({ description: "Read the website from its first allowed origin, following links, as the assistant does." }),
+          links: z.array(z.string().max(2000)).max(10).optional(),
+        }),
+      ),
+    },
+  },
+  responses: { 201: { description: 'Run', ...json(HelpDraftRunSchema) }, default: problemResponse },
+});
+
+export const uploadHelpDraftFileRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/help/drafts/{runId}/files',
+  tags: ['help'],
+  operationId: 'uploadHelpDraftFile',
+  summary: 'Add a file to a Draft with AI before it starts: PDF, Word, OpenDocument, HTML, Markdown or text, up to 10 MB. For supervisors.',
+  description: 'The body is the file, with its size in Content-Length; its kind is told by the extension in filename and checked against its first bytes. At most 10. It is deleted when the run ends.',
+  security: bearer,
+  request: { params: helpDraftParams, query: FilenameQuery, body: BinaryBody },
+  responses: { 201: { description: 'Run', ...json(HelpDraftRunSchema) }, default: problemResponse },
+});
+
+export const startHelpDraftRunRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/help/drafts/{runId}/start',
+  tags: ['help'],
+  operationId: 'startHelpDraftRun',
+  summary: 'Start a Draft with AI. Its articles appear as drafts as they are written. For supervisors.',
+  security: bearer,
+  request: { params: helpDraftParams },
+  responses: { 200: { description: 'Run', ...json(HelpDraftRunSchema) }, default: problemResponse },
 });

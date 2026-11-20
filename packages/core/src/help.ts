@@ -15,6 +15,7 @@ import {
   toIso,
   versionConflict,
 } from '@openchat/shared';
+import { toHelpDraftRun } from './help-draft';
 import { requireCapability } from './workspaces';
 
 export { HELP_LIMITS, helpAssetKey };
@@ -63,11 +64,17 @@ const toSummary = (row: HelpArticleSummaryRow) => ({
   position: row.position,
   version: row.version,
   publishedAt: row.publishedAt === null ? null : toIso(row.publishedAt),
+  aiDrafted: row.aiDrafted === 1,
   createdAt: toIso(row.createdAt),
   updatedAt: toIso(row.updatedAt),
 });
 
-const toArticle = (row: HelpArticleRow) => ({ ...toSummary(row), bodyMarkdown: row.bodyMarkdown, bodyHtml: row.bodyHtml });
+const toArticle = (row: HelpArticleRow) => ({
+  ...toSummary(row),
+  bodyMarkdown: row.bodyMarkdown,
+  bodyHtml: row.bodyHtml,
+  aiSources: row.aiSourcesJson === null ? [] : (JSON.parse(row.aiSourcesJson) as { title: string; url: string | null }[]),
+});
 
 const toAsset = (row: HelpAssetRow) => ({
   id: row.id,
@@ -123,10 +130,16 @@ async function writing<T>(write: () => Promise<T>): Promise<T> {
 
 // ---------- The help centre of one website ----------
 
-export async function getHelpCentre(db: Database, ctx: WorkspaceContext, websiteId: string) {
+/** `canDraft`: this installation has Workers AI, so Draft with AI is offered. */
+export async function getHelpCentre(db: Database, ctx: WorkspaceContext, websiteId: string, options: { canDraft: boolean } = { canDraft: false }) {
   const settings = await websiteOrNotFound(db, ctx, websiteId);
   const repository = helpRepository(db, ctx);
-  const [collections, articles, assets] = await Promise.all([repository.collections(websiteId), repository.articles(websiteId), repository.assets(websiteId)]);
+  const [collections, articles, assets, runs] = await Promise.all([
+    repository.collections(websiteId),
+    repository.articles(websiteId),
+    repository.assets(websiteId),
+    repository.draftRuns(websiteId, 5),
+  ]);
   return {
     websiteId,
     websiteName: settings.websiteName,
@@ -136,6 +149,7 @@ export async function getHelpCentre(db: Database, ctx: WorkspaceContext, website
     collections: collections.map(toCollection),
     articles: articles.map(toSummary),
     assets: assets.map(toAsset),
+    drafting: { available: options.canDraft, runs: runs.map(toHelpDraftRun) },
     limits: { articlesPerWebsite: HELP_LIMITS.articlesPerWebsite, ...HELP_TEXT_LIMITS },
   };
 }

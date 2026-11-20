@@ -916,9 +916,17 @@ export const helpArticles = sqliteTable(
     updatedByMemberId: text('updated_by_member_id'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
+    /** Written by Draft with AI (ADR-0023 step 2): the run, and which of its outline it is. Kept after edits. */
+    draftRunId: text('draft_run_id'),
+    draftIndex: integer('draft_index'),
+    /** Shown as "Drafted by AI" until a person changes the words. */
+    aiDrafted: integer('ai_drafted', { mode: 'boolean' }).notNull().default(false),
+    /** The pages and files it was drafted from: [{ title, url }], url null for a file. */
+    aiSourcesJson: text('ai_sources_json'),
   },
   (t) => [
     unique('help_articles_tenant_uq').on(t.workspaceId, t.id),
+    uniqueIndex('help_articles_draft_uq').on(t.draftRunId, t.draftIndex).where(sql`${t.draftRunId} IS NOT NULL`),
     unique('help_articles_slug_uq').on(t.websiteId, t.language, t.slug),
     foreignKey({
       name: 'help_articles_website_fk',
@@ -936,6 +944,49 @@ export const helpArticles = sqliteTable(
     index('help_articles_group_idx').on(t.workspaceId, t.translationGroupId),
     check('help_articles_status_ck', sql`${t.status} IN ('draft','published')`),
     check('help_articles_published_ck', sql`(${t.status} = 'published') = (${t.publishedAt} IS NOT NULL)`),
+  ],
+);
+
+/**
+ * One Draft with AI (ADR-0023 step 2). Holds its inputs (links and file names, never the files, which are in R2
+ * only while it runs), its outline, and what came of it.
+ */
+export const helpDraftRuns = sqliteTable(
+  'help_draft_runs',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull(),
+    websiteId: text('website_id').notNull(),
+    language: text('language').notNull(),
+    /** All its articles go here, if chosen. Not a foreign key: a deleted collection leaves the articles outside any. */
+    collectionId: text('collection_id'),
+    readWebsite: integer('read_website', { mode: 'boolean' }).notNull().default(false),
+    linksJson: text('links_json').notNull().default('[]'),
+    /** [{ name, contentType, sizeBytes }] */
+    filesJson: text('files_json').notNull().default('[]'),
+    status: text('status', { enum: ['uploading', 'queued', 'reading', 'writing', 'done', 'failed'] }).notNull().default('uploading'),
+    errorCode: text('error_code'),
+    /** [{ title, summary, collectionId, sources: number[] }] */
+    outlineJson: text('outline_json'),
+    planned: integer('planned').notNull().default(0),
+    /** Outline positions the model could not write, so that a repeat does not count one twice. */
+    failedJson: text('failed_json').notNull().default('[]'),
+    materialChars: integer('material_chars').notNull().default(0),
+    createdByMemberId: text('created_by_member_id'),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+    finishedAt: integer('finished_at'),
+  },
+  (t) => [
+    unique('help_draft_runs_tenant_uq').on(t.workspaceId, t.id),
+    foreignKey({
+      name: 'help_draft_runs_website_fk',
+      columns: [t.workspaceId, t.websiteId],
+      foreignColumns: [websites.workspaceId, websites.id],
+    }).onDelete('cascade'),
+    index('help_draft_runs_website_idx').on(t.workspaceId, t.websiteId, t.createdAt),
+    index('help_draft_runs_open_idx').on(t.updatedAt).where(sql`${t.status} NOT IN ('done','failed')`),
+    check('help_draft_runs_status_ck', sql`${t.status} IN ('uploading','queued','reading','writing','done','failed')`),
   ],
 );
 

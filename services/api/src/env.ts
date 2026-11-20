@@ -53,6 +53,7 @@ export interface Env {
   LIMIT_IPV6_PREFIX?: string;
   LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY?: string;
   LIMIT_ASSISTANT_PAGES_PER_SOURCE?: string;
+  LIMIT_HELP_DRAFT_RUNS_PER_WORKSPACE_PER_DAY?: string;
   /** Optional, both together: without them this installation has no AI assistant. `oc deploy --assistant` adds them. See ADR-0022. */
   AI?: Ai;
   VECTORIZE?: Vectorize;

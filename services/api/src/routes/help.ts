@@ -1,6 +1,9 @@
 /** The help centre, for members (ADR-0023). Any member reads; supervisors change it, checked in @openchat/core. */
 import {
   createHelpArticleRoute,
+  createHelpDraftRunRoute,
+  startHelpDraftRunRoute,
+  uploadHelpDraftFileRoute,
   createHelpCollectionRoute,
   deleteHelpArticleRoute,
   deleteHelpAssetRoute,
@@ -16,6 +19,14 @@ import {
 import {
   assertAttachmentContent,
   checkHelpAsset,
+  checkHelpDraftFile,
+  createHelpDraftRun,
+  getHelpDraftRun,
+  helpDraftFileType,
+  helpDraftPrefix,
+  recordHelpDraftFile,
+  startHelpDraftRun,
+  type HelpDraftDeps,
   cleanAttachmentFilename,
   createHelpArticle,
   createHelpCollection,
@@ -32,9 +43,13 @@ import {
   updateHelpCollection,
   workspaceContext,
 } from '@openchat/core';
-import { AppError, newId } from '@openchat/shared';
+import { AppError, newId, readAbuseLimits } from '@openchat/shared';
 import type { Context } from 'hono';
+import { textRuntime } from '../assistant/runtime';
+import { dispatchSoon } from '../dispatch';
 import { authDeps, type App, type AppEnv } from '../context';
+
+const draftDeps = (c: Context<AppEnv>, db: HelpDraftDeps['db']): HelpDraftDeps => ({ db, runtime: textRuntime(c.env), limits: readAbuseLimits(c.env), defaultModel: c.env.ASSISTANT_MODEL });
 
 async function scoped(c: Context<AppEnv>, workspaceId: string) {
   const { db } = await authDeps(c.env);
@@ -46,7 +61,7 @@ export function registerHelpRoutes(app: App) {
   app.openapi(getHelpCentreRoute, async (c) => {
     const { workspaceId, websiteId } = c.req.valid('param');
     const { db, ctx } = await scoped(c, workspaceId);
-    return c.json(await getHelpCentre(db, ctx, websiteId), 200);
+    return c.json(await getHelpCentre(db, ctx, websiteId, { canDraft: textRuntime(c.env) !== null }), 200);
   });
 
   app.openapi(saveHelpSettingsRoute, async (c) => {
@@ -133,5 +148,39 @@ export function registerHelpRoutes(app: App) {
     // After the row: a failure here leaves a file nothing points to, never a row with no file.
     await c.env.ATTACHMENTS.delete(helpAssetKey(assetId));
     return c.body(null, 204);
+  });
+
+  app.openapi(createHelpDraftRunRoute, async (c) => {
+    const { workspaceId, websiteId } = c.req.valid('param');
+    const { db, ctx } = await scoped(c, workspaceId);
+    return c.json(await createHelpDraftRun(draftDeps(c, db), ctx, websiteId, c.req.valid('json')), 201);
+  });
+
+  app.openapi(uploadHelpDraftFileRoute, async (c) => {
+    const { workspaceId, runId } = c.req.valid('param');
+    const { db, ctx } = await scoped(c, workspaceId);
+    const deps = draftDeps(c, db);
+    const declared = Number(c.req.header('content-length'));
+    const { index } = await checkHelpDraftFile(deps, ctx, runId, declared);
+    const name = cleanAttachmentFilename(c.req.valid('query').filename);
+    // At most 10 MB, so it is read whole, and its length and first bytes are checked before it is stored.
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    if (bytes.length !== declared) throw new AppError(400, 'validation_failed', 'The file is not the size it said');
+    const { contentType } = helpDraftFileType(name, bytes.subarray(0, 512));
+    const key = `${helpDraftPrefix(runId)}file-${index}`;
+    await c.env.ATTACHMENTS.put(key, bytes, { httpMetadata: { contentType } });
+    if (!(await recordHelpDraftFile(deps, ctx, runId, index, { name, contentType, sizeBytes: bytes.length }))) {
+      await c.env.ATTACHMENTS.delete(key);
+      throw new AppError(409, 'draft_started', 'This draft has started already, or took another file at the same time');
+    }
+    return c.json(await getHelpDraftRun(deps, ctx, runId), 201);
+  });
+
+  app.openapi(startHelpDraftRunRoute, async (c) => {
+    const { workspaceId, runId } = c.req.valid('param');
+    const { db, ctx } = await scoped(c, workspaceId);
+    const run = await startHelpDraftRun(draftDeps(c, db), ctx, runId);
+    dispatchSoon(c, workspaceId, [runId]);
+    return c.json(run, 200);
   });
 }

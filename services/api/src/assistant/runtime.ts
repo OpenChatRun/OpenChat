@@ -43,3 +43,14 @@ export function assistantRuntime(env: Env): AssistantRuntime | null {
     },
   };
 }
+
+/** The text model alone, for Draft with AI in the help centre (ADR-0023), which needs no Vectorize. */
+export function textRuntime(env: Env): Pick<AssistantRuntime, 'generate'> | null {
+  if (!env.AI) return null;
+  const ai = env.AI as unknown as UntypedAi;
+  return {
+    async generate(model, messages, maxTokens) {
+      return generatedText(await ai.run(model, { messages, max_tokens: maxTokens, temperature: 0.2 }));
+    },
+  };
+}

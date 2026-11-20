@@ -37,7 +37,11 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## The help centre
 
-- **Step 1 of [ADR-0023](architecture/decisions/0023-help-centre.md) is built:** articles, collections, images and the public pages with search. Drafting articles with AI, a Help tab in the widget, and the AI assistant answering from articles are the next steps.
+- **Steps 1 and 2 of [ADR-0023](architecture/decisions/0023-help-centre.md) are built:** articles, collections, images, the public pages with search, and Draft with AI. A Help tab in the widget, and the AI assistant answering from articles, are the next steps.
+- **Draft with AI can be wrong.** It writes from the material only, but a model can still misread it. Every article is a draft for a person to check.
+- **Draft with AI reads the website from its first allowed origin's home page**, following links, as the assistant does. It does not read a sitemap, and it reads at most 50 pages.
+- **Scanned PDFs** have no text for it to read, and images in files are ignored.
+- **Drafted titles can read poorly** in some languages, such as Japanese titles ending "…について?". Edit them before publishing.
 - **Search matches words, not meaning.** It ranks by where the words appear, and every word must be there, so "refund" does not find "money back".
 - **Only on the installation's own address**, `/help/<slug>`. A custom domain such as `help.example.com` is not offered.
 - **Images are public at their link**, including those used only in drafts, though the link cannot be guessed.

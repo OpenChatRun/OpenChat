@@ -182,6 +182,14 @@ Installation admins read it on the dashboard's **Audit log** page (`GET /api/v1/
 - **Images** are checked as attachments are: the declared type must be an image and agree with the first bytes, and the name with the type; SVG is refused. They are served with `Content-Security-Policy: default-src 'none'; sandbox` and `nosniff`, and are public at an ID that cannot be guessed, including images used only in drafts. Deleting one removes it.
 - **Load.** A cached page costs one indexed read of the website. Anything else, including every search, is limited per IP (300 a minute). Search terms are not stored or logged.
 
+### Draft with AI
+
+- **It reads only the company's own pages.** Links follow the assistant's rules: `https`, on the host of one of the website's allowed origins, no credentials or ports, robots.txt respected, size and time limits, and redirects checked. Reading the website starts at the first allowed origin.
+- **Files** must be PDF, Word, OpenDocument, HTML, Markdown or text. The extension decides the kind and the first bytes must agree: `%PDF-`, a zip, or UTF-8 with no NUL. They may be up to 10 MB each, and 10 per run. They are read whole, checked against `Content-Length`, and kept in R2 only while the run is open.
+- **The material is untrusted.** The prompt says it is never instructions. The model has no tools. What it writes is a draft, never published by itself. Links and email addresses are kept only if they appear in the run's material, and images are removed. The text then goes through the same renderer as any article.
+- **Only supervisors** start runs (`help.manage`), and a run reads only for its own website.
+- **Without Workers AI** the routes answer 409 `drafting_unavailable`, and the dashboard does not offer it.
+
 ## Privacy
 
 Customers are the controllers of visitor data. For GDPR and similar laws, the product needs:

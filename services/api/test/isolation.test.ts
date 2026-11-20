@@ -30,6 +30,9 @@ type Case = Scoped | Unscoped | VisitorScoped | InstallationAdmin | Operator;
 
 /** Stands for a file in the cases below: the harness sends these bytes as the body. */
 const UPLOAD = { __file: true };
+/** A text file, for Draft with AI, which takes documents rather than images. */
+const UPLOAD_TEXT = { __file: 'text' };
+const TEXT = new TextEncoder().encode('Opening hours are nine to five.');
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 
 /** Keyed by operationId. Adding a route without an entry here fails the first test below. */
@@ -142,6 +145,9 @@ const CASES: Record<string, Case> = {
   deleteHelpArticle: { kind: 'workspace', ownerStatus: 204 },
   uploadHelpAsset: { kind: 'workspace', body: UPLOAD, ownerStatus: 201 },
   deleteHelpAsset: { kind: 'workspace', ownerStatus: 204 },
+  createHelpDraftRun: { kind: 'workspace', body: { language: 'en' }, ownerStatus: 201 },
+  uploadHelpDraftFile: { kind: 'workspace', body: UPLOAD_TEXT, ownerStatus: 201 },
+  startHelpDraftRun: { kind: 'workspace', ownerStatus: 200 },
 };
 
 /** Served by the app, but not part of the versioned contract. */
@@ -220,8 +226,8 @@ const testEnv = { ...env, EMAIL_QUEUE: { send: async (_job: JobEnvelope) => unde
 
 /** Resources in each workspace, by the name of the path parameter that holds them. */
 const RESOURCES: Record<'a' | 'b', Record<string, string>> = {
-  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a' },
-  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b' },
+  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a', runId: 'hdrf_a' },
+  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b', runId: 'hdrf_b' },
 };
 
 function urlFor(path: string, ...sources: Record<string, string>[]): string {
@@ -235,17 +241,18 @@ let requests = 0;
 /** Waits for dispatch after the response, which writes to the outbox and would otherwise disturb a later snapshot. */
 const request = async (method: string, path: string, token: string | null, body?: Record<string, unknown>) => {
   const ctx = createExecutionContext();
-  const upload = body === UPLOAD;
+  const upload = body === UPLOAD || body === UPLOAD_TEXT;
+  const text = body === UPLOAD_TEXT;
   const response = await worker.fetch(
-    new Request(`${ORIGIN}${path}${upload ? '?filename=a.png' : ''}`, {
+    new Request(`${ORIGIN}${path}${upload ? (text ? '?filename=a.txt' : '?filename=a.png') : ''}`, {
       method,
       headers: {
         // Its own address each time, so that sign-in limits never decide a result here.
         'cf-connecting-ip': `192.0.2.${++requests}`,
         ...(token ? { authorization: `Bearer ${token}` } : {}),
-        ...(upload ? { 'content-type': 'image/png', 'content-length': String(PNG.length) } : body ? { 'content-type': 'application/json' } : {}),
+        ...(upload ? { 'content-type': text ? 'text/plain' : 'image/png', 'content-length': String((text ? TEXT : PNG).length) } : body ? { 'content-type': 'application/json' } : {}),
       },
-      ...(upload ? { body: PNG } : body ? { body: JSON.stringify(body) } : {}),
+      ...(upload ? { body: text ? TEXT : PNG } : body ? { body: JSON.stringify(body) } : {}),
     }),
     testEnv,
     ctx,
@@ -254,7 +261,7 @@ const request = async (method: string, path: string, token: string | null, body?
   return response;
 };
 
-const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned', 'help_collections', 'help_articles', 'help_assets'];
+const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned', 'help_collections', 'help_articles', 'help_assets', 'help_draft_runs'];
 
 /** Every row belonging to workspace A. A refused request must leave this exactly as it was. */
 async function snapshotOfA(): Promise<string> {
@@ -280,6 +287,8 @@ async function seed() {
          (?1, ?2, ?3, 'supervisor', 'active', 1, 1), (?4, ?2, ?5, 'agent', 'active', 1, 1)`,
       ).bind(`mem_${w}_owner`, `work_${w}`, `user_${w}_owner`, `mem_${w}_agent`, `user_${w}_agent`),
       env.DB.prepare(`INSERT INTO websites (id, workspace_id, name, website_key, created_at, updated_at) VALUES (?1, ?2, 'Site', ?3, 1, 1)`).bind(`site_${w}`, `work_${w}`, `key_${w}`),
+      // A second website, whose open Draft with AI run would otherwise stop the owner starting one on the first.
+      env.DB.prepare(`INSERT INTO websites (id, workspace_id, name, website_key, created_at, updated_at) VALUES (?1, ?2, 'Docs', ?3, 1, 1)`).bind(`site_${w}_docs`, `work_${w}`, `key_${w}_docs`),
       env.DB.prepare(`INSERT INTO push_subscriptions (id, workspace_id, member_id, relay_id, relay_subscription_id, platform, created_at, updated_at) VALUES (?1, ?2, ?3, 'managed', ?4, 'ios', 1, 1)`).bind(`psub_${w}`, `work_${w}`, `mem_${w}_owner`, `sub_${w}`),
       env.DB.prepare(`INSERT INTO tags (id, workspace_id, name, created_at) VALUES (?1, ?2, 'existing', 1)`).bind(`tag_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO automation_rules (id, workspace_id, name, trigger_type, conditions_json, actions_json, created_at, updated_at) VALUES (?1, ?2, 'Rule', 'conversation_inactive', '{"inactiveMinutes":30}', '[]', 1, 1)`).bind(`rule_${w}`, `work_${w}`),
@@ -292,6 +301,7 @@ async function seed() {
       env.DB.prepare(`INSERT INTO help_collections (id, workspace_id, website_id, language, name, slug, created_at, updated_at) VALUES (?1, ?2, ?3, 'en', 'Basics', 'basics', 1, 1)`).bind(`hcol_${w}`, `work_${w}`, `site_${w}`),
       env.DB.prepare(`INSERT INTO help_articles (id, workspace_id, website_id, collection_id, translation_group_id, language, slug, title, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?1, 'en', 'hours', 'Hours', 1, 1)`).bind(`hart_${w}`, `work_${w}`, `site_${w}`, `hcol_${w}`),
       env.DB.prepare(`INSERT INTO help_assets (id, workspace_id, website_id, content_type, size_bytes, filename, created_at) VALUES (?1, ?2, ?3, 'image/png', 11, 'a.png', 1)`).bind(`hast_${w}`, `work_${w}`, `site_${w}`),
+      env.DB.prepare(`INSERT INTO help_draft_runs (id, workspace_id, website_id, language, links_json, created_at, updated_at) VALUES (?1, ?2, ?3, 'en', '["https://example.com/hours"]', ?4, ?4)`).bind(`hdrf_${w}`, `work_${w}`, `site_${w}_docs`, Date.now()),
       env.DB.prepare(`INSERT INTO attachments (id, workspace_id, conversation_id, storage_key, filename, content_type, size, status, uploaded_by_type, uploaded_by_id, created_at) VALUES (?1, ?2, ?3, ?4, 'a.png', 'image/png', 11, 'ready', 'member', ?5, 1)`).bind(`att_${w}`, `work_${w}`, `conv_${w}`, `w/work_${w}/c/conv_${w}/att_${w}`, `mem_${w}_agent`),
     ]),
   ]);

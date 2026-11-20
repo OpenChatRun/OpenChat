@@ -180,6 +180,22 @@ Its foreign key to the conversation cascades. Erasure and the retention sweep ad
 
 A collection is deleted in one batch that first takes its articles out of it: a composite foreign key cannot `SET NULL`. Websites cascade to all three tables. An image's row is deleted before its file, so a failure leaves a file that nothing points to, never a broken row.
 
+**Draft with AI** (step 2) adds `help_draft_runs`: one per run.
+- **What it keeps:** the language, an optional collection, whether to read the website, the links, and the names and sizes of the files. The files themselves are never in it.
+- **`status`:** `uploading` (taking files), `queued`, `reading`, `writing`, `done` or `failed`, with an `error_code` when it failed.
+- **Outline and counts:** the outline as JSON, `planned`, and `failed_json`, the outline positions that could not be written.
+
+While a run is open, its files and material are in the attachments bucket under `help-draft/<runId>/`. They are deleted when the run ends, or by the hourly sweep. Starting a run writes the `help.draft_started` outbox row in the same batch.
+
+Articles gain four columns:
+- `draft_run_id` and `draft_index`, unique together where set, so that a repeated job writes nothing twice;
+- `ai_drafted`, which any change to the title, summary or body clears;
+- `ai_sources_json`, the pages and files the article came from.
+
+Runs have no foreign key from articles, and a collection a run names is checked when each article is written.
+
+**Limits.** Runs go through one guarded insert. It requires the website to exist and to have no open run, and the workspace to have started fewer runs today (UTC) than `LIMIT_HELP_DRAFT_RUNS_PER_WORKSPACE_PER_DAY`, 5 by default. The ADR said drafting would be counted with the assistant's answers. It has a limit of its own instead, so that drafting never uses up the answers visitors get.
+
 **Audit.** `help.address_changed` (with `from` and `to`), `help.article_published`, `help.article_unpublished` and `help.article_deleted` (with the title and language). Writing and editing are not audited: they change nothing visitors see until publishing does.
 
 **Privacy.** Articles and images are the company's content, not visitor data. Contact export, erasure and retention do not touch them.

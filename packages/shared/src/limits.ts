@@ -15,6 +15,8 @@ export const ABUSE_LIMITS = {
   assistantAnswersPerWorkspacePerDay: { variable: 'LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY', flag: 'assistant-answers-per-workspace-per-day', default: 500, min: 1, max: 1_000_000 },
   /** Pages the assistant reads from one website address given as a source. */
   assistantPagesPerSource: { variable: 'LIMIT_ASSISTANT_PAGES_PER_SOURCE', flag: 'assistant-pages-per-source', default: 50, min: 1, max: 500 },
+  /** Draft with AI runs one workspace can start in a day (UTC), across its websites. See ADR-0023. */
+  helpDraftRunsPerWorkspacePerDay: { variable: 'LIMIT_HELP_DRAFT_RUNS_PER_WORKSPACE_PER_DAY', flag: 'help-draft-runs-per-workspace-per-day', default: 5, min: 1, max: 1_000 },
 } as const;
 
 export type AbuseLimitName = keyof typeof ABUSE_LIMITS;
