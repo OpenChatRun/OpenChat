@@ -43,6 +43,7 @@ export interface HelpArticleSummaryRow {
   position: number;
   version: number;
   publishedAt: number | null;
+  aiDrafted: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -50,7 +51,48 @@ export interface HelpArticleSummaryRow {
 export interface HelpArticleRow extends HelpArticleSummaryRow {
   bodyMarkdown: string;
   bodyHtml: string;
+  aiSourcesJson: string | null;
 }
+
+export type HelpDraftStatus = 'uploading' | 'queued' | 'reading' | 'writing' | 'done' | 'failed';
+
+export interface HelpDraftRunRow {
+  id: string;
+  workspaceId: string;
+  websiteId: string;
+  language: string;
+  collectionId: string | null;
+  readWebsite: number;
+  linksJson: string;
+  filesJson: string;
+  status: HelpDraftStatus;
+  errorCode: string | null;
+  outlineJson: string | null;
+  planned: number;
+  failedJson: string;
+  materialChars: number;
+  createdAt: number;
+  updatedAt: number;
+  finishedAt: number | null;
+  /** Articles written so far. */
+  written: number;
+}
+
+/** What may go into one run (ADR-0023). */
+export const HELP_DRAFT_LIMITS = {
+  links: 10,
+  files: 10,
+  fileBytes: 10 * 1024 * 1024,
+  materialChars: 200_000,
+  articles: 20,
+  /** Runs still open after this are stopped by the sweep, and their files removed. */
+  openMs: 60 * 60 * 1000,
+} as const;
+
+export const HELP_DRAFT_TOPIC = 'help.draft_started';
+
+/** Where a run keeps its files and its material while it runs. Removed when it ends. */
+export const helpDraftPrefix = (runId: string) => `help-draft/${runId}/`;
 
 /** What is stored for an article's text: the source and everything derived from it. */
 export interface HelpArticleText {
@@ -85,8 +127,13 @@ export const isUniqueViolation = (error: unknown) => error instanceof Error && /
 
 const COLLECTION_COLUMNS = `id, website_id AS websiteId, language, name, slug, position, created_at AS createdAt, updated_at AS updatedAt`;
 const SUMMARY_COLUMNS = `id, website_id AS websiteId, collection_id AS collectionId, translation_group_id AS translationGroupId, language, slug,
-  title, summary, status, position, version, published_at AS publishedAt, created_at AS createdAt, updated_at AS updatedAt`;
-const ARTICLE_COLUMNS = `${SUMMARY_COLUMNS}, body_markdown AS bodyMarkdown, body_html AS bodyHtml`;
+  title, summary, status, position, version, published_at AS publishedAt, ai_drafted AS aiDrafted, created_at AS createdAt, updated_at AS updatedAt`;
+const ARTICLE_COLUMNS = `${SUMMARY_COLUMNS}, body_markdown AS bodyMarkdown, body_html AS bodyHtml, ai_sources_json AS aiSourcesJson`;
+const RUN_COLUMNS = `r.id, r.workspace_id AS workspaceId, r.website_id AS websiteId, r.language, r.collection_id AS collectionId, r.read_website AS readWebsite,
+  r.links_json AS linksJson, r.files_json AS filesJson, r.status, r.error_code AS errorCode, r.outline_json AS outlineJson, r.planned,
+  r.failed_json AS failedJson, r.material_chars AS materialChars, r.created_at AS createdAt, r.updated_at AS updatedAt, r.finished_at AS finishedAt,
+  (SELECT COUNT(*) FROM help_articles a WHERE a.workspace_id = r.workspace_id AND a.draft_run_id = r.id) AS written`;
+const OPEN_RUN = `status NOT IN ('done', 'failed')`;
 const ASSET_COLUMNS = `id, website_id AS websiteId, content_type AS contentType, size_bytes AS sizeBytes, filename, created_at AS createdAt`;
 
 export function helpRepository(database: Database, ctx: WorkspaceContext) {
@@ -272,6 +319,7 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
                     body_html = COALESCE(?7, body_html), search_title = COALESCE(?8, search_title), search_text = COALESCE(?9, search_text),
                     slug = COALESCE(?10, slug), position = COALESCE(?11, position),
                     collection_id = CASE WHEN ?12 = 1 THEN ?13 ELSE collection_id END,
+                    ai_drafted = CASE WHEN COALESCE(?4, ?5, ?6) IS NULL THEN ai_drafted ELSE 0 END,
                     version = version + 1, updated_by_member_id = ?14, updated_at = ${DB_NOW_MS}
               WHERE workspace_id = ?1 AND id = ?2 AND version = ?3
                 AND (?12 = 0 OR ?13 IS NULL OR EXISTS (SELECT 1 FROM help_collections c WHERE c.workspace_id = ?1 AND c.id = ?13
@@ -369,7 +417,238 @@ export function helpRepository(database: Database, ctx: WorkspaceContext) {
       const result = await d1.prepare(`DELETE FROM help_assets WHERE workspace_id = ?1 AND id = ?2`).bind(w, assetId).run();
       return result.meta.changes > 0;
     },
+
+    // ---------- Draft with AI ----------
+
+    async draftRuns(websiteId: string, limit = 10): Promise<HelpDraftRunRow[]> {
+      const { results } = await d1
+        .prepare(`SELECT ${RUN_COLUMNS} FROM help_draft_runs r WHERE r.workspace_id = ?1 AND r.website_id = ?2 ORDER BY r.created_at DESC, r.id DESC LIMIT ?3`)
+        .bind(w, websiteId, limit)
+        .all<HelpDraftRunRow>();
+      return results;
+    },
+
+    async draftRun(runId: string): Promise<HelpDraftRunRow | null> {
+      return d1.prepare(`SELECT ${RUN_COLUMNS} FROM help_draft_runs r WHERE r.workspace_id = ?1 AND r.id = ?2`).bind(w, runId).first<HelpDraftRunRow>();
+    },
+
+    /**
+     * Null if the website is not here, already has a run open, or the workspace has started `perDay` runs since
+     * `dayStart`. The caller tells which.
+     */
+    async createDraftRun(
+      websiteId: string,
+      input: { language: string; collectionId: string | null; readWebsite: boolean; links: string[] },
+      perDay: number,
+      dayStart: number,
+    ): Promise<HelpDraftRunRow | null> {
+      const id = newId('helpDraftRun');
+      const result = await d1
+        .prepare(
+          `INSERT INTO help_draft_runs (id, workspace_id, website_id, language, collection_id, read_website, links_json, created_by_member_id, created_at, updated_at)
+           SELECT ?3, ?1, ?2, ?4, ?5, ?6, ?7, ?8, ${DB_NOW_MS}, ${DB_NOW_MS}
+            WHERE EXISTS (SELECT 1 FROM websites WHERE workspace_id = ?1 AND id = ?2)
+              AND NOT EXISTS (SELECT 1 FROM help_draft_runs WHERE workspace_id = ?1 AND website_id = ?2 AND ${OPEN_RUN})
+              AND (SELECT COUNT(*) FROM help_draft_runs WHERE workspace_id = ?1 AND created_at >= ?9) < ?10`,
+        )
+        .bind(w, websiteId, id, input.language, input.collectionId, input.readWebsite ? 1 : 0, JSON.stringify(input.links), ctx.memberId, dayStart, perDay)
+        .run();
+      return result.meta.changes ? this.draftRun(id) : null;
+    },
+
+    async openDraftRun(websiteId: string): Promise<boolean> {
+      return (await d1.prepare(`SELECT 1 AS yes FROM help_draft_runs WHERE workspace_id = ?1 AND website_id = ?2 AND ${OPEN_RUN}`).bind(w, websiteId).first()) !== null;
+    },
+
+    /** Adds a file's name to a run still taking files, at position `index`. False if it is not, or is full. */
+    async addDraftFile(runId: string, index: number, file: { name: string; contentType: string; sizeBytes: number }): Promise<boolean> {
+      const result = await d1
+        .prepare(
+          `UPDATE help_draft_runs SET files_json = json_insert(files_json, '$[#]', json(?3)), updated_at = ${DB_NOW_MS}
+            WHERE workspace_id = ?1 AND id = ?2 AND status = 'uploading' AND json_array_length(files_json) = ?4 AND ?4 < ${HELP_DRAFT_LIMITS.files}`,
+        )
+        .bind(w, runId, JSON.stringify(file), index)
+        .run();
+      return result.meta.changes > 0;
+    },
+
+    /** Queues a run that is taking files, with its outbox row. False if it is not. */
+    async startDraftRun(runId: string): Promise<boolean> {
+      const [updated] = await d1.batch([
+        d1.prepare(`UPDATE help_draft_runs SET status = 'queued', updated_at = ${DB_NOW_MS} WHERE workspace_id = ?1 AND id = ?2 AND status = 'uploading'`).bind(w, runId),
+        d1
+          .prepare(
+            `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)
+             SELECT ?3, ?1, '${HELP_DRAFT_TOPIC}', ?2, '{}', ${DB_NOW_MS} WHERE changes() = 1`,
+          )
+          .bind(w, runId, newId('outbox')),
+      ]);
+      return updated!.meta.changes > 0;
+    },
   };
+}
+
+// ---------- Draft with AI, from its jobs ----------
+
+export async function helpDraftRunForJob(database: Database, workspaceId: string, runId: string): Promise<HelpDraftRunRow | null> {
+  return rawHandle(database).prepare(`SELECT ${RUN_COLUMNS} FROM help_draft_runs r WHERE r.workspace_id = ?1 AND r.id = ?2`).bind(workspaceId, runId).first<HelpDraftRunRow>();
+}
+
+/** The website a run drafts for, as a job reads it: its name for the model, and where pages may be read. */
+export async function helpDraftWebsite(database: Database, workspaceId: string, websiteId: string): Promise<{ name: string; allowedOrigins: string[] } | null> {
+  const row = await rawHandle(database)
+    .prepare(`SELECT name, allowed_origins_json AS originsJson FROM websites WHERE workspace_id = ?1 AND id = ?2`)
+    .bind(workspaceId, websiteId)
+    .first<{ name: string; originsJson: string }>();
+  return row ? { name: row.name, allowedOrigins: JSON.parse(row.originsJson) as string[] } : null;
+}
+
+export async function helpCollectionName(database: Database, workspaceId: string, collectionId: string): Promise<string | null> {
+  return (await rawHandle(database).prepare(`SELECT name FROM help_collections WHERE workspace_id = ?1 AND id = ?2`).bind(workspaceId, collectionId).first<{ name: string }>())?.name ?? null;
+}
+
+/** Moves a run on, if it is in one of `from`. False if it was not. */
+export async function moveHelpDraftRun(
+  database: Database,
+  workspaceId: string,
+  runId: string,
+  from: HelpDraftStatus[],
+  to: HelpDraftStatus,
+  patch: { errorCode?: string; outlineJson?: string; planned?: number; materialChars?: number } = {},
+): Promise<boolean> {
+  const ends = to === 'done' || to === 'failed';
+  const result = await rawHandle(database)
+    .prepare(
+      `UPDATE help_draft_runs SET status = ?3, error_code = COALESCE(?4, error_code), outline_json = COALESCE(?5, outline_json),
+              planned = COALESCE(?6, planned), material_chars = COALESCE(?7, material_chars), updated_at = ${DB_NOW_MS},
+              finished_at = ${ends ? DB_NOW_MS : 'finished_at'}
+        WHERE workspace_id = ?1 AND id = ?2 AND status IN (${from.map((f) => `'${f}'`).join(', ')})`,
+    )
+    .bind(workspaceId, runId, to, patch.errorCode ?? null, patch.outlineJson ?? null, patch.planned ?? null, patch.materialChars ?? null)
+    .run();
+  return result.meta.changes > 0;
+}
+
+/** Slugs taken in a website and language that start with `base`. */
+export async function helpSlugsLike(database: Database, workspaceId: string, websiteId: string, language: string, table: 'help_articles' | 'help_collections', base: string): Promise<string[]> {
+  const { results } = await rawHandle(database)
+    .prepare(`SELECT slug FROM ${table} WHERE website_id = ?1 AND language = ?2 AND workspace_id = ?3 AND substr(slug, 1, length(?4)) = ?4`)
+    .bind(websiteId, language, workspaceId, base)
+    .all<{ slug: string }>();
+  return results.map((row) => row.slug);
+}
+
+/** A collection in this language by name, ignoring case, or a new one. Null if the website has as many as it may. */
+export async function helpCollectionForDraft(database: Database, workspaceId: string, websiteId: string, language: string, name: string, slug: string): Promise<string | null> {
+  const d1 = rawHandle(database);
+  const find = () =>
+    d1
+      .prepare(`SELECT id FROM help_collections WHERE workspace_id = ?1 AND website_id = ?2 AND language = ?3 AND lower(name) = lower(?4) ORDER BY position, id LIMIT 1`)
+      .bind(workspaceId, websiteId, language, name)
+      .first<{ id: string }>();
+  const found = await find();
+  if (found) return found.id;
+  const id = newId('helpCollection');
+  await d1.batch([
+    d1
+      .prepare(
+        `INSERT INTO help_collections (id, workspace_id, website_id, language, name, slug, position, created_at, updated_at)
+         SELECT ?3, ?1, ?2, ?4, ?5, ?6,
+                (SELECT COALESCE(MAX(position), -1) + 1 FROM help_collections WHERE workspace_id = ?1 AND website_id = ?2 AND language = ?4),
+                ${DB_NOW_MS}, ${DB_NOW_MS}
+          WHERE (SELECT COUNT(*) FROM help_collections WHERE workspace_id = ?1 AND website_id = ?2) < ${HELP_LIMITS.collectionsPerWebsite}`,
+      )
+      .bind(workspaceId, websiteId, id, language, name, slug),
+    d1.prepare(`UPDATE websites SET help_version = help_version + 1 WHERE workspace_id = ?1 AND id = ?2`).bind(workspaceId, websiteId),
+  ]);
+  return (await find())?.id ?? null;
+}
+
+/**
+ * A drafted article, as a draft. Null if the website is full. Throws on a slug in use, or on this outline position
+ * written already (both unique violations; the caller looks again to tell which).
+ */
+export async function insertHelpDraftedArticle(
+  database: Database,
+  workspaceId: string,
+  run: { id: string; websiteId: string; language: string },
+  index: number,
+  input: HelpArticleText & { slug: string; collectionId: string | null; sourcesJson: string },
+): Promise<boolean> {
+  const d1 = rawHandle(database);
+  const id = newId('helpArticle');
+  const [inserted] = await d1.batch([
+    d1
+      .prepare(
+        `INSERT INTO help_articles (id, workspace_id, website_id, collection_id, translation_group_id, language, slug, title, summary,
+                                    body_markdown, body_html, search_title, search_text, position, draft_run_id, draft_index, ai_drafted,
+                                    ai_sources_json, created_at, updated_at)
+         SELECT ?3, ?1, ?2, CASE WHEN EXISTS (SELECT 1 FROM help_collections WHERE workspace_id = ?1 AND id = ?4 AND website_id = ?2 AND language = ?5) THEN ?4 END,
+                ?3, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
+                (SELECT COALESCE(MAX(position), -1) + 1 FROM help_articles WHERE workspace_id = ?1 AND website_id = ?2 AND language = ?5),
+                ?13, ?14, 1, ?15, ${DB_NOW_MS}, ${DB_NOW_MS}
+          WHERE (SELECT COUNT(*) FROM help_articles WHERE workspace_id = ?1 AND website_id = ?2) < ${HELP_LIMITS.articlesPerWebsite}`,
+      )
+      .bind(
+        workspaceId,
+        run.websiteId,
+        id,
+        input.collectionId,
+        run.language,
+        input.slug,
+        input.title,
+        input.summary,
+        input.bodyMarkdown,
+        input.bodyHtml,
+        input.searchTitle,
+        input.searchText,
+        run.id,
+        index,
+        input.sourcesJson,
+      ),
+    d1.prepare(`UPDATE websites SET help_version = help_version + 1 WHERE workspace_id = ?1 AND id = ?2`).bind(workspaceId, run.websiteId),
+    d1.prepare(`UPDATE help_draft_runs SET updated_at = ${DB_NOW_MS} WHERE workspace_id = ?1 AND id = ?2`).bind(workspaceId, run.id),
+  ]);
+  return inserted!.meta.changes > 0;
+}
+
+export async function helpDraftWritten(database: Database, workspaceId: string, runId: string, index: number): Promise<boolean> {
+  return (await rawHandle(database).prepare(`SELECT 1 AS yes FROM help_articles WHERE workspace_id = ?1 AND draft_run_id = ?2 AND draft_index = ?3`).bind(workspaceId, runId, index).first()) !== null;
+}
+
+/** Records an outline position that could not be written. Once only, however often it is repeated. */
+export async function recordHelpDraftFailure(database: Database, workspaceId: string, runId: string, index: number): Promise<void> {
+  await rawHandle(database)
+    .prepare(
+      `UPDATE help_draft_runs SET failed_json = json_insert(failed_json, '$[#]', ?3), updated_at = ${DB_NOW_MS}
+        WHERE workspace_id = ?1 AND id = ?2 AND NOT EXISTS (SELECT 1 FROM json_each(failed_json) WHERE value = ?3)`,
+    )
+    .bind(workspaceId, runId, index)
+    .run();
+}
+
+/** Ends a writing run once every position is written or failed. True for the one call that ended it. */
+export async function finishHelpDraftRunIfComplete(database: Database, workspaceId: string, runId: string): Promise<boolean> {
+  const result = await rawHandle(database)
+    .prepare(
+      `UPDATE help_draft_runs SET status = 'done', updated_at = ${DB_NOW_MS}, finished_at = ${DB_NOW_MS}
+        WHERE workspace_id = ?1 AND id = ?2 AND status = 'writing'
+          AND (SELECT COUNT(*) FROM help_articles a WHERE a.workspace_id = ?1 AND a.draft_run_id = ?2) + json_array_length(failed_json) >= planned`,
+    )
+    .bind(workspaceId, runId)
+    .run();
+  return result.meta.changes > 0;
+}
+
+/** Runs open for longer than `olderThanMs` since they last moved: stopped, for their files to be removed. */
+export async function stopStaleHelpDraftRuns(database: Database, olderThanMs: number, limit: number): Promise<{ workspaceId: string; id: string }[]> {
+  const d1 = rawHandle(database);
+  const { results } = await d1
+    .prepare(`SELECT workspace_id AS workspaceId, id FROM help_draft_runs WHERE ${OPEN_RUN} AND updated_at < ?1 ORDER BY updated_at LIMIT ?2`)
+    .bind(Date.now() - olderThanMs, limit)
+    .all<{ workspaceId: string; id: string }>();
+  for (const run of results) await moveHelpDraftRun(database, run.workspaceId, run.id, ['uploading', 'queued', 'reading', 'writing'], 'failed', { errorCode: 'timed_out' });
+  return results;
 }
 
 // ---------- What visitors reach ----------

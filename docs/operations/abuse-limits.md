@@ -14,6 +14,7 @@ Six settings apply to every website on an installation. The defaults suit most i
 | How much of an IPv6 address counts as one address | /64 | /32 to /128 | `--ipv6-prefix` | `LIMIT_IPV6_PREFIX` |
 | AI assistant answers per workspace, per day (UTC), test questions included | 500 | 1 to 1,000,000 | `--assistant-answers-per-workspace-per-day` | `LIMIT_ASSISTANT_ANSWERS_PER_WORKSPACE_PER_DAY` |
 | Pages the AI assistant reads from one website address | 50 | 1 to 500 | `--assistant-pages-per-source` | `LIMIT_ASSISTANT_PAGES_PER_SOURCE` |
+| Draft with AI runs one workspace starts in a day (UTC) | 5 | 1 to 1,000 | `--help-draft-runs-per-workspace-per-day` | `LIMIT_HELP_DRAFT_RUNS_PER_WORKSPACE_PER_DAY` |
 
 ## How to change a setting
 

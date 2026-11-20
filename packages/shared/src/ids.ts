@@ -37,6 +37,7 @@ export const ID_PREFIXES = {
   helpCollection: 'hcol',
   helpArticle: 'hart',
   helpAsset: 'hast',
+  helpDraftRun: 'hdrf',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;

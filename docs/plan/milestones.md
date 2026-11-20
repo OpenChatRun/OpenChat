@@ -372,6 +372,21 @@ Articles and the public page ([ADR-0023](../architecture/decisions/0023-help-cen
 
 Limits: search matches words, not meaning; no custom domain; translations need native review.
 
+### Help centre step 2 exit check
+
+Draft with AI ([ADR-0023](../architecture/decisions/0023-help-centre.md)). Run on a throwaway installation on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#draft-with-ai-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| A website and a PDF become reviewable drafts in two languages | Yes: 20 drafts in English and 20 in Japanese, from openchat.run and a PDF; and 4 in German from the PDF alone |
+| No invented links | Yes: every link was in the material. Tests: links and addresses not in the material are removed, and images too |
+| Nothing is published by itself | Tests: every drafted article is a draft |
+| Files are not kept | Removed when a run ends; the hourly sweep removes those of a run that stops |
+| Repeats write nothing twice | Tests |
+| Tenancy | Isolation harness covers the 3 new routes |
+
+Limits: AI can be wrong, and every draft needs checking; titles in some languages read poorly; scanned PDFs have no text to read.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

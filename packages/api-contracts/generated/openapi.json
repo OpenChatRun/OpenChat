@@ -3653,6 +3653,26 @@
               "$ref": "#/components/schemas/HelpAsset"
             }
           },
+          "drafting": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "False on an installation without Workers AI: Draft with AI is not offered."
+              },
+              "runs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HelpDraftRun"
+                },
+                "description": "The latest, newest first."
+              }
+            },
+            "required": [
+              "available",
+              "runs"
+            ]
+          },
           "limits": {
             "type": "object",
             "properties": {
@@ -3694,6 +3714,7 @@
           "collections",
           "articles",
           "assets",
+          "drafting",
           "limits"
         ]
       },
@@ -3782,6 +3803,10 @@
             ],
             "format": "date-time"
           },
+          "aiDrafted": {
+            "type": "boolean",
+            "description": "Written by Draft with AI and not changed by a person since."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3803,6 +3828,7 @@
           "position",
           "version",
           "publishedAt",
+          "aiDrafted",
           "createdAt",
           "updatedAt"
         ]
@@ -3838,6 +3864,106 @@
           "filename",
           "url",
           "createdAt"
+        ]
+      },
+      "HelpDraftRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "collectionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "readWebsite": {
+            "type": "boolean"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "name",
+                "sizeBytes"
+              ]
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploading",
+              "queued",
+              "reading",
+              "writing",
+              "done",
+              "failed"
+            ],
+            "description": "uploading takes files until it is started."
+          },
+          "errorCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For failed: no_material, no_outline or timed_out."
+          },
+          "planned": {
+            "type": "integer",
+            "description": "Articles in the outline."
+          },
+          "written": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer",
+            "description": "Outlined articles the model could not write from the material."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "collectionId",
+          "readWebsite",
+          "links",
+          "files",
+          "status",
+          "errorCode",
+          "planned",
+          "written",
+          "failed",
+          "createdAt",
+          "finishedAt"
         ]
       },
       "HelpArticle": {
@@ -3888,6 +4014,10 @@
             ],
             "format": "date-time"
           },
+          "aiDrafted": {
+            "type": "boolean",
+            "description": "Written by Draft with AI and not changed by a person since."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3902,6 +4032,28 @@
           "bodyHtml": {
             "type": "string",
             "description": "Rendered by the server from an allow-list. What visitors are sent."
+          },
+          "aiSources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "title",
+                "url"
+              ]
+            },
+            "description": "For an article Draft with AI wrote: the pages (with url) and files (url null) it came from."
           }
         },
         "required": [
@@ -3916,10 +4068,12 @@
           "position",
           "version",
           "publishedAt",
+          "aiDrafted",
           "createdAt",
           "updatedAt",
           "bodyMarkdown",
-          "bodyHtml"
+          "bodyHtml",
+          "aiSources"
         ]
       }
     },
@@ -10915,6 +11069,242 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HelpAsset"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/help/drafts": {
+      "post": {
+        "tags": [
+          "help"
+        ],
+        "operationId": "createHelpDraftRun",
+        "summary": "Begin a Draft with AI: the website, links on it, or files, in one language. For supervisors.",
+        "description": "Links must be https, on the host of one of the website's allowed origins. The run takes files (uploadHelpDraftFile) until it is started (startHelpDraftRun). One run at a time per website, and a daily limit per workspace (429 draft_limit_reached). 409 drafting_unavailable on an installation without Workers AI.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "es",
+                      "fr",
+                      "de",
+                      "it",
+                      "pt",
+                      "nl",
+                      "ja",
+                      "ko",
+                      "zh-Hans",
+                      "zh-Hant"
+                    ]
+                  },
+                  "collectionId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "All its articles go in this collection. Otherwise the model groups them, in collections it finds or makes."
+                  },
+                  "readWebsite": {
+                    "type": "boolean",
+                    "description": "Read the website from its first allowed origin, following links, as the assistant does."
+                  },
+                  "links": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "maxItems": 10
+                  }
+                },
+                "required": [
+                  "language"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpDraftRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/help/drafts/{runId}/files": {
+      "post": {
+        "tags": [
+          "help"
+        ],
+        "operationId": "uploadHelpDraftFile",
+        "summary": "Add a file to a Draft with AI before it starts: PDF, Word, OpenDocument, HTML, Markdown or text, up to 10 MB. For supervisors.",
+        "description": "The body is the file, with its size in Content-Length; its kind is told by the extension in filename and checked against its first bytes. At most 10. It is deleted when the run ends.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "required": true,
+            "name": "filename",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpDraftRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/help/drafts/{runId}/start": {
+      "post": {
+        "tags": [
+          "help"
+        ],
+        "operationId": "startHelpDraftRun",
+        "summary": "Start a Draft with AI. Its articles appear as drafts as they are written. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "runId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpDraftRun"
                 }
               }
             }

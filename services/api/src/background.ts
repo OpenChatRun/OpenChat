@@ -11,6 +11,7 @@ import { RETIRED_HANDLERS } from './email/delivery';
 import { FOLLOW_UP_HANDLERS } from './email/follow-ups';
 import { DISPATCH_JOB, NOTIFICATION_HANDLERS } from './push/fanout';
 import { ASSISTANT_INDEX_JOB, runIndexJob } from './assistant/jobs';
+import { HELP_DRAFT_ARTICLE_JOB, HELP_DRAFT_JOB, runHelpDraftArticleJob, runHelpDraftJob } from './help/drafting';
 import { ASSISTANT_INDEX_LEARNED_JOB, ASSISTANT_LEARN_JOB, runIndexLearnedJob, runLearnJob } from './assistant/learning';
 import { ASSISTANT_REPLY_JOB, runReplyJob } from './assistant/reply';
 import { RelayError } from './push/relay-client';
@@ -92,6 +93,8 @@ const HANDLERS: Record<string, Handler> = {
   [ASSISTANT_REPLY_JOB]: (job, env) => runReplyJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
   [ASSISTANT_LEARN_JOB]: (job, env) => runLearnJob(job, env, (workspaceId, ids) => dispatchNow(env, workspaceId, ids)),
   [ASSISTANT_INDEX_LEARNED_JOB]: (job, env) => runIndexLearnedJob(job, env),
+  [HELP_DRAFT_JOB]: (job, env) => runHelpDraftJob(job, env, openDatabase(env.DB)),
+  [HELP_DRAFT_ARTICLE_JOB]: (job, env) => runHelpDraftArticleJob(job, env, openDatabase(env.DB)),
   // Queued by a Worker from before ADR-0016. Its link would lead nowhere, so it is acknowledged and dropped. Remove after one release.
   'workspace.invitation_email': async () => undefined,
 };

@@ -15,6 +15,9 @@ import {
   SOURCE_CHANGED_TOPIC,
   VECTORS_REMOVED_TOPIC,
   LEARNED_CHANGED_TOPIC,
+  HELP_DRAFT_TOPIC,
+  HELP_DRAFT_LIMITS,
+  stopStaleHelpDraftRuns,
   purgeDispatchedOutbox,
   recordOutboxFailure,
   staleOutbox,
@@ -32,6 +35,7 @@ import { pushJobsFor } from './push/fanout';
 import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs';
 import { learnedIndexJob, queueAssistantLearning } from './assistant/learning';
 import { queueAssistantReply } from './assistant/reply';
+import { deleteHelpDraftFiles, helpDraftJob } from './help/drafting';
 
 const SWEEP_AGE_MS = 60_000;
 const SWEEP_LIMIT = 200;
@@ -117,6 +121,10 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
     case LEARNED_CHANGED_TOPIC:
       await env.JOBS_QUEUE.send(learnedIndexJob(row));
       return;
+    case HELP_DRAFT_TOPIC:
+      // The job looks at the run's status, so a second send reads nothing twice once it has an outline.
+      await env.JOBS_QUEUE.send(helpDraftJob(row.workspaceId, row.aggregateId));
+      return;
     case VECTORS_REMOVED_TOPIC:
       await removeVectors(env, row);
       return;
@@ -195,6 +203,8 @@ export async function sweepOutbox(env: Env, scheduledTime: number): Promise<void
     await purgeDispatchedOutbox(db, PURGE_AGE_MS, PURGE_LIMIT);
     await sweepAttachments(env, db);
     await sweepRetention(db);
+    // Draft with AI runs that stopped moving: failed, and their files removed (ADR-0023).
+    for (const run of await stopStaleHelpDraftRuns(db, HELP_DRAFT_LIMITS.openMs, ORPHAN_LIMIT)) await deleteHelpDraftFiles(env, run.id);
     const refreshed = await refreshAssistantPages(env, db);
     for (const source of refreshed) await dispatchNow(env, source.workspaceId, [source.id]);
   }

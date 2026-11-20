@@ -33,7 +33,7 @@ Three queues plus DLQs, not one per job type. Few queues keep self-hosted setup 
 |---|---|---|---|---|---|
 | `oc-notifications` | `notification.fanout`, `notification.dispatch`, `notification.unregister` | 25 | 1 s | 8 | 20 |
 | `oc-email` | `email.follow_up`, `auth.password_reset_email`, `auth.new_account_email` | 10 | 5 s | 8 | 5 |
-| `oc-jobs` | `attachment.process`, `assistant.index_source`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
+| `oc-jobs` | `attachment.process`, `assistant.index_source`, `help.draft`, `help.draft_article`, `automation.evaluate`, `webhook.deliver` (later), `workspace.purge`, `analytics.rollup` | 10 | 5 s | 5 | 10 |
 | `*-dlq` | All of the above | 25 | 30 s | 3 | 1 |
 
 Email jobs hold IDs only and read the address when sending. System email (`auth.password_reset_email`, `auth.new_account_email`) has no delivery row, because the token is created at send time. Each attempt has a new token and so a new provider idempotency key. A crash after sending can deliver two emails, and failures of any kind retry and then dead-letter.
@@ -132,6 +132,7 @@ One schedule, `* * * * *`, with a dispatcher inside. Each sweep is bounded and m
 | Attachment orphans | Hourly | Unattached and older than 24 h, `LIMIT 200` | Delete from R2, then the row |
 | Outbox purge | Hourly | Dispatched more than 14 days ago, in chunks | Delete |
 | Retention | Hourly | Expired sessions and tokens, old receipts and failed jobs, and anonymous visitors, then each workspace's setting, in chunks | Delete. See [retention](data-model.md#retention) |
+| Draft with AI runs | Hourly | Runs not finished and not moved for an hour, 200 at a time | Mark failed with `timed_out`, delete `help-draft/<runId>/` in R2 |
 | Assistant pages | Hourly | Page sources read more than a week ago, 20 at a time | Bump the generation and queue `assistant.index_source`, guarded by the generation read |
 | Heartbeat | Every minute | | Record the time for `/health/queues` |
 
@@ -150,6 +151,21 @@ A visitor message's push is held back while the assistant answers the conversati
 `assistant.learn` (step 3) runs on the jobs queue, so that it never delays an answer to a visitor. Dispatch of `conversation.updated` queues it when the conversation is resolved, its website learns, and there is something new: no learned answer, or one still `pending` or `discarded` from fewer messages. The key is `assistant.learn:<conversationId>:<lastMessageSeq>`. The job reads the visitor's and members' public text messages, at most 30, asks the model for a question and answer, checks the result for personal data, and saves it guarded as the [data model](data-model.md#the-ai-assistant) describes. A model failure is retried. Two jobs for the same conversation at once can both ask the model; only one is saved.
 
 `assistant.index_learned` embeds an approved learned answer and writes its vector, queued by the outbox topic `assistant.learned_changed` with the generation. It is safe to repeat, as source indexing is.
+
+## Draft with AI's jobs
+
+Draft with AI ([ADR-0023](decisions/0023-help-centre.md), step 2) starts from the outbox topic `help.draft_started`, written in the batch that starts a run. Dispatch queues `help.draft` with the key `help.draft:<runId>`.
+
+- **`help.draft`** reads the run's files, converting PDF, Word, OpenDocument and HTML with Workers AI's `toMarkdown`, then its links, then the website, with the assistant's page reader, up to 200,000 characters in all. It asks the text model for an outline and makes the collections the outline names, then saves the material to R2 and the outline in the run. Last, it sends one `help.draft_article` for each article, with the key `help.draft_article:<runId>:<index>`.
+  - A repeat after the outline is saved sends the same articles again.
+  - A repeat before then reads everything again.
+  - With nothing read, or no outline the model gives twice, the run fails, and its files are removed.
+- **`help.draft_article`** writes one article from the material its outline item names.
+  - An article already written is skipped: `(draft_run_id, draft_index)` is unique.
+  - The model is asked once. An article it cannot write, or that the website has no room for, is counted in `failed_json`, once only, so no job retries forever.
+  - The job that brings written plus failed to the outline's count ends the run and removes its files.
+
+The hourly sweep fails any run that has not moved for an hour, including one left taking files, and removes its files.
 
 ## What email is for
 

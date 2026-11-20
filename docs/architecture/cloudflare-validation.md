@@ -662,6 +662,20 @@ Tested on a throwaway `oc-ai-test2`, deployed with `pnpm oc deploy --assistant`,
 
 Teardown without `oc destroy`: remove each queue's consumer before deleting the Worker (error 10064 otherwise), and pipe `yes` to `queues delete`.
 
+## Draft with AI on real Cloudflare (2026-11-20)
+
+Tested on a throwaway `oc-draft-test` with `--assistant` ([ADR-0023](decisions/0023-help-centre.md), step 2), then deleted. The website was openchat.run, and the file a 45 KB PDF of the administration guide.
+
+| Check | Result |
+|---|---|
+| `toMarkdown` on a PDF | Converted. Drafting from the PDF alone gave four articles in German, each naming the PDF as its source |
+| Website and PDF, in English and in Japanese | 20 articles each, all drafts marked **Drafted by AI**, in 2.5 minutes a run. About 100,000 characters read a run. Articles run in parallel on the jobs queue |
+| Long documents | At first no article came from the PDF: the outline saw only the start of each document. Long documents are now split into parts of 4,000 characters. Then 11 of the 40 articles came from the PDF |
+| Links | 12 distinct links in 40 articles, all on openchat.run or the project's GitHub repository, all in the material. None invented |
+| Sections | Llama 3.3 70B named 14 sections where it was asked for 6, so the code keeps the 6 it uses most |
+| Facts | Spot checks matched the material: commands from the guide, prices from the website. The titles in Japanese were often vague ("…について?") |
+| Files | Removed when each run ended |
+
 ## Help centre on real Cloudflare (2026-11-20)
 
 Tested on a throwaway `oc-help-test`, deployed with `pnpm oc deploy` on the first try, then deleted ([ADR-0023](decisions/0023-help-centre.md), step 1).

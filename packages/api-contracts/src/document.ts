@@ -108,6 +108,9 @@ import {
   setHelpArticleStatusRoute,
   deleteHelpArticleRoute,
   uploadHelpAssetRoute,
+  createHelpDraftRunRoute,
+  uploadHelpDraftFileRoute,
+  startHelpDraftRunRoute,
   deleteHelpAssetRoute,
 } from './routes';
 
@@ -219,6 +222,9 @@ export const ALL_ROUTES = [
   setHelpArticleStatusRoute,
   deleteHelpArticleRoute,
   uploadHelpAssetRoute,
+  createHelpDraftRunRoute,
+  uploadHelpDraftFileRoute,
+  startHelpDraftRunRoute,
   deleteHelpAssetRoute,
 ] as const;
 
