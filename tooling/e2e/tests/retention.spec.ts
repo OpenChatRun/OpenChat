@@ -13,8 +13,8 @@ test('an installation admin sets how long a workspace keeps closed conversations
   await retention.getByRole('button', { name: 'Save retention' }).click();
   await expect(retention.getByRole('button', { name: 'Save retention' })).toBeDisabled();
 
+  // The page is in the address, so a reload keeps it open.
   await page.reload();
-  await page.getByRole('button', { name: 'Workspaces', exact: true }).click();
   await expect(select).toHaveValue('90');
 
   // Back to keeping everything, so that no other test meets a sweep.

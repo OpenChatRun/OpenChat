@@ -29,4 +29,6 @@ Before relying on OpenChat, read the [known issues](../known-issues.md).
 | Supervisor | All of that, and assign anyone's conversations, set up follow-up emails, the AI assistant, and the help centre |
 | Installation admin | Add and remove people, create workspaces, add websites and change their settings, set retention, and read the audit log. An account setting, not a workspace role: an admin sees no conversations until they add themselves to the workspace, which the audit log records |
 
+Each page of the web dashboard has its own address, such as `/websites`, `/admin/workspaces` or `/inbox/` followed by a conversation, so a refresh, a bookmark or the browser's back button keeps your place. The Help centre page is at `/help-centre`, because `/help/` is where visitors read the published articles. The workspace is not part of the address: the dashboard opens the one you chose last in that browser.
+
 There is no sign-up page and there are no invitations. An installation admin creates each account, and OpenChat emails that person a link to choose a password.

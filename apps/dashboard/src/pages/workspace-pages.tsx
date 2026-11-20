@@ -15,6 +15,7 @@ import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
 import { LanguagePicker, useServerLanguage } from '../language-picker';
 import { ThemePicker } from '../theme-picker';
+import { navigate, useRoute, type AdminPage, type Section } from '../routes';
 
 type Membership = Me['memberships'][number];
 
@@ -48,9 +49,16 @@ function WebsitesPanel({ membership }: { membership: Membership }) {
 }
 
 /** The list of members changes rarely, and the inbox needs names and assignees. */
-function InboxWithMembers({ membership }: { membership: Membership }) {
+function InboxWithMembers({ membership, conversationId }: { membership: Membership; conversationId: string | null }) {
   const members = useQuery({ queryKey: ['members', membership.workspace.id], queryFn: () => api.listMembers(membership.workspace.id) });
-  return <InboxPanel membership={membership} members={members.data?.data ?? []} />;
+  return (
+    <InboxPanel
+      membership={membership}
+      members={members.data?.data ?? []}
+      selected={conversationId}
+      onSelect={(id) => navigate({ section: 'inbox', adminPage: null, conversationId: id })}
+    />
+  );
 }
 
 function MembersPanel({ membership }: { membership: Membership }) {
@@ -96,16 +104,13 @@ const SECTIONS = [
   ['email', 'sectionEmail', 'email'],
   ['assistant', 'sectionAssistant', 'assistant'],
   ['help', 'sectionHelp', 'help'],
-] as const satisfies readonly (readonly [string, MessageKey, IconName])[];
+] as const satisfies readonly (readonly [Section, MessageKey, IconName])[];
 const ADMIN_PAGES = [
   ['people', 'adminPeople', 'people'],
   ['workspaces', 'adminWorkspaces', 'workspaces'],
   ['jobs', 'adminJobs', 'jobs'],
   ['audit', 'adminAudit', 'audit'],
-] as const satisfies readonly (readonly [string, MessageKey, IconName])[];
-
-type Section = (typeof SECTIONS)[number][0];
-type AdminPage = (typeof ADMIN_PAGES)[number][0];
+] as const satisfies readonly (readonly [AdminPage, MessageKey, IconName])[];
 
 function RailButton({ label, icon, current, onClick }: { label: string; icon: IconName; current: boolean; onClick: () => void }) {
   return (
@@ -121,9 +126,12 @@ export function WorkspaceApp() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.getMe });
   useServerLanguage(me.data);
   const [selectedId, setSelectedId] = useState(() => preference.get(WORKSPACE_PREFERENCE));
-  const [tab, setTab] = useState<Section>('inbox');
-  const [adminPage, setAdminPage] = useState<AdminPage | null>(null);
+  const route = useRoute();
   const isAdmin = me.data?.isInstallationAdmin === true;
+  // The address is the page. Someone who is not an admin, given an admin page's address, sees the inbox.
+  const adminPage = me.data && !isAdmin ? null : route.adminPage;
+  const tab: Section = route.section ?? 'inbox';
+  const openSection = (section: Section) => navigate({ section, adminPage: null, conversationId: null });
 
   const memberships = me.data?.memberships ?? [];
   // A remembered workspace may be gone, or belong to someone else who used this browser.
@@ -131,6 +139,8 @@ export function WorkspaceApp() {
   const select = (id: string) => {
     preference.set(WORKSPACE_PREFERENCE, id);
     setSelectedId(id);
+    // An open conversation belongs to the workspace being left.
+    if (route.conversationId) navigate({ section: 'inbox', adminPage: null, conversationId: null }, { replace: true });
   };
   const title = adminPage ? t(ADMIN_PAGES.find(([page]) => page === adminPage)![1]) : current ? t(SECTIONS.find(([name]) => name === tab)![1]) : 'OpenChat';
   const wide = tab === 'inbox' && !adminPage;
@@ -145,14 +155,14 @@ export function WorkspaceApp() {
           {current && (
             <nav className="flex shrink-0 gap-1 md:flex-col" aria-label={t('navSections')}>
               {SECTIONS.map(([name, label, icon]) => (
-                <RailButton key={name} label={t(label)} icon={icon} current={!adminPage && tab === name} onClick={() => { setTab(name); setAdminPage(null); }} />
+                <RailButton key={name} label={t(label)} icon={icon} current={!adminPage && tab === name} onClick={() => openSection(name)} />
               ))}
             </nav>
           )}
           {isAdmin && (
             <nav className="flex shrink-0 gap-1 md:mt-3 md:flex-col md:border-t md:border-white/10 md:pt-3" aria-label={t('navAdministration')}>
               {ADMIN_PAGES.map(([page, label, icon]) => (
-                <RailButton key={page} label={t(label)} icon={icon} current={adminPage === page} onClick={() => setAdminPage(adminPage === page ? null : page)} />
+                <RailButton key={page} label={t(label)} icon={icon} current={adminPage === page} onClick={() => (adminPage === page ? openSection('inbox') : navigate({ section: null, adminPage: page, conversationId: null }))} />
               ))}
             </nav>
           )}
@@ -188,7 +198,7 @@ export function WorkspaceApp() {
           {current && !adminPage && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'inbox' ? <InboxWithMembers membership={current} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>
