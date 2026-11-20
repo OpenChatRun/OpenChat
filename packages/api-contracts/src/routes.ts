@@ -1,7 +1,7 @@
 import { createRoute, z } from '@hono/zod-openapi';
 import { NOTIFICATION_EVENTS } from '@openchat/notification-protocol';
 import { page, PaginationQuery, problemResponse } from './common';
-import { AssistantMessageSchema, AssistantStateSchema, ConversationPrioritySchema, ConversationStatusSchema, VisitorWireMessageSchema } from './realtime';
+import { AssistantMessageSchema, AssistantStateSchema, ConversationPrioritySchema, ConversationStatusSchema, OriginalSchema, VisitorWireMessageSchema } from './realtime';
 
 export const HealthSchema = z.object({ status: z.literal('ok') }).openapi('Health');
 
@@ -618,6 +618,7 @@ export const MessageSchema = z
     metadata: z.record(z.string(), z.unknown()),
     assistant: AssistantMessageSchema.optional().openapi({ description: 'Present when the AI assistant wrote it, as a system message. `sender.displayName` is its name.' }),
     translations: z.array(MessageTranslationSchema).optional().openapi({ description: "Machine translations of a visitor's message for the team (ADR-0024), one per language. Absent when there are none." }),
+    original: OriginalSchema.optional().openapi({ description: 'A reply sent translated (ADR-0024): `content` is what the visitor received, and this is what the member wrote, in their language.' }),
   })
   .openapi('Message');
 
@@ -762,6 +763,10 @@ export const sendMessageRoute = createRoute({
           type: z.enum(['text', 'internal_note']),
           content: z.string().trim().max(16000),
           attachmentIds: z.array(z.string().max(64)).max(10).optional().openapi({ description: 'Files uploaded to this conversation by this member. Content may be empty if there is at least one.' }),
+          translate: z.boolean().optional().openapi({
+            description:
+              "Send a reply translated into the visitor's language when the workspace translates and they read another (ADR-0024). If it cannot be translated, nothing is sent: 409 `translation_unavailable`, 429 `translation_limit`, or 502 `translation_failed`. Send again without it to send the words as written.",
+          }),
         }).refine((body) => body.content.length > 0 || (body.attachmentIds?.length ?? 0) > 0, { message: 'Write something or attach a file' }),
       ),
     },
@@ -1061,6 +1066,7 @@ export const ContactExportSchema = z
             createdAt: z.string(),
             attachments: z.array(z.object({ filename: z.string(), contentType: z.string(), size: z.number().int() })),
             machineTranslations: z.array(MessageTranslationSchema).openapi({ description: 'Machine translations for the team (ADR-0024). Written by a model, not by anyone in the conversation.' }),
+            original: OriginalSchema.optional().openapi({ description: 'A team reply sent translated: what the team member wrote. `content` is the machine translation the visitor received.' }),
           }),
         ),
       }),

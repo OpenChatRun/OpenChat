@@ -17,7 +17,7 @@ import {
   type WorkspaceContext,
 } from '@openchat/database';
 import { AppError, notFound, sameLanguage, type AbuseLimits } from '@openchat/shared';
-import { ASSISTANT_MODELS, today } from './assistant';
+import { ASSISTANT_MODELS, defaultModelOf, today } from './assistant';
 import { requireCapability } from './workspaces';
 
 /**
@@ -46,6 +46,8 @@ export interface TranslationDeps {
   /** Null when the installation has no Workers AI, or no queue for the job. Translation is then off. */
   runtime: TranslationRuntime | null;
   limits: Pick<AbuseLimits, 'translationCharsPerWorkspacePerDay'>;
+  /** The installation's text model for the assistant, if it chose one. Members' replies use it. */
+  defaultModel?: string | undefined;
 }
 
 const isTranslationModel = (model: string) => TRANSLATION_MODELS.some((m) => m.id === model);
@@ -189,4 +191,46 @@ export async function translateMessageOnRequest(deps: TranslationDeps, ctx: Work
   await saveTranslation(deps.db, ctx.workspaceId, message.id, { language: input.language, content, model });
   const kept = await translationOf(deps.db, ctx.workspaceId, message.id, input.language);
   return { language: input.language, content: kept?.content ?? content };
+}
+
+// ---------- A member's reply (step 3) ----------
+
+/** How long a member waits for their reply to be translated: 5 seconds, and more for a long one. */
+export const replyTimeoutMs = (text: string) => Math.min(15_000, 5_000 + Math.floor(text.length / 400) * 1_000);
+
+export const replyPrompt = (source: string, target: string) =>
+  `You translate a customer support agent's reply to a customer. Translate the reply inside the <reply> tags from ${englishName(source)} into ${englishName(target)}. Keep its meaning, tone and formality, and keep names, numbers, links, email addresses and code exactly as they are. Reply with the translation only: no notes, no quotation marks, no tags.`;
+
+/**
+ * What a member's reply becomes for the visitor, or null when it needs no translation: translation is off, the
+ * visitor's language is not known, or they read the member's language. Throws an AppError when it is needed and
+ * cannot be had, so that nothing reaches the visitor in a language they did not choose without the member knowing.
+ */
+export async function translateReply(deps: TranslationDeps, ctx: WorkspaceContext, input: { userId: string; visitorLanguage: string | null; content: string }): Promise<{ content: string; original: { language: string; content: string } } | null> {
+  if (!input.visitorLanguage || !input.content.trim()) return null;
+  const [settings, memberLanguage] = await Promise.all([translationSettingsFor(deps.db, ctx.workspaceId), userLanguage(deps.db, input.userId)]);
+  if (!settings.enabled || !memberLanguage || sameLanguage(memberLanguage, input.visitorLanguage)) return null;
+  if (!deps.runtime) throw unavailable();
+  if (!(await takeTranslationCharacters(deps.db, ctx.workspaceId, today(), input.content.length, deps.limits.translationCharsPerWorkspacePerDay))) {
+    throw new AppError(429, 'translation_limit', 'This workspace has translated all it can today. Send it untranslated, or wait until tomorrow (UTC)');
+  }
+  let output: string;
+  try {
+    output = await withTimeout(
+      deps.runtime.generate(
+        defaultModelOf(deps),
+        [
+          { role: 'system', content: replyPrompt(memberLanguage, input.visitorLanguage) },
+          { role: 'user', content: `<reply>\n${input.content}\n</reply>` },
+        ],
+        Math.min(4096, Math.ceil(input.content.length / 2) + 200),
+      ),
+      replyTimeoutMs(input.content),
+    );
+  } catch {
+    throw new AppError(502, 'translation_failed', 'Your reply was not sent, because it could not be translated. Try again, or send it untranslated');
+  }
+  const content = output.replace(/^\s*<reply>\s*/i, '').replace(/\s*<\/reply>\s*$/i, '').trim();
+  if (!content) throw new AppError(502, 'translation_failed', 'Your reply was not sent, because it could not be translated. Try again, or send it untranslated');
+  return { content, original: { language: memberLanguage, content: input.content } };
 }

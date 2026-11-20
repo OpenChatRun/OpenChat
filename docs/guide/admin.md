@@ -103,7 +103,7 @@ Visitors search titles, summaries and text. Search ignores capitals and accents,
 
 ## Automatic translation
 
-If your installation has Workers AI, a supervisor can turn on **Automatic translation**, at the top of the **Assistant** page. Each visitor's message is then translated into the language each team member uses the dashboard in, and shown with **Translated from …** and **Show original**. A member whose language was not covered can choose **Translate**. Internal notes and your team's replies are not translated.
+If your installation has Workers AI, a supervisor can turn on **Automatic translation**, at the top of the **Assistant** page. Each visitor's message is then translated into the language each team member uses the dashboard in, and shown with **Translated from …** and **Show original**. A member whose language was not covered can choose **Translate**. Replies written in the dashboard are translated into the visitor's language with the assistant's text model, Llama 3.3 unless your installation chose another, and labelled for the visitor. Internal notes are never translated.
 
 Every visitor message in the workspace is then sent to Workers AI, so check that your privacy notice covers it. **M2M100**, the default model, only translates, so a visitor cannot steer it; a text model translates chat better, but a visitor could try to steer what it writes, which only your team sees. Turning it on or off, or changing the model, is recorded in the audit log. A workspace can translate 200,000 characters a day by default; after that, members see the originals until the next day (UTC).
 

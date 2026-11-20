@@ -447,6 +447,21 @@ Visitors' messages translated for the team ([ADR-0024](../architecture/decisions
 
 Limits: m2m100 translates plainly, sometimes wrongly, and writes Simplified Chinese for readers of Traditional. Members' replies are not translated yet (step 3), and the apps show no translations (step 4). Not offered on OpenChat Cloud.
 
+### Translation step 3 exit check
+
+Members' replies translated for visitors ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)). Run on a throwaway installation with Workers AI on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#translated-replies-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| A reply goes out in the visitor's language | Yes: English replies sent in German and Japanese with Llama 3.3, about 1.4 seconds each, a link kept exactly |
+| The member sees their own words, the visitor sees a label | Yes: "Sent translated · Show what was sent" in the dashboard; "Automatisch übersetzt · Original anzeigen" in the widget, live, with the English marked `lang="en"` |
+| Nothing goes out untranslated without the member choosing | Tests: a failed translation, the daily limit, or no Workers AI sends nothing; **Send untranslated** sends the words as written, under the same client ID |
+| A retry costs nothing more | Tests: a repeat of a sent reply is answered from what was stored, without calling the model |
+| Notes, a visitor in the member's language, and replies without `translate` are sent as written | Tests, and on real Cloudflare for a reply without `translate` |
+| The original is not a machine translation | Tests: members' lists and export keep it apart as `original` |
+
+Limits: the apps send replies as written and show no labels until step 4. A file's name is not translated. A long reply waits up to 15 seconds.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

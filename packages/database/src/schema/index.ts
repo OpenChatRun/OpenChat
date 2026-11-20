@@ -391,6 +391,11 @@ export const messages = sqliteTable(
      * that; it is not declared here, for the reason given on conversations.assistant_state.
      */
     assistantId: text('assistant_id'),
+    /**
+     * Set when a member wrote this in another language and it was sent translated (ADR-0024): `content` is what the
+     * visitor received, and what they wrote is its translation in this language.
+     */
+    originalLanguage: text('original_language'),
   },
   (t) => [
     unique('messages_tenant_uq').on(t.workspaceId, t.id),

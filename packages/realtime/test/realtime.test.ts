@@ -214,6 +214,8 @@ describe('toVisitorEvent, across every domain event', () => {
   const table: [string, DomainEvent, unknown][] = [
     ['a public message', created(message()), { type: 'message.created' }],
     ['an internal note', created(note), null],
+    ['a reply sent translated', created(message({ content: 'Hallo', original: { language: 'en', content: 'Hello' } })), { type: 'message.created', data: { message: { content: 'Hallo', original: { language: 'en', content: 'Hello' } } } }],
+    ['a translation being stored', { v: 1, kind: 'message.translated', workspaceId: 'w', conversationId: 'c', messageId: 'm', languages: ['en'] }, null],
     ['a mislabelled note with a public type', created(message({ visibility: 'internal', publicSeq: null })), null],
     ['a note type marked public', created(message({ type: 'internal_note', publicSeq: 3 })), null],
     ['a conversation being created', { v: 1, kind: 'conversation.created', workspaceId: 'w', conversation: patch }, null],

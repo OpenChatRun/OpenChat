@@ -53,6 +53,9 @@ export interface VisitorMessageRow {
   attachmentsJson: string;
   /** Written by the AI assistant: an answer, or handing over to the team. */
   assistantKind: 'answer' | 'handover' | null;
+  /** A member's reply sent translated (ADR-0024): the language they wrote in, and what they wrote. */
+  originalLanguage: string | null;
+  originalContent: string | null;
 }
 
 export type VisitorSendResult =
@@ -67,7 +70,10 @@ export type VisitorSendResult =
 const MESSAGE_SELECT = `SELECT m.id, ${ATTACHMENTS_JSON} AS attachmentsJson, m.conversation_id AS conversationId, m.public_seq AS seq,
     CASE WHEN m.sender_type = 'visitor' THEN m.client_message_id END AS clientMessageId,
     m.sender_type AS senderType, m.message_type AS type, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name, asst.name) AS senderName,
-    CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind
+    CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind,
+    CASE WHEN m.sender_type = 'member' THEN m.original_language END AS originalLanguage,
+    CASE WHEN m.sender_type = 'member' AND m.original_language IS NOT NULL THEN (SELECT o.content FROM message_translations o
+      WHERE o.workspace_id = m.workspace_id AND o.message_id = m.id AND o.language = m.original_language) END AS originalContent
   FROM messages m
   JOIN conversations c ON c.workspace_id = m.workspace_id AND c.id = m.conversation_id AND c.contact_id = ?1
   LEFT JOIN workspace_members sm ON m.sender_type = 'member' AND sm.workspace_id = m.workspace_id AND sm.id = m.sender_id

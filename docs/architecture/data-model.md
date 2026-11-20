@@ -221,6 +221,8 @@ Migration 0023 only adds the two columns.
 
 **Translations** (step 2) are in `message_translations`, one row per message and language, keyed `(workspace_id, message_id, language)`, with the model that wrote it. Its foreign key to `messages` cascades, so erasure and retention delete translations with their messages; nothing else needs to know about them. A translation is inserted from a `SELECT` on its message, so one for a message deleted meanwhile is never stored, and the first one stored for a language is kept (`ON CONFLICT DO NOTHING`). Members' message lists carry them; visitors' never do. Contact export includes them as `machineTranslations`.
 
+**A member's reply sent translated** (step 3) stores what the visitor received as `messages.content`, the member's own words as a `message_translations` row in their language (model `original`), and that language in `messages.original_language`. Both are written in the message's batch, the row only if the message was inserted, so a replay adds nothing. Member and visitor queries read the original beside the message; it is not listed among the machine translations. Migration 0025 adds the column.
+
 The workspace's choice is `workspaces.translation_enabled` and `translation_model` (NULL for the default, `m2m100`). Characters translated are counted in `assistant_usage.translated_chars`, taken before the model is called by an upsert that refuses to pass the day's limit. Migration 0024 adds the table and the columns.
 
 ## Retention

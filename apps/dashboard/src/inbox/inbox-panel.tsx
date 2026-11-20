@@ -420,6 +420,20 @@ function TranslatedContent({ workspaceId, message, reader, from }: { workspaceId
   );
 }
 
+/** A member's reply sent translated (ADR-0024): their own words, and what the visitor received a tap away. */
+function SentTranslated({ message, original }: { message: Message; original: { language: string; content: string } }) {
+  const [sent, setSent] = useState(false);
+  return (
+    <>
+      <div className="break-words whitespace-pre-wrap" lang={sent ? undefined : original.language}>{sent ? message.content : original.content}</div>
+      <p className="mt-1.5 text-xs opacity-75">
+        {t('sentTranslated')} ·{' '}
+        <button type="button" className="underline" onClick={() => setSent(!sent)}>{t(sent ? 'showYourWords' : 'showSent')}</button>
+      </p>
+    </>
+  );
+}
+
 function MessageBubble({ message, translation }: { message: Message; translation?: { workspaceId: string; reader: string; from: string } | null }) {
   const shown = message.sender.displayName ?? t('agent');
   if (message.assistant?.kind === 'handover') {
@@ -451,6 +465,8 @@ function MessageBubble({ message, translation }: { message: Message; translation
         </div>
         {message.content && translation && message.sender.type === 'visitor' && message.type === 'text' ? (
           <TranslatedContent workspaceId={translation.workspaceId} message={message} reader={translation.reader} from={translation.from} />
+        ) : message.original ? (
+          <SentTranslated message={message} original={message.original} />
         ) : (
           message.content && <div className="break-words whitespace-pre-wrap">{message.content}</div>
         )}
@@ -460,8 +476,11 @@ function MessageBubble({ message, translation }: { message: Message; translation
   );
 }
 
-function Composer(props: { workspaceId: string; conversationId: string; drafts: Map<string, string>; realtime: { current: Realtime | null } }) {
-  const { workspaceId, conversationId, drafts, realtime } = props;
+/** A reply that could not be translated is not sent (ADR-0024): the member chooses what happens. */
+const TRANSLATION_REFUSALS = new Set(['translation_failed', 'translation_limit', 'translation_unavailable']);
+
+function Composer(props: { workspaceId: string; conversationId: string; drafts: Map<string, string>; realtime: { current: Realtime | null }; translateTo: string | null }) {
+  const { workspaceId, conversationId, drafts, realtime, translateTo } = props;
   const client = useQueryClient();
   const [draft, setDraftState] = useState(() => drafts.get(conversationId) ?? '');
   const [mode, setMode] = useState<'text' | 'internal_note'>('text');
@@ -488,7 +507,8 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
     setDraftState(value);
   };
   const send = useMutation({
-    mutationFn: (input: { id: string; content: string; type: 'text' | 'internal_note'; attachmentIds: string[] }) => api.sendMessage(workspaceId, conversationId, { clientMessageId: input.id, type: input.type, content: input.content, ...(input.attachmentIds.length > 0 ? { attachmentIds: input.attachmentIds } : {}) }),
+    mutationFn: (input: { id: string; content: string; type: 'text' | 'internal_note'; attachmentIds: string[]; translate: boolean }) =>
+      api.sendMessage(workspaceId, conversationId, { clientMessageId: input.id, type: input.type, content: input.content, ...(input.attachmentIds.length > 0 ? { attachmentIds: input.attachmentIds } : {}), ...(input.translate ? { translate: true } : {}) }),
     onSuccess: (message) => {
       attempt.current = null;
       client.setQueryData<Message[]>(threadKey(workspaceId, conversationId), (known) => mergeMessages(known ?? [], [message]));
@@ -498,15 +518,16 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
       setFiles([]);
     },
   });
-  const submit = () => {
+  const submit = (untranslated = false) => {
     const content = draft.trim();
     if ((!content && files.length === 0) || send.isPending || uploading > 0) return;
     const attachmentIds = files.map((file) => file.id);
     const fileKey = attachmentIds.join();
     if (attempt.current?.content !== content || attempt.current.type !== mode || attempt.current.files !== fileKey) attempt.current = { id: crypto.randomUUID(), content, type: mode, files: fileKey };
-    send.mutate({ id: attempt.current.id, content, type: mode, attachmentIds });
+    send.mutate({ id: attempt.current.id, content, type: mode, attachmentIds, translate: mode === 'text' && translateTo !== null && !untranslated });
   };
   const note = mode === 'internal_note';
+  const refused = send.error instanceof ApiError && TRANSLATION_REFUSALS.has(send.error.code);
   return (
     <form
       className={`space-y-2 border-t p-3 ${note ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'}`}
@@ -541,7 +562,14 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
           }
         }}
       />
+      {!note && translateTo && <p className="text-xs text-slate-600 dark:text-slate-400">{t('replyTranslatedInto', { language: languageName(translateTo) })}</p>}
       {send.error ? <p className="error" role="alert">{t('notSent', { error: errorMessage(send.error) })}</p> : null}
+      {refused && !send.isPending && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="button-quiet" onClick={() => submit()}>{t('tryAgain')}</button>
+          <button type="button" className="button-quiet" onClick={() => submit(true)}>{t('sendUntranslated')}</button>
+        </div>
+      )}
       {uploadError ? <p className="error" role="alert">{t('fileNotAdded', { error: errorMessage(uploadError) })}</p> : null}
       {(files.length > 0 || uploading > 0) && (
         <ul className="flex flex-wrap gap-2 text-xs" aria-label={t('filesToSend')}>
@@ -777,6 +805,8 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
   const reader = me.data?.language ?? getLocale();
   const from = data?.visitorLanguage ?? null;
   const translation = translationSettings.data?.enabled && from && !sameLanguage(from, reader) ? { workspaceId, reader, from } : null;
+  // Replies go out translated only for a member whose account has a language: the server translates from it.
+  const translateTo = translationSettings.data?.enabled && from && me.data?.language && !sameLanguage(from, me.data.language) ? from : null;
   const conflict = update.error instanceof ApiError && update.error.status === 409;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
@@ -832,7 +862,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
         </ol>
       </div>
       <p className="min-h-6 bg-slate-50 px-4 py-1 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-400" aria-live="polite">{typists.length > 0 ? t(typists.length > 1 ? 'typingMany' : 'typingOne', { names: typists.join(', ') }) : ''}</p>
-      <Composer key={conversationId} workspaceId={workspaceId} conversationId={conversationId} drafts={drafts} realtime={realtime} />
+      <Composer key={conversationId} workspaceId={workspaceId} conversationId={conversationId} drafts={drafts} realtime={realtime} translateTo={translateTo} />
     </section>
     {data && (
       <aside className="space-y-4 border-t border-slate-200 bg-slate-50/60 p-4 lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l dark:border-slate-800 dark:bg-slate-900/40">

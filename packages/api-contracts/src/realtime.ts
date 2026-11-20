@@ -36,6 +36,9 @@ export const AssistantMessageSchema = z.object({
   reason: z.enum(['asked', 'no_sources', 'unsure', 'turns', 'limit', 'error']).optional(),
 });
 
+/** What a member wrote, when a reply was sent translated (ADR-0024). */
+export const OriginalSchema = z.object({ language: z.string(), content: z.string() }).openapi('MessageOriginal');
+
 export const WireMessageSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
@@ -51,6 +54,8 @@ export const WireMessageSchema = z.object({
   createdAt: Iso,
   metadata: z.record(z.string(), z.unknown()),
   assistant: AssistantMessageSchema.optional(),
+  /** A member's reply sent translated (ADR-0024): `content` is what the visitor received, and this is what the member wrote. */
+  original: OriginalSchema.optional(),
 });
 
 /** Not a subtype of WireMessage by design: no visibility, no member IDs, no internal_note type. */
@@ -67,6 +72,8 @@ export const VisitorWireMessageSchema = z.object({
   createdAt: Iso,
   /** Written by the AI assistant: shown with an AI label, and a handover in the visitor's own language. */
   assistant: z.object({ kind: z.enum(['answer', 'handover']) }).optional(),
+  /** A team member's reply, translated automatically for the visitor (ADR-0024): what the member wrote, for Show original. */
+  original: OriginalSchema.optional(),
 });
 
 export const ConversationPatchSchema = z.object({

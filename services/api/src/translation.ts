@@ -29,7 +29,7 @@ export function translationRuntime(env: Env): TranslationRuntime | null {
   };
 }
 
-export const translationDeps = (env: Env): TranslationDeps => ({ db: openDatabase(env.DB), runtime: translationRuntime(env), limits: readAbuseLimits(env) });
+export const translationDeps = (env: Env): TranslationDeps => ({ db: openDatabase(env.DB), runtime: translationRuntime(env), limits: readAbuseLimits(env), defaultModel: env.ASSISTANT_MODEL });
 
 /** One job per visitor message. It decides from what is true when it runs, so it is queued whenever translation can run. */
 export async function queueTranslation(env: Env, row: OutboxRow, message: { senderType: string; type: string }): Promise<void> {

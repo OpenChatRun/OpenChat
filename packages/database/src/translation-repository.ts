@@ -30,9 +30,12 @@ export interface TranslationRow {
   model: string;
 }
 
-/** The translations of a message, as JSON, for a query with messages as m. */
+/**
+ * The machine translations of a message, as JSON, for a query with messages as m. A member's own words, kept beside
+ * the translation they sent, are not one: they are the message's original.
+ */
 export const TRANSLATIONS_JSON = `(SELECT COALESCE(json_group_array(json_object('language', tr.language, 'content', tr.content)), '[]')
-       FROM message_translations tr WHERE tr.workspace_id = m.workspace_id AND tr.message_id = m.id)`;
+       FROM message_translations tr WHERE tr.workspace_id = m.workspace_id AND tr.message_id = m.id AND tr.language IS NOT m.original_language)`;
 
 async function settingsOf(database: Database, workspaceId: string): Promise<TranslationSettingsRow> {
   const row = await rawHandle(database)

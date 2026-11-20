@@ -33,6 +33,10 @@ Both live in a Shadow DOM, so the host page's styles cannot reach them and their
 - **Still need help?** switches to Chat. If the visitor has no conversation yet, the first message sends `helpArticleId`, which is kept on the conversation only if it names a published article of the same website. The inbox shows "Came from the help article …".
 - **Freshness.** The tab appears or goes with the bootstrap, which is cached for 30 seconds.
 
+## Translated replies
+
+A team reply translated automatically (ADR-0024) carries `original`, what the team member wrote. The widget labels it **Translated automatically**, with **Show original** to see the member's words, marked with their language.
+
 ## Languages
 
 The widget speaks English, Spanish, French, German, Italian, Portuguese, Dutch, Japanese, Korean, Simplified Chinese, and Traditional Chinese. It chooses the first of these that it speaks:

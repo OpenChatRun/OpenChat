@@ -18,6 +18,8 @@ export interface ChatMessage {
   attachments: VisitorMessage['attachments'];
   /** The name of a file on its way, until the server has it. */
   pendingFile: string | null;
+  /** A team reply translated automatically for the visitor (ADR-0024): what the team member wrote. */
+  original: { language: string; content: string } | null;
 }
 
 export const fromServer = (message: VisitorMessage): ChatMessage => ({
@@ -35,6 +37,7 @@ export const fromServer = (message: VisitorMessage): ChatMessage => ({
   status: 'sent',
   attachments: message.attachments,
   pendingFile: null,
+  original: message.original ?? null,
 });
 
 export const pendingMessage = (clientMessageId: string, content: string, pendingFile: string | null = null): ChatMessage => ({
@@ -51,6 +54,7 @@ export const pendingMessage = (clientMessageId: string, content: string, pending
   status: 'sending',
   attachments: [],
   pendingFile,
+  original: null,
 });
 
 /** Committed messages in order, then what is still on its way. A socket, a response, and a catch-up can each bring the same message. */

@@ -190,6 +190,8 @@ Automatic translation ([ADR-0024](decisions/0024-automatic-translation.md), step
 - A model that fails costs that language only, and is not retried: members can ask with **Translate**. A D1 failure is retried, and the repeat skips what is stored.
 - Afterwards the workspace hub gets `message.translated`, with IDs and languages only. Members read the translations through REST.
 
+A member's reply (step 3) is not a job: the send request translates it before committing, so that the visitor gets one message, already translated, and the member learns at once if it could not be.
+
 ## What email is for
 
 By the owner's decision ([amendment A15](spec-review.md#amendments-to-the-specification)), email has two uses: follow-ups to visitors who have gone quiet, and account email such as password resets. Members hear about conversations through push, not email. Job types from before, `email.alert` and `email.send`, are acknowledged and dropped, in case a Worker from before a deploy queues one.
