@@ -398,8 +398,8 @@ test('an installation admin changes the widget from the Workspaces page', async 
   await card.getByLabel('Ask for an email').selectOption('optional');
   await card.getByRole('button', { name: 'Save widget settings' }).click();
   await expect(card.getByRole('status')).toContainText('Saved');
+  // The page is in the address, so a reload keeps it open.
   await page.reload();
-  await openWorkspacesPage(page);
   const after = page.getByRole('listitem').filter({ hasText: 'Shop' }).first();
   await expect(after.getByLabel('Welcome message')).toHaveValue('Hello from settings');
   await expect(after.getByLabel('Ask for an email')).toHaveValue('optional');

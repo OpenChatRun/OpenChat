@@ -874,9 +874,9 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
   );
 }
 
-export function InboxPanel({ membership, members }: { membership: Membership; members: Member[] }) {
+/** The open conversation is in the page's address, so the caller holds it. */
+export function InboxPanel({ membership, members, selected, onSelect }: { membership: Membership; members: Member[]; selected: string | null; onSelect: (id: string | null) => void }) {
   const workspaceId = membership.workspace.id;
-  const [selected, setSelected] = useState<string | null>(null);
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selected;
   const drafts = useRef(new Map<string, string>());
@@ -888,7 +888,7 @@ export function InboxPanel({ membership, members }: { membership: Membership; me
       {online.length > 0 && <p className="text-xs text-slate-600 dark:text-slate-400">{t('alsoOnline', { names: online.map((m) => m.name).join(', ') })}</p>}
       {/* Wide enough for three columns, the inbox fills the window and each column scrolls on its own. The header and padding above it are about 7.5rem. */}
       <div className="flex min-h-[min(720px,calc(100dvh-11rem))] overflow-hidden rounded-2xl lg:h-[calc(100dvh-7.5rem)] lg:min-h-[30rem] border border-slate-200 bg-white shadow-sm shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900">
-        <ConversationList workspaceId={workspaceId} memberId={membership.memberId} selected={selected} onSelect={setSelected} visitorsOnline={visitorsOnline} hidden={selected !== null} />
+        <ConversationList workspaceId={workspaceId} memberId={membership.memberId} selected={selected} onSelect={onSelect} visitorsOnline={visitorsOnline} hidden={selected !== null} />
         {selected ? (
           <Thread
             key={selected}
@@ -899,7 +899,7 @@ export function InboxPanel({ membership, members }: { membership: Membership; me
             visitorOnline={visitorsOnline.has(selected)}
             drafts={drafts.current}
             realtime={realtime}
-            onBack={() => setSelected(null)}
+            onBack={() => onSelect(null)}
           />
         ) : (
           <div className="hidden flex-1 flex-col items-center justify-center gap-3 bg-slate-50 p-8 text-center text-sm text-slate-600 md:flex dark:bg-slate-950 dark:text-slate-400">
