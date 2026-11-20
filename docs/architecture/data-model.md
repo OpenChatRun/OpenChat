@@ -219,6 +219,10 @@ The ADR has the widget send the language when it creates a session as well. A se
 
 Migration 0023 only adds the two columns.
 
+**Translations** (step 2) are in `message_translations`, one row per message and language, keyed `(workspace_id, message_id, language)`, with the model that wrote it. Its foreign key to `messages` cascades, so erasure and retention delete translations with their messages; nothing else needs to know about them. A translation is inserted from a `SELECT` on its message, so one for a message deleted meanwhile is never stored, and the first one stored for a language is kept (`ON CONFLICT DO NOTHING`). Members' message lists carry them; visitors' never do. Contact export includes them as `machineTranslations`.
+
+The workspace's choice is `workspaces.translation_enabled` and `translation_model` (NULL for the default, `m2m100`). Characters translated are counted in `assistant_usage.translated_chars`, taken before the model is called by an upsert that refuses to pass the day's limit. Migration 0024 adds the table and the columns.
+
 ## Retention
 
 Each workspace has `retention_days`, set by an installation admin under **Workspaces** (`PUT /api/v1/admin/workspaces/{id}/retention`), from 30 days to ten years. NULL, the default, keeps everything. A change is audited as `workspace.retention_changed`, with the old and new values.

@@ -431,6 +431,22 @@ Languages ([ADR-0024](../architecture/decisions/0024-automatic-translation.md), 
 
 Limits: nothing is translated yet. The apps neither show the visitor's language nor write the member's until step 4. A supervisor's picker offers OpenChat's eleven languages and the one stored; the API takes any tag. The device used last decides the account's language.
 
+### Translation step 2 exit check
+
+Visitors' messages translated for the team ([ADR-0024](../architecture/decisions/0024-automatic-translation.md), [background jobs](../architecture/background-jobs.md#translations-job)). Run on a throwaway installation with Workers AI on real Cloudflare on 20 November 2026 ([validation](../architecture/cloudflare-validation.md#automatic-translation-on-real-cloudflare-2026-11-20)):
+
+| Criterion | Result |
+|---|---|
+| Off until a supervisor turns it on, audited | Yes (tests for agents and the audit row) |
+| A visitor's message is translated into members' languages | Yes: German, Japanese and Traditional Chinese into English with m2m100, and German and Russian with Llama 3.3 |
+| Members see it labelled, with the original one tap away | Yes: "Translated from German · Show original", and "Translating…" until it arrived 2.7 seconds after sending, without a reload |
+| Translate on request | Yes: Japanese, French and Traditional Chinese in about 1.2 seconds; a stored one at once |
+| A visitor cannot steer it | m2m100 only translates. Llama 3.3 translated an instruction to answer PWNED rather than obeying it |
+| Visitors never see translations | Tests: not in their messages, and the event never reaches their room |
+| Daily limit, erasure, export | Tests for the limit; on real D1, erasure removed the contact's translations and export listed them as `machineTranslations` |
+
+Limits: m2m100 translates plainly, sometimes wrongly, and writes Simplified Chinese for readers of Traditional. Members' replies are not translated yet (step 3), and the apps show no translations (step 4). Not offered on OpenChat Cloud.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

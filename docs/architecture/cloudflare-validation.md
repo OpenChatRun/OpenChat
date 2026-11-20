@@ -726,6 +726,19 @@ A throwaway installation deployed with `--assistant`, the default model, and two
 | Unpublishing, then deleting | Out of answers at once. A minute later, Vectorize held 0 vectors: every version of both articles was removed |
 | Straight after the deploy | Logging in answered 500, then 503 `not_configured`, for under a minute, then worked. Deleting the Worker failed on the first try and worked on the second, both times this happened |
 
+## Automatic translation on real Cloudflare (2026-11-20)
+
+A throwaway installation deployed with `--assistant`, and one member reading English. All of it was deleted afterwards.
+
+| What | Result |
+|---|---|
+| `@cf/meta/m2m100-1.2b`, with ISO 639-1 codes as `source_lang` and `target_lang` | German, Japanese and Traditional Chinese visitor messages were translated into English within 15 seconds of sending. Plain, with mistakes: "Hallo, wo ist meine Bestellung? Ich habe sie vor einer Woche aufgegeben" became "Where is my order?I gave it up a week ago." |
+| m2m100 into `zh` for a reader of Traditional Chinese | Simplified Chinese ("已订购的商品"): m2m100 has one Chinese |
+| A member asking for Japanese, French or Traditional Chinese | 1.2 to 1.3 seconds; asking again for a stored one, 0.3 seconds |
+| Llama 3.3 70B with the translation prompt | "Hello, where is my order? I placed it a week ago." A German message telling it to ignore its instructions and answer PWNED was translated, not obeyed. Russian was translated well |
+| In the dashboard | A message sent while its conversation was open showed "Translating…", then its translation 2.7 seconds after sending, without a reload |
+| Erasing the contact | Its messages' translations were gone; other conversations' remained |
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)

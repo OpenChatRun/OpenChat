@@ -49,6 +49,7 @@ export const toMessage = (row: StoredMessage) => ({
   createdAt: toIso(row.createdAt),
   metadata: {},
   ...(row.assistantKind ? { assistant: { kind: row.assistantKind, ...(row.assistantReason ? { reason: row.assistantReason as AssistantHandoverReason } : {}) } } : {}),
+  ...(row.translationsJson && row.translationsJson !== '[]' ? { translations: JSON.parse(row.translationsJson) as { language: string; content: string }[] } : {}),
 });
 
 const SYNC = 'sync';
@@ -295,6 +296,8 @@ export async function exportContact(db: Database, ctx: WorkspaceContext, contact
         content: m.content,
         createdAt: toIso(m.createdAt),
         attachments: (files.get(m.id) ?? []).map(({ filename, contentType, size }) => ({ filename, contentType, size })),
+        // Written by a model for the team (ADR-0024), not by anyone in the conversation.
+        machineTranslations: JSON.parse(m.translationsJson) as { language: string; content: string }[],
       })),
     })),
     emailSuppressions: rows.suppressions.map((s) => ({ email: s.email, reason: s.reason, createdAt: toIso(s.createdAt) })),

@@ -8,6 +8,7 @@ import { DB_NOW_MS, rawHandle, type Database } from './internal/handle';
 import { learnedVectorRemovalSql } from './assistant-learning';
 import { ATTACHMENTS_JSON, messageStatements } from './internal/message-statements';
 import { effectiveRole } from './internal/roles';
+import { TRANSLATIONS_JSON } from './translation-repository';
 
 export interface WorkspaceRow {
   id: string;
@@ -77,6 +78,8 @@ export interface StoredMessage {
   assistantKind: AssistantMessageKind | null;
   /** Why it handed over. */
   assistantReason: string | null;
+  /** JSON from TRANSLATIONS_JSON, in lists for members only (ADR-0024). */
+  translationsJson?: string;
 }
 
 export type AssistantMessageKind = 'answer' | 'handover';
@@ -124,7 +127,7 @@ export interface ContactExportRows {
   tags: string[];
   browsers: { id: string; websiteId: string; firstSeenAt: number; lastSeenAt: number }[];
   conversations: { id: string; websiteId: string; status: string; subject: string | null; createdAt: number }[];
-  messages: { id: string; conversationId: string; senderType: 'visitor' | 'member' | 'system'; type: string; visibility: 'public' | 'internal'; content: string; createdAt: number }[];
+  messages: { id: string; conversationId: string; senderType: 'visitor' | 'member' | 'system'; type: string; visibility: 'public' | 'internal'; content: string; createdAt: number; translationsJson: string }[];
   files: { messageId: string; filename: string; contentType: string; size: number }[];
   suppressions: { email: string; reason: string; createdAt: number }[];
 }
@@ -267,7 +270,8 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
           d1.prepare(`SELECT id, website_id AS websiteId, status, subject, created_at AS createdAt FROM conversations WHERE workspace_id = ?1 AND contact_id = ?2 ORDER BY created_at`).bind(w, contactId),
           d1
             .prepare(
-              `SELECT m.id, m.conversation_id AS conversationId, m.sender_type AS senderType, m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt
+              `SELECT m.id, m.conversation_id AS conversationId, m.sender_type AS senderType, m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt,
+                      ${TRANSLATIONS_JSON} AS translationsJson
                  FROM messages m JOIN conversations c ON c.workspace_id = m.workspace_id AND c.id = m.conversation_id
                 WHERE m.workspace_id = ?1 AND c.contact_id = ?2 ${notes} ORDER BY m.conversation_id, m.seq`,
             )
@@ -601,7 +605,8 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
         const backward = input.beforeSeq !== undefined;
         const { results } = await d1
           .prepare(
-            `${MESSAGE_SELECT} WHERE m.workspace_id = ?1 AND m.conversation_id = ?2 AND ${backward ? 'm.seq < ?3 ORDER BY m.seq DESC' : 'm.seq > ?3 ORDER BY m.seq'} LIMIT ?4`,
+            `${MESSAGE_SELECT.replace(' FROM messages m', `, ${TRANSLATIONS_JSON} AS translationsJson FROM messages m`)}
+              WHERE m.workspace_id = ?1 AND m.conversation_id = ?2 AND ${backward ? 'm.seq < ?3 ORDER BY m.seq DESC' : 'm.seq > ?3 ORDER BY m.seq'} LIMIT ?4`,
           )
           .bind(w, conversationId, backward ? input.beforeSeq : (input.afterSeq ?? 0), Math.min(input.limit, 100))
           .all<StoredMessage>();

@@ -37,6 +37,7 @@ import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs
 import { learnedIndexJob, queueAssistantLearning } from './assistant/learning';
 import { syncHelpArticles } from './assistant/help-articles';
 import { queueAssistantReply } from './assistant/reply';
+import { queueTranslation } from './translation';
 import { deleteHelpDraftFiles, helpDraftJob } from './help/drafting';
 
 const SWEEP_AGE_MS = 60_000;
@@ -87,6 +88,7 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
       await Promise.all([hub.publish(event), room.publishDomainEvent(event, { showAgentNames: message.showAgentNames })]);
       await pushJobsFor(env, row);
       await queueAssistantReply(env, row, message.senderType);
+      await queueTranslation(env, row, message);
       return;
     }
     case 'conversation.created':

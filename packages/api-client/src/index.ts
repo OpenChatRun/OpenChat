@@ -40,6 +40,8 @@ import type {
   updateWebsiteRoute,
   updateWorkspaceRoute,
   getAssistantRoute,
+  getTranslationSettingsRoute,
+  translateMessageRoute,
   addAssistantSourceRoute,
   testAssistantRoute,
   listLearnedAnswersRoute,
@@ -85,6 +87,8 @@ export type AuditLogPage = Json200<typeof listAuditLogRoute>;
 export type AuditEntry = AuditLogPage['data'][number];
 export type LoginInput = BodyOf<typeof loginRoute>;
 export type Assistant = Json200<typeof getAssistantRoute>;
+export type TranslationSettings = Json200<typeof getTranslationSettingsRoute>;
+export type MessageTranslation = Json200<typeof translateMessageRoute>;
 export type AssistantSource = Assistant['sources'][number];
 export type AssistantSourceInput = BodyOf<typeof addAssistantSourceRoute>;
 export type AssistantAnswer = Json200<typeof testAssistantRoute>;
@@ -255,6 +259,10 @@ export function createClient(options: ClientOptions) {
     createFollowUpRule: (workspaceId: string, input: { name: string; inactiveMinutes: number }) => request<FollowUpRule>('POST', `${workspace(workspaceId)}/follow-up-rules`, input),
     updateFollowUpRule: (workspaceId: string, ruleId: string, change: { name?: string; enabled?: boolean; inactiveMinutes?: number }) => request<FollowUpRule>('PATCH', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`, change),
     deleteFollowUpRule: (workspaceId: string, ruleId: string) => request<void>('DELETE', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`),
+    getTranslationSettings: (workspaceId: string) => get<TranslationSettings>(`${workspace(workspaceId)}/translation`),
+    updateTranslationSettings: (workspaceId: string, input: { enabled: boolean; model: string }) => request<TranslationSettings>('PUT', `${workspace(workspaceId)}/translation`, input),
+    translateMessage: (workspaceId: string, conversationId: string, messageId: string, language?: string) =>
+      request<MessageTranslation>('POST', `${conversation(workspaceId, conversationId)}/messages/${encodeURIComponent(messageId)}/translation`, language ? { language } : {}),
     getAssistant: (workspaceId: string, websiteId: string) => get<Assistant>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant`),
     saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean; learn?: boolean }) =>
       request<{ name: string; model: string | null; enabled: boolean; learn: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),

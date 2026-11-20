@@ -294,6 +294,8 @@ export class WorkspaceHub extends RealtimeObject {
         return this.broadcast(stringify(event.kind, { workspaceId: event.workspaceId, conversation: event.conversation }));
       case 'conversation.read':
         return this.broadcast(stringify(event.kind, { conversationId: event.conversationId, reader: event.reader, deliveredSeq: event.deliveredSeq, readSeq: event.readSeq }));
+      case 'message.translated':
+        return this.broadcast(stringify(event.kind, { conversationId: event.conversationId, messageId: event.messageId, languages: event.languages }));
       default:
         // An old object may receive a kind it does not know yet.
         return 0;

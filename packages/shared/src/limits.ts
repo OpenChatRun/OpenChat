@@ -17,6 +17,8 @@ export const ABUSE_LIMITS = {
   assistantPagesPerSource: { variable: 'LIMIT_ASSISTANT_PAGES_PER_SOURCE', flag: 'assistant-pages-per-source', default: 50, min: 1, max: 500 },
   /** Draft with AI runs one workspace can start in a day (UTC), across its websites. See ADR-0023. */
   helpDraftRunsPerWorkspacePerDay: { variable: 'LIMIT_HELP_DRAFT_RUNS_PER_WORKSPACE_PER_DAY', flag: 'help-draft-runs-per-workspace-per-day', default: 5, min: 1, max: 1_000 },
+  /** Characters one workspace can have translated in a day (UTC), counted per language translated into. See ADR-0024. */
+  translationCharsPerWorkspacePerDay: { variable: 'LIMIT_TRANSLATION_CHARS_PER_WORKSPACE_PER_DAY', flag: 'translation-chars-per-workspace-per-day', default: 200_000, min: 1, max: 100_000_000 },
 } as const;
 
 export type AbuseLimitName = keyof typeof ABUSE_LIMITS;

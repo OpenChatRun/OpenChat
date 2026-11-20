@@ -107,7 +107,9 @@ export type AgentServerFrame =
     }>
   | Envelope<'typing', { conversationId: string; actor: { type: 'visitor' | 'member'; id: string; displayName: string | null } }>
   | Envelope<'presence.member', { memberId: string; online: boolean }>
-  | Envelope<'presence.visitor', { conversationId: string; online: boolean }>;
+  | Envelope<'presence.visitor', { conversationId: string; online: boolean }>
+  /** Machine translations of a visitor's message are stored (ADR-0024). IDs and languages only: read them through REST. */
+  | Envelope<'message.translated', { conversationId: string; messageId: string; languages: string[] }>;
 
 export type AgentClientFrame = AuthRefreshFrame | TypingSetFrame;
 

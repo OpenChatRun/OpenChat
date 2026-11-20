@@ -36,3 +36,4 @@ export {
 export type { AttachmentJson } from './internal/message-statements';
 export * from './help-repository';
 export * from './help-assistant';
+export * from './translation-repository';

@@ -127,6 +127,8 @@ export const AgentServerFrameSchema = z
       z.object({ conversationId: z.string(), actor: z.object({ type: z.enum(['visitor', 'member']), id: z.string(), displayName: z.string().nullable() }) }),
     ),
     frame('presence.member', z.object({ memberId: z.string(), online: z.boolean() })),
+    /** Machine translations of a visitor's message are stored (ADR-0024). Read them through REST. */
+    frame('message.translated', z.object({ conversationId: z.string(), messageId: z.string(), languages: z.array(z.string()) })),
     frame('presence.visitor', z.object({ conversationId: z.string(), online: z.boolean() })),
   ])
   .openapi('AgentServerFrame');

@@ -53,6 +53,15 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **Its text was machine-translated**, on the public pages and in the dashboard.
 - **Changing an address breaks the old links**, with no redirect.
 
+## Automatic translation
+
+- **Steps 1 and 2 of [ADR-0024](architecture/decisions/0024-automatic-translation.md) are built:** languages are stored, and visitors' messages are translated for the team. Members' replies are not translated for visitors yet, and the apps show no translations.
+- **M2M100, the default, translates plainly and sometimes wrongly,** such as "I gave it up a week ago" for "I placed it a week ago". Llama 3.3 translated the same messages well. Every translation is labelled, with the original one tap away.
+- **M2M100 writes Simplified Chinese** even for a member who reads Traditional Chinese. Choose a text model for that.
+- **Nothing is translated until the visitor's language is known,** which needs the visitor to write once after this release in an older conversation.
+- **A member's language is the dashboard's language.** Members who never opened the dashboard since this release have none, and nothing is translated for them unless they ask.
+- **Not offered on OpenChat Cloud** until the privacy documents cover it, as for the assistant.
+
 ## The widget
 
 - **One conversation per visitor.** The widget shows one, though the API allows more.
