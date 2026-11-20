@@ -30,7 +30,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **A rare missed push.** A visitor's message is not pushed while the assistant answers. If its job fails three times, or the assistant is turned off at that moment, that message gets no push; the conversation still shows in the inbox.
 - **Spotting a request for a person, or an attempt to steer it, uses word lists.** Other phrasings reach the model, which is told to decline.
 - **Its widget text was machine-translated**, and needs a native speaker's review.
-- **Not offered on OpenChat Cloud** until its privacy documents cover Workers AI.
+- **On OpenChat Cloud since 20 November 2026,** with its privacy documents' version 3. Each organisation has a monthly allowance, 1,000 answers and 1,000,000 translated characters across its workspaces, on top of the daily limits. Past it, the assistant hands over and the dashboard still says the daily limit was reached.
 - **It can be wrong.** The threshold for a relevant passage, 0.45, was set from one website in four languages ([validation](architecture/cloudflare-validation.md#ai-assistant-sources-on-real-cloudflare-2026-11-19)).
 - **Changes take up to a minute to show**, because Vectorize applies writes in the background.
 - **Its dashboard text was machine-translated**, like the rest.
@@ -63,7 +63,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **M2M100 writes Simplified Chinese** even for a member who reads Traditional Chinese. Choose a text model for that.
 - **Nothing is translated until the visitor's language is known,** which needs the visitor to write once after this release in an older conversation.
 - **A member's language is the dashboard's language.** Members who never opened the dashboard since this release have none, and nothing is translated for them unless they ask.
-- **Not offered on OpenChat Cloud** until the privacy documents cover it, as for the assistant.
+- **On OpenChat Cloud within a monthly allowance,** as for the assistant. Past it, nothing more is translated that month, and the dashboard calls it the daily limit.
 
 ## The widget
 
