@@ -169,7 +169,7 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
        * the message insert becomes a replay. The first statement after the insert only runs for a new message.
        */
       /** `helpArticleId` is kept only if it names a published article of this website. */
-      async create(input: { clientMessageId: string; content: string; helpArticleId?: string | undefined }): Promise<{ created: boolean; conversation: VisitorConversationRow; message: VisitorMessageRow }> {
+      async create(input: { clientMessageId: string; content: string; helpArticleId?: string | undefined; language?: string | undefined }): Promise<{ created: boolean; conversation: VisitorConversationRow; message: VisitorMessageRow }> {
         const id = await deterministicId('conversation', `${ctx.visitorId}|${input.clientMessageId}`);
         const messageId = newId('message');
         const [, insert] = await d1.batch([
@@ -190,6 +190,7 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
             type: 'text',
             content: input.content,
             ownerContactId: ctx.contactId,
+            visitorLanguage: input.language,
           }),
           d1
             .prepare(
@@ -240,7 +241,7 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
     },
 
     messages: {
-      async send(conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[] }): Promise<VisitorSendResult> {
+      async send(conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[]; language?: string | undefined }): Promise<VisitorSendResult> {
         const [insert] = await d1.batch(
           messageStatements(d1, {
             id: newId('message'),
@@ -251,6 +252,7 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
             type: 'text',
             content: input.content,
             ownerContactId: ctx.contactId,
+            visitorLanguage: input.language,
             ...(input.attachmentIds ? { attachmentIds: input.attachmentIds } : {}),
           }),
         );

@@ -4,7 +4,7 @@
  */
 import { canAssignConversation, signTicket, TICKET_TTL_SECONDS, verifyTicket, type TicketClaims } from '@openchat/auth';
 import { repositories, type AssistantHandoverReason, type AttachmentJson, type ContactRow, type ConversationChange, type ConversationRow, type ConversationStatus, type Database, type StoredMessage, type WorkspaceContext } from '@openchat/database';
-import { AppError, notFound, toIso } from '@openchat/shared';
+import { AppError, canonicalLanguage, notFound, toIso } from '@openchat/shared';
 import { toAttachment } from './attachments';
 import type { AuthDeps } from './auth-flows';
 import { requireCapability } from './workspaces';
@@ -30,6 +30,7 @@ const toConversation = (row: ConversationRow) => ({
   updatedAt: toIso(row.updatedAt),
   assistantState: row.assistantState,
   helpArticleId: row.helpArticleId,
+  visitorLanguage: row.visitorLanguage,
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
@@ -130,6 +131,11 @@ export async function updateConversation(db: Database, ctx: WorkspaceContext, co
   if (change.assignedMemberId !== undefined) {
     const allowed = canAssignConversation(ctx.role, { actorMemberId: ctx.memberId, currentAssigneeId: current.assignedMemberId, newAssigneeId: change.assignedMemberId });
     if (!allowed) throw new AppError(403, 'forbidden', 'Your role does not allow this');
+  }
+  if (change.visitorLanguage !== undefined) {
+    requireCapability(ctx, 'conversation.language');
+    change.visitorLanguage = canonicalLanguage(change.visitorLanguage) ?? undefined;
+    if (change.visitorLanguage === undefined) throw new AppError(400, 'validation_failed', 'That is not a language tag');
   }
 
   const result = await conversations.update(conversationId, change, expectedVersion);

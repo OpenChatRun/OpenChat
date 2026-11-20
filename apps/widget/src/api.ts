@@ -145,7 +145,7 @@ export function createApi(deps: ApiDeps) {
       if (!response.ok) throw await failure(response);
       return (await response.json()) as HelpArticle;
     },
-    async createConversation(input: { clientMessageId: string; content: string; helpArticleId?: string }): Promise<VisitorConversation & { message: VisitorMessage }> {
+    async createConversation(input: { clientMessageId: string; content: string; helpArticleId?: string; language?: string }): Promise<VisitorConversation & { message: VisitorMessage }> {
       return (await (await authed('POST', '/api/v1/widget/conversations', input)).json()) as VisitorConversation & { message: VisitorMessage };
     },
     async uploadAttachment(conversationId: string, file: File): Promise<{ id: string }> {
@@ -155,7 +155,7 @@ export function createApi(deps: ApiDeps) {
     async fetchAttachment(url: string): Promise<Blob> {
       return (await authed('GET', url)).blob();
     },
-    async sendMessage(conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[] }): Promise<VisitorMessage> {
+    async sendMessage(conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[]; language?: string }): Promise<VisitorMessage> {
       return (await (await authed('POST', `${conversationPath(conversationId)}/messages`, input)).json()) as VisitorMessage;
     },
     async listMessages(conversationId: string, query: { afterSeq?: number; beforeSeq?: number; limit: number }): Promise<VisitorMessage[]> {

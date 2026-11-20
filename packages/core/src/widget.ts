@@ -15,7 +15,7 @@ import {
   type VisitorMessageRow,
   type AttachmentJson,
 } from '@openchat/database';
-import { AppError, createLogger, notFound, toIso } from '@openchat/shared';
+import { AppError, canonicalLanguage, createLogger, notFound, toIso } from '@openchat/shared';
 import { enforce, limitKey, limitKeyForIp, LIMITS, type AuthDeps } from './auth-flows';
 import { issueTicket, visitorSocketUntil } from './messaging';
 
@@ -132,9 +132,12 @@ export async function listVisitorConversations(deps: Pick<AuthDeps, 'db'>, ctx: 
   return { data: (await visitorRepositories(deps.db, ctx).conversations.list()).map(toConversation) };
 }
 
-export async function createVisitorConversation(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, input: { clientMessageId: string; content: string; helpArticleId?: string | undefined }, ip: string) {
+/** A tag that is not one is dropped, not refused: a message matters more than its language (ADR-0024). */
+const visitorLanguage = (tag: string | undefined) => (tag === undefined ? undefined : (canonicalLanguage(tag) ?? undefined));
+
+export async function createVisitorConversation(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, input: { clientMessageId: string; content: string; helpArticleId?: string | undefined; language?: string | undefined }, ip: string) {
   await limitMessage(deps, ctx, ip, input.content);
-  const { created, conversation, message } = await visitorRepositories(deps.db, ctx).conversations.create(input);
+  const { created, conversation, message } = await visitorRepositories(deps.db, ctx).conversations.create({ ...input, language: visitorLanguage(input.language) });
   return { created, messageId: message.id, conversation: { ...toConversation(conversation), message: toMessage(message, ctx) } };
 }
 
@@ -145,10 +148,10 @@ export async function listVisitorMessages(deps: Pick<AuthDeps, 'db'>, ctx: Visit
   return { data: (await repos.messages.list(conversationId, input)).map((row) => toMessage(row, ctx)) };
 }
 
-export async function sendVisitorMessage(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[] | undefined }, ip: string) {
+export async function sendVisitorMessage(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, conversationId: string, input: { clientMessageId: string; content: string; attachmentIds?: string[] | undefined; language?: string | undefined }, ip: string) {
   await limitMessage(deps, ctx, ip, input.content);
-  const { attachmentIds, ...rest } = input;
-  const result = await visitorRepositories(deps.db, ctx).messages.send(conversationId, { ...rest, ...(attachmentIds?.length ? { attachmentIds: [...new Set(attachmentIds)] } : {}) });
+  const { attachmentIds, language, ...rest } = input;
+  const result = await visitorRepositories(deps.db, ctx).messages.send(conversationId, { ...rest, language: visitorLanguage(language), ...(attachmentIds?.length ? { attachmentIds: [...new Set(attachmentIds)] } : {}) });
   if (result.outcome === 'not_found') throw notFound();
   if (result.outcome === 'invalid_attachments') throw new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
   if (result.outcome === 'conflict') throw new AppError(409, 'client_message_id_taken', 'Send this message again with a new clientMessageId');

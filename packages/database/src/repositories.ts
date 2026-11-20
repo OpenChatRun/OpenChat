@@ -151,6 +151,7 @@ export interface ConversationRow {
   updatedAt: number;
   assistantState: AssistantState | null;
   helpArticleId: string | null;
+  visitorLanguage: string | null;
 }
 
 export interface ConversationChange {
@@ -158,6 +159,8 @@ export interface ConversationChange {
   assignedMemberId?: string | null | undefined;
   status?: ConversationStatus | undefined;
   priority?: ConversationPriority | undefined;
+  /** A correction of the visitor's language (ADR-0024). */
+  visitorLanguage?: string | undefined;
 }
 
 /** A member ID, or null for conversations nobody is assigned to. */
@@ -211,7 +214,7 @@ const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_i
     ${CONVERSATION_TAGS_JSON} AS tagsJson, c.assigned_member_id AS assignedMemberId,
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
     c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
-    c.assistant_state AS assistantState, c.help_article_id AS helpArticleId
+    c.assistant_state AS assistantState, c.help_article_id AS helpArticleId, c.visitor_language AS visitorLanguage
   FROM conversations c
   JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
   LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id
@@ -445,16 +448,17 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
               `UPDATE conversations
                   SET assigned_member_id = CASE WHEN ?1 THEN ?2 ELSE assigned_member_id END,
                       assistant_state = CASE WHEN ?1 AND ?2 IS NOT NULL AND (assistant_state IS NULL OR assistant_state = 'answering') THEN 'stopped' ELSE assistant_state END,
-                      status = COALESCE(?3, status), priority = COALESCE(?4, priority),
+                      status = COALESCE(?3, status), priority = COALESCE(?4, priority), visitor_language = COALESCE(?9, visitor_language),
                       version = version + 1, last_mutation_id = ?5, updated_at = ${DB_NOW_MS}
                 WHERE workspace_id = ?6 AND id = ?7 AND version = ?8
                   AND (NOT ?1 OR ?2 IS NULL OR EXISTS (SELECT 1 FROM workspace_members t
                         WHERE t.workspace_id = conversations.workspace_id AND t.id = ?2 AND t.status = 'active'))`,
             )
-            .bind(assigning ? 1 : 0, assignee, change.status ?? null, change.priority ?? null, mutation, w, conversationId, expectedVersion),
+            .bind(assigning ? 1 : 0, assignee, change.status ?? null, change.priority ?? null, mutation, w, conversationId, expectedVersion, change.visitorLanguage ?? null),
           event('assigned', assigning, 'assignedMemberId', assignee),
           event('status_changed', change.status !== undefined, 'status', change.status ?? null),
           event('priority_changed', change.priority !== undefined, 'priority', change.priority ?? null),
+          event('language_changed', change.visitorLanguage !== undefined, 'visitorLanguage', change.visitorLanguage ?? null),
           d1
             .prepare(
               `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)

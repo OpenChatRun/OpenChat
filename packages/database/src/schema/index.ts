@@ -64,6 +64,8 @@ export const users = sqliteTable('users', {
   disabledAt: integer('disabled_at'),
   /** Manages people across the installation. Reading a workspace still needs a membership. See ADR-0015. */
   isInstallationAdmin: integer('is_installation_admin', { mode: 'boolean' }).notNull().default(false),
+  /** The language they read, one of the dashboard's (ADR-0024). The same in every workspace. NULL until a client sets it. */
+  language: text('language'),
   createdAt: ts('created_at'),
   updatedAt: ts('updated_at'),
 });
@@ -317,6 +319,11 @@ export const conversations = sqliteTable(
     assistantState: text('assistant_state', { enum: ['answering', 'handed_over', 'stopped'] }),
     /** The help article the visitor was reading when they started it (ADR-0023). Kept if the article goes. */
     helpArticleId: text('help_article_id'),
+    /**
+     * The visitor's language (ADR-0024), a BCP 47 tag: the widget's, or the browser's when the widget does not speak
+     * it. The first one sent is kept; a supervisor can correct it.
+     */
+    visitorLanguage: text('visitor_language'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

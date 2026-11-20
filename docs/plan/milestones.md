@@ -419,6 +419,18 @@ Limits: for a minute or two after an edit, the article answers nothing, as with 
 
 All four steps of ADR-0023 are built. Next: automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)).
 
+### Translation step 1 exit check
+
+Languages ([ADR-0024](../architecture/decisions/0024-automatic-translation.md), [data model](../architecture/data-model.md#languages)). Run on a throwaway installation on real Cloudflare on 20 November 2026:
+
+| Criterion | Result |
+|---|---|
+| The visitor's language is stored | Yes: a browser in German stored `de`; one in Russian, which the widget does not speak, stored `ru-RU` while the widget spoke English |
+| The inbox shows it, and a supervisor can correct it | Yes, shown as "Russian (Russia)", corrected to German, with a `language_changed` event. Agents are refused (tests) |
+| A member's language is kept on the server | Yes: a browser in Japanese set the account to Japanese; a new browser in English then opened in Japanese; choosing English set the account to English |
+
+Limits: nothing is translated yet. The apps neither show the visitor's language nor write the member's until step 4. A supervisor's picker offers OpenChat's eleven languages and the one stored; the API takes any tag. The device used last decides the account's language.
+
 Next, both accepted on 20 November 2026: the help centre ([ADR-0023](../architecture/decisions/0023-help-centre.md)), in four steps, then automatic translation ([ADR-0024](../architecture/decisions/0024-automatic-translation.md)), in four.
 
 ### Assistant step 1 exit check

@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports -- A test, never bundled: it keeps the widget's languages in step with the API's.
 import { WidgetSettingsSchema } from '@openchat/api-contracts';
 import { describe, expect, it } from 'vitest';
-import { LOCALES, matchLocale, OPEN_LABEL, pickLocale } from './locale';
+import { LOCALES, matchLocale, OPEN_LABEL, pickLocale, visitorLanguage } from './locale';
 import { formatSize, TRANSLATIONS } from './strings';
 
 describe('choosing a language', () => {
@@ -57,5 +57,13 @@ describe('translations', () => {
     expect(formatSize(1_572_864, 'fr', TRANSLATIONS.fr)).toBe('1,5 Mo');
     expect(formatSize(1_572_864, 'de', TRANSLATIONS.de)).toBe('1,5 MB');
     expect(formatSize(200, 'en', TRANSLATIONS.en)).toBe('1 KB');
+  });
+});
+
+describe('the language sent for translation', () => {
+  it('is the widget\'s when it speaks one the visitor named, else the first they named', () => {
+    expect(visitorLanguage([undefined, 'de-AT', 'fr'])).toBe('de');
+    expect(visitorLanguage(['', 'ru-RU', 'uk'])).toBe('ru-RU');
+    expect(visitorLanguage([])).toBe('en');
   });
 });

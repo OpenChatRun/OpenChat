@@ -9,6 +9,7 @@ const TABLE: Record<Capability, [supervisor: boolean, agent: boolean]> = {
   'conversation.note': [true, true],
   'conversation.assign.self': [true, true],
   'conversation.assign.others': [true, false],
+  'conversation.language': [true, false],
   'contact.merge': [true, false],
   'suppression.manage': [true, false],
   'automation.manage': [true, false],

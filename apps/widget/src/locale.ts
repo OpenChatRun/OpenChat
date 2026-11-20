@@ -26,6 +26,18 @@ export function pickLocale(candidates: readonly (string | null | undefined)[]): 
   return 'en';
 }
 
+/**
+ * The language the widget tells the server its visitor reads, for translation (ADR-0024): the one it speaks to them,
+ * or, if it speaks none they named, the first the page or browser gave, so that a Russian visitor is `ru`, not `en`.
+ */
+export function visitorLanguage(candidates: readonly (string | null | undefined)[]): string {
+  for (const candidate of candidates) {
+    const locale = matchLocale(candidate);
+    if (locale) return locale;
+  }
+  return candidates.find((candidate) => candidate?.trim())?.trim() ?? 'en';
+}
+
 /** What the page says about its visitor: the page's language, then the browser's. */
 export function pageLanguages(): string[] {
   return [document.documentElement.lang, ...(navigator.languages ?? [navigator.language])];

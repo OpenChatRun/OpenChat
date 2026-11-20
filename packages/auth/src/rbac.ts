@@ -14,6 +14,7 @@ const CAPABILITIES = {
   'conversation.note': ALL,
   'conversation.assign.self': ALL,
   'conversation.assign.others': SUPERVISORS,
+  'conversation.language': SUPERVISORS,
   'contact.merge': SUPERVISORS,
   'tag.delete': SUPERVISORS,
   'suppression.manage': SUPERVISORS,

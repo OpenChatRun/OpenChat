@@ -47,6 +47,8 @@ A tag matches by its language, so `pt-BR` is Portuguese and `de-AT` German. Chin
 
 The button's label is chosen by the loader, before the website's setting is known, from steps 1, 3, and 4. The chat bundle corrects it once the setting arrives.
 
+**The visitor's language, for translation** ([ADR-0024](decisions/0024-automatic-translation.md)). Each message the visitor sends carries `language`: the language the widget chose, or, if it speaks none of those named in steps 1 to 4, the first one named, so that a visitor whose browser is in Russian is `ru-RU`, not English. The server keeps the first one it receives on the conversation.
+
 **Not translated:** the welcome message, which is shown as the site owner wrote it, and agents' replies. Follow-up emails are in English. The dashboard has [its own language choice](dashboard.md#languages).
 
 **Right-to-left languages,** such as Arabic and Hebrew, are not supported yet. They need the panel's layout mirrored as well as its strings.

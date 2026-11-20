@@ -23,6 +23,8 @@ export interface MessageStatementsInput {
    * website's assistant is still on. `state` is what the conversation's assistant_state becomes.
    */
   assistant?: { id: string; answersSeq: number; state: 'answering' | 'handed_over'; metadata: Record<string, unknown> };
+  /** The visitor's language (ADR-0024), kept only if the conversation has none yet. */
+  visitorLanguage?: string | undefined;
 }
 
 /** Older than this and the sweep may be deleting it, so that a message can no longer claim it. */
@@ -125,11 +127,12 @@ export function messageStatements(d1: D1Database, input: MessageStatementsInput)
                 assistant_state = CASE WHEN ?6 IS NOT NULL THEN ?6
                                        WHEN ?3 = 'member' AND (assistant_state IS NULL OR assistant_state = 'answering') THEN 'stopped'
                                        ELSE assistant_state END,
+                visitor_language = COALESCE(visitor_language, ?7),
                 version = version + 1,
                 updated_at = ${DB_NOW_MS}
           WHERE workspace_id = ?4 AND id = ?5 AND ${inserted}`,
       )
-      .bind(id, visibility, input.sender.type, w, c, input.assistant?.state ?? null),
+      .bind(id, visibility, input.sender.type, w, c, input.assistant?.state ?? null, input.visitorLanguage ?? null),
     d1
       .prepare(
         `INSERT INTO outbox (id, workspace_id, topic, aggregate_id, payload_json, created_at)

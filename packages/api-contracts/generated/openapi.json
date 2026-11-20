@@ -2207,6 +2207,13 @@
         ],
         "description": "The conversation, and the message that started it, so that a client knows it is committed without asking again."
       },
+      "LanguageTag": {
+        "type": "string",
+        "maxLength": 35,
+        "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,4}$",
+        "example": "pt-BR",
+        "description": "The visitor's language: the widget's, or the browser's when the widget does not speak it."
+      },
       "Attachment": {
         "type": "object",
         "properties": {
@@ -2345,6 +2352,20 @@
               "null"
             ],
             "description": "The help article the visitor was reading when they started it, from \"Still need help?\" in the widget. It may since have been deleted."
+          },
+          "visitorLanguage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LanguageTag"
+              },
+              {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The visitor's language, as their widget or browser gave it. Null for conversations started before it was recorded, until the visitor writes again."
+              }
+            ]
           }
         },
         "required": [
@@ -2365,7 +2386,8 @@
           "createdAt",
           "updatedAt",
           "assistantState",
-          "helpArticleId"
+          "helpArticleId",
+          "visitorLanguage"
         ]
       },
       "Message": {
@@ -2717,6 +2739,9 @@
           "name": {
             "type": "string"
           },
+          "language": {
+            "$ref": "#/components/schemas/AppLanguage"
+          },
           "isInstallationAdmin": {
             "type": "boolean"
           },
@@ -2747,9 +2772,31 @@
           "id",
           "email",
           "name",
+          "language",
           "isInstallationAdmin",
           "memberships"
         ]
+      },
+      "AppLanguage": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "en",
+          "es",
+          "fr",
+          "de",
+          "it",
+          "pt",
+          "nl",
+          "ja",
+          "ko",
+          "zh-Hans",
+          "zh-Hant",
+          null
+        ],
+        "description": "The language they read (ADR-0024), the same in every workspace. Null until a client sets it."
       },
       "Role": {
         "type": "string",
@@ -6003,6 +6050,9 @@
                     "type": "string",
                     "maxLength": 64,
                     "description": "The help article the visitor came from. Kept only if it is a published article of this website."
+                  },
+                  "language": {
+                    "$ref": "#/components/schemas/LanguageTag"
                   }
                 },
                 "required": [
@@ -6540,6 +6590,16 @@
                       "maxLength": 64
                     },
                     "maxItems": 5
+                  },
+                  "language": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LanguageTag"
+                      },
+                      {
+                        "description": "The visitor's language. Kept only if the conversation has none yet."
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -7113,6 +7173,16 @@
                       "normal",
                       "high",
                       "urgent"
+                    ]
+                  },
+                  "visitorLanguage": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LanguageTag"
+                      },
+                      {
+                        "description": "Corrects the visitor's language. Supervisors only."
+                      }
                     ]
                   }
                 },
@@ -7921,6 +7991,60 @@
             "bearerAuth": []
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "updateMe",
+        "summary": "Change the language the current user reads",
+        "description": "Clients write it when the user chooses a language, and use it as the default on a new device. Translation is into this language (ADR-0024).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "$ref": "#/components/schemas/AppLanguage"
+                  }
+                },
+                "required": [
+                  "language"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Current user",

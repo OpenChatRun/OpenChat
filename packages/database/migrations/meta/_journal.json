@@ -162,6 +162,13 @@
       "when": 1795171582100,
       "tag": "0022_help_assistant",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1795179569009,
+      "tag": "0023_languages",
+      "breakpoints": true
     }
   ]
 }

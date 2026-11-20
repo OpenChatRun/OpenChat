@@ -7,3 +7,4 @@ export * from './limits';
 export * from './security-txt';
 export * from './software';
 export * from './help-text';
+export * from './language';

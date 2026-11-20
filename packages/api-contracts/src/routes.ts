@@ -93,11 +93,21 @@ export const RoleSchema = z.enum(['supervisor', 'agent']).openapi('Role');
 
 export const WorkspaceSchema = z.object({ id: z.string(), name: z.string(), slug: z.string(), createdAt: z.string() }).openapi('Workspace');
 
+/** The languages OpenChat itself speaks: the dashboard's, the apps' and the widget's. */
+export const AppLanguageSchema = z.enum(['en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ja', 'ko', 'zh-Hans', 'zh-Hant']).openapi('AppLanguage');
+/** A BCP 47 language tag, such as `de`, `pt-BR` or `zh-Hant`. */
+export const LanguageTagSchema = z
+  .string()
+  .max(35)
+  .regex(/^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8}){0,4}$/, 'A language tag, such as de or pt-BR')
+  .openapi('LanguageTag', { example: 'pt-BR' });
+
 export const MeSchema = z
   .object({
     id: z.string(),
     email: z.string(),
     name: z.string(),
+    language: AppLanguageSchema.nullable().openapi({ description: 'The language they read (ADR-0024), the same in every workspace. Null until a client sets it.' }),
     isInstallationAdmin: z.boolean(),
     memberships: z.array(z.object({ memberId: z.string(), role: RoleSchema, workspace: WorkspaceSchema })),
   })
@@ -233,6 +243,18 @@ export const getMeRoute = createRoute({
   operationId: 'getMe',
   summary: 'The current user and their workspace memberships',
   security: bearer,
+  responses: { 200: { description: 'Current user', ...json(MeSchema) }, default: problemResponse },
+});
+
+export const updateMeRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/me',
+  tags: ['auth'],
+  operationId: 'updateMe',
+  summary: 'Change the language the current user reads',
+  description: 'Clients write it when the user chooses a language, and use it as the default on a new device. Translation is into this language (ADR-0024).',
+  security: bearer,
+  request: { body: { required: true, ...json(z.strictObject({ language: AppLanguageSchema })) } },
   responses: { 200: { description: 'Current user', ...json(MeSchema) }, default: problemResponse },
 });
 
@@ -570,6 +592,7 @@ export const ConversationSchema = z
     updatedAt: z.string(),
     assistantState: AssistantStateSchema.nullable().openapi({ description: 'The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part.' }),
     helpArticleId: z.string().nullable().openapi({ description: 'The help article the visitor was reading when they started it, from "Still need help?" in the widget. It may since have been deleted.' }),
+    visitorLanguage: LanguageTagSchema.nullable().openapi({ description: "The visitor's language, as their widget or browser gave it. Null for conversations started before it was recorded, until the visitor writes again." }),
   })
   .openapi('Conversation');
 
@@ -645,8 +668,9 @@ export const updateConversationRoute = createRoute({
             assignedMemberId: z.string().max(64).nullable().optional(),
             status: ConversationStatusSchema.optional(),
             priority: ConversationPrioritySchema.optional(),
+            visitorLanguage: LanguageTagSchema.optional().openapi({ description: "Corrects the visitor's language. Supervisors only." }),
           })
-          .refine((b) => b.assignedMemberId !== undefined || b.status !== undefined || b.priority !== undefined, 'Nothing to change'),
+          .refine((b) => b.assignedMemberId !== undefined || b.status !== undefined || b.priority !== undefined || b.visitorLanguage !== undefined, 'Nothing to change'),
       ),
     },
   },
@@ -814,6 +838,7 @@ export const createVisitorConversationRoute = createRoute({
           clientMessageId: ClientMessageId,
           content: VisitorContent,
           helpArticleId: z.string().max(64).optional().openapi({ description: 'The help article the visitor came from. Kept only if it is a published article of this website.' }),
+          language: LanguageTagSchema.optional().openapi({ description: "The visitor's language: the widget's, or the browser's when the widget does not speak it." }),
         }),
       ),
     },
@@ -846,7 +871,7 @@ export const sendVisitorMessageRoute = createRoute({
   operationId: 'sendVisitorMessage',
   summary: 'Send a message. Rate limited per visitor and per website.',
   security: visitor,
-  request: { params: visitorConversationParams, body: { required: true, ...json(z.strictObject({ clientMessageId: ClientMessageId, content: z.string().trim().max(VISITOR_CONTENT_MAX), attachmentIds: z.array(z.string().max(64)).max(5).optional() }).refine((body) => body.content.length > 0 || (body.attachmentIds?.length ?? 0) > 0, { message: 'Write something or attach a file' })) } },
+  request: { params: visitorConversationParams, body: { required: true, ...json(z.strictObject({ clientMessageId: ClientMessageId, content: z.string().trim().max(VISITOR_CONTENT_MAX), attachmentIds: z.array(z.string().max(64)).max(5).optional(), language: LanguageTagSchema.optional().openapi({ description: "The visitor's language. Kept only if the conversation has none yet." }) }).refine((body) => body.content.length > 0 || (body.attachmentIds?.length ?? 0) > 0, { message: 'Write something or attach a file' })) } },
   responses: {
     201: { description: 'Committed', ...json(VisitorWireMessageSchema) },
     200: { description: 'A replay of an existing clientMessageId', ...json(VisitorWireMessageSchema) },
