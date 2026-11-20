@@ -36,6 +36,7 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 - **Team inbox.** In the same eleven languages. Live replies, internal notes, files, statuses, priorities, assignment and tags, across several workspaces.
 - **The OpenChat iPhone app**, coming soon to the App Store, with notifications end-to-end encrypted to each phone, so the relay that carries them cannot read them. The app and the relay are not open source, but your installation works with them.
 - **Follow-up emails**, only with the visitor's consent, with an unsubscribe link.
+- **An AI assistant that answers first**, if you turn it on. It answers visitors from your website's pages and texts you give it, and from answers it learns from your team's resolved conversations once a supervisor approves them. It hands over to a person when it cannot answer, or the visitor asks for one, and every answer is labelled AI. It runs on Workers AI in your own Cloudflare account. Not yet on OpenChat Cloud.
 - **For operators:** one-command deploy and upgrade with rollback, backups, health checks, retention, data export and erasure, and an audit log.
 
 **Status: before 1.0.** It works, and has been tested on real Cloudflare, but has not had an independent security review, and the official iPhone app is waiting for Apple's review. Read the [known issues](docs/known-issues.md) before relying on it.
@@ -61,7 +62,6 @@ A chat button for your website, a team inbox on the web and on iPhone, and follo
 
 **Planned.** These have no dates yet, and each gets a design before it is built.
 
-- **An AI assistant that answers first.** It replies to visitors from what you give it, such as your website, help articles and past answers, and hands the conversation to a person when it cannot answer, is unsure, or the visitor asks for one. Your team sees everything it said, and takes over from the same inbox. It would run in your own Cloudflare account.
 - **A help centre:** articles your visitors can search from the widget and a public page, which the AI assistant also answers from.
 - **Automatic translation.** Visitors write in their own language and agents in theirs; each side sees the conversation translated, with the original one tap away.
 - **More languages**, including right-to-left ones such as Arabic and Hebrew.
