@@ -14,6 +14,7 @@ import {
   pendingOutboxFor,
   SOURCE_CHANGED_TOPIC,
   VECTORS_REMOVED_TOPIC,
+  LEARNED_CHANGED_TOPIC,
   purgeDispatchedOutbox,
   recordOutboxFailure,
   staleOutbox,
@@ -29,6 +30,7 @@ import { sweepFollowUps } from './email/follow-ups';
 import { sweepRetention } from './retention';
 import { pushJobsFor } from './push/fanout';
 import { indexJob, refreshAssistantPages, removeVectors } from './assistant/jobs';
+import { learnedIndexJob, queueAssistantLearning } from './assistant/learning';
 import { queueAssistantReply } from './assistant/reply';
 
 const SWEEP_AGE_MS = 60_000;
@@ -38,10 +40,10 @@ const PURGE_LIMIT = 1000;
 const ORPHAN_AGE_MS = 24 * 60 * 60 * 1000;
 const ORPHAN_LIMIT = 200;
 
-async function conversationEvent(db: Database, row: OutboxRow, kind: 'conversation.created' | 'conversation.updated'): Promise<DomainEvent | null> {
+async function conversationEvent(db: Database, row: OutboxRow, kind: 'conversation.created' | 'conversation.updated'): Promise<{ event: DomainEvent; learnDue: boolean; lastMessageSeq: number } | null> {
   const c = await conversationForDispatch(db, row.workspaceId, row.aggregateId);
   if (!c) return null;
-  return {
+  const event: DomainEvent = {
     v: 1,
     kind,
     workspaceId: row.workspaceId,
@@ -58,6 +60,7 @@ async function conversationEvent(db: Database, row: OutboxRow, kind: 'conversati
       updatedAt: toIso(c.updatedAt),
     },
   };
+  return { event, learnDue: c.assistantLearnDue === 1, lastMessageSeq: c.lastMessageSeq };
 }
 
 async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void> {
@@ -82,11 +85,14 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
     }
     case 'conversation.created':
     case 'conversation.updated': {
-      const event = await conversationEvent(db, row, row.topic);
-      if (!event) return;
+      const found = await conversationEvent(db, row, row.topic);
+      if (!found) return;
+      const { event, learnDue, lastMessageSeq } = found;
       const room = env.CONVERSATION_ROOM.getByName(roomName(row.workspaceId, row.aggregateId));
       await Promise.all([hub.publish(event), room.publishDomainEvent(event)]);
       await pushJobsFor(env, row);
+      // Resolved, on a website whose assistant learns (ADR-0022 step 3). The job checks again when it runs.
+      if (learnDue) await queueAssistantLearning(env, row, lastMessageSeq);
       return;
     }
     case 'member.access_changed':
@@ -107,6 +113,9 @@ async function dispatchRow(env: Env, db: Database, row: OutboxRow): Promise<void
     case SOURCE_CHANGED_TOPIC:
       // The job checks the generation, so a source changed again since is not read twice.
       await env.JOBS_QUEUE.send(indexJob(row));
+      return;
+    case LEARNED_CHANGED_TOPIC:
+      await env.JOBS_QUEUE.send(learnedIndexJob(row));
       return;
     case VECTORS_REMOVED_TOPIC:
       await removeVectors(env, row);

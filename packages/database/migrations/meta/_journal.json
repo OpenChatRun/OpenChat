@@ -127,6 +127,13 @@
       "when": 1795132291273,
       "tag": "0017_assistant_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1795155607036,
+      "tag": "0018_assistant_learned",
+      "breakpoints": true
     }
   ]
 }

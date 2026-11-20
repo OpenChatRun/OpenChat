@@ -130,11 +130,11 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 ## The AI assistant
 
-[ADR-0022](decisions/0022-ai-assistant.md), steps 1 and 2. Four tables, each with `workspace_id`, reached only through `assistantRepository`:
+[ADR-0022](decisions/0022-ai-assistant.md), steps 1 to 3. Five tables, each with `workspace_id`, reached only through `assistantRepository`:
 
 | Table | Holds |
 |---|---|
-| `assistant_settings` | One row per website: the name visitors will see, a model, or NULL for the installation's default, and `enabled`, whether it answers visitors |
+| `assistant_settings` | One row per website: the name visitors will see, a model, or NULL for the installation's default, `enabled`, whether it answers visitors, and `learn`, whether it learns from resolved conversations |
 | `assistant_sources` | What the assistant answers from: a web page (`kind='page'`, with `url`) or pasted text (`kind='text'`, with `content`). `status` is `pending`, `indexing`, `ready` or `failed`, with `error_code`. `generation` goes up each time the source changes or is read again; `indexed_generation` is the one the chunks are from |
 | `assistant_chunks` | Passages of a source, about 1,200 characters each. The ID is `<sourceId>.<generation>.<n>`, and is also the vector's ID in Vectorize |
 | `assistant_usage` | Per workspace and UTC day: answers, pages read, and passages written. Answers are counted with `INSERT … ON CONFLICT DO UPDATE … WHERE answers < limit RETURNING`, so the daily limit holds without a read first |
@@ -156,7 +156,13 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 `handed_over` and `stopped` are final. An assistant message is a Pattern 1 insert, with `client_message_id = 'assistant:<visitorMessageId>'`, so a retried job writes it once. Its `INSERT … SELECT` also requires, at commit, that the visitor's message is still the conversation's last, that nobody has the conversation, that the state is NULL or `answering`, and that the website's assistant is still enabled. If anything changed while the model was thinking, nothing is written.
 
-**Erasure.** Assistant messages are messages: contact export includes them, and erasure deletes them with the conversation. Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
+**Learned answers (step 3).** `assistant_learned` holds one row per conversation (`assistant_learned_conversation_uq`): a `question` and `answer` the model wrote from it, never its messages, with a `status`: `pending`, `approved`, `rejected`, or `discarded` when nothing could be learned, with `discard_reason`. `learned_seq` is the conversation's last message when it was read, so it is read again only after new messages, and never over a supervisor's decision. Only `approved` rows are used. `workspaces.assistant_auto_approve` saves new ones as approved; a change is audited as `assistant.auto_approve_changed`.
+
+A learned answer is a one-passage source: its vector's ID is `<id>.<indexed_generation>.0`, so `assistant.vectors_removed` deletes it as it deletes a source's. Approving, editing or rejecting bumps `generation`, clears `indexed_generation`, and writes the outbox rows to remove the old vector and, if approved, index the new one, in one batch. Retrieval reads it only while it is approved and at the indexed generation, so a stale vector finds nothing.
+
+Its foreign key to the conversation cascades. Erasure and the retention sweep add, in their batches and before the conversations go, one `assistant.vectors_removed` row for each learned answer with a vector; the row ID is fixed by the answer and generation, so a repeat writes nothing.
+
+**Erasure.** Assistant messages are messages: contact export includes them, and erasure deletes them with the conversation. Learned answers go with their conversation, as above. They hold no personal data by design, so contact export leaves them out. Sources are the company's own pages and texts, not visitor data, so contact export and erasure do not touch them. Websites and workspaces cannot be deleted yet. When they can, their vectors must be removed by ID from `assistant_chunks` first, because Vectorize cannot delete a namespace.
 
 ## Retention
 

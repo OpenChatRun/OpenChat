@@ -42,6 +42,7 @@ import type {
   getAssistantRoute,
   addAssistantSourceRoute,
   testAssistantRoute,
+  listLearnedAnswersRoute,
 } from '@openchat/api-contracts';
 import type { z } from 'zod';
 
@@ -82,6 +83,7 @@ export type Assistant = Json200<typeof getAssistantRoute>;
 export type AssistantSource = Assistant['sources'][number];
 export type AssistantSourceInput = BodyOf<typeof addAssistantSourceRoute>;
 export type AssistantAnswer = Json200<typeof testAssistantRoute>;
+export type LearnedAnswer = Json200<typeof listLearnedAnswersRoute>['data'][number];
 export type CreatedWorkspace = Json201<typeof createWorkspaceRoute>;
 export type Conversation = Json200<typeof getConversationRoute>;
 export type ConversationPage = Json200<typeof listConversationsRoute>;
@@ -239,13 +241,19 @@ export function createClient(options: ClientOptions) {
     updateFollowUpRule: (workspaceId: string, ruleId: string, change: { name?: string; enabled?: boolean; inactiveMinutes?: number }) => request<FollowUpRule>('PATCH', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`, change),
     deleteFollowUpRule: (workspaceId: string, ruleId: string) => request<void>('DELETE', `${workspace(workspaceId)}/follow-up-rules/${encodeURIComponent(ruleId)}`),
     getAssistant: (workspaceId: string, websiteId: string) => get<Assistant>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant`),
-    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean }) =>
-      request<{ name: string; model: string | null; enabled: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
+    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean; learn?: boolean }) =>
+      request<{ name: string; model: string | null; enabled: boolean; learn: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
     addAssistantSource: (workspaceId: string, websiteId: string, input: AssistantSourceInput) => request<AssistantSource>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/sources`, input),
     updateAssistantSource: (workspaceId: string, sourceId: string, change: { title?: string; content?: string } = {}) =>
       request<AssistantSource>('PATCH', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`, change),
     deleteAssistantSource: (workspaceId: string, sourceId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`),
     testAssistant: (workspaceId: string, websiteId: string, question: string) => request<AssistantAnswer>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/test`, { question }),
+    listLearnedAnswers: (workspaceId: string, websiteId: string, status: LearnedAnswer['status']) =>
+      get<{ data: LearnedAnswer[] }>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/learned?status=${status}`),
+    decideLearnedAnswer: (workspaceId: string, learnedId: string, input: { status: 'approved' | 'rejected'; question?: string; answer?: string }) =>
+      request<LearnedAnswer>('PATCH', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`, input),
+    deleteLearnedAnswer: (workspaceId: string, learnedId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`),
+    setLearnedAutoApprove: (workspaceId: string, autoApprove: boolean) => request<{ autoApprove: boolean }>('PUT', `${workspace(workspaceId)}/assistant/learning`, { autoApprove }),
     createRealtimeTicket: (workspaceId: string) => request<RealtimeTicket>('POST', `${workspace(workspaceId)}/realtime/tickets`),
   };
 }

@@ -1513,8 +1513,16 @@ export const AssistantSchema = z
     canReply: z.boolean().openapi({ description: "True when it can also answer visitors: the assistant's queue is bound as well. It can be turned on only then." }),
     models: z.array(z.object({ id: z.string(), label: z.string() })),
     defaultModel: z.string(),
-    settings: z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean() }).nullable(),
+    settings: z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean(), learn: z.boolean() }).nullable(),
     sources: z.array(AssistantSourceSchema),
+    learning: z
+      .object({
+        autoApprove: z.boolean().openapi({ description: 'For the whole workspace: learned answers are used without waiting for approval.' }),
+        pending: z.number().int(),
+        approved: z.number().int(),
+        rejected: z.number().int(),
+      })
+      .openapi({ description: "Answers learned from this website's resolved conversations, by status." }),
     limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int(), turnsPerConversation: z.number().int() }),
   })
   .openapi('Assistant');
@@ -1544,7 +1552,7 @@ export const saveAssistantSettingsRoute = createRoute({
   path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/settings',
   tags: ['assistant'],
   operationId: 'saveAssistantSettings',
-  summary: 'Name the assistant, choose its model, and turn answering visitors on or off. For supervisors.',
+  summary: 'Name the assistant, choose its model, and turn answering visitors and learning on or off. For supervisors.',
   security: bearer,
   request: {
     params: assistantParams,
@@ -1555,11 +1563,12 @@ export const saveAssistantSettingsRoute = createRoute({
           name: AssistantName,
           model: z.string().max(100).nullable(),
           enabled: z.boolean().optional().openapi({ description: 'Answer visitors in conversations nobody has. Left out, it stays as it was; a new assistant starts off.' }),
+          learn: z.boolean().optional().openapi({ description: 'Learn a question and answer from each resolved conversation. Left out, it stays as it was; a new assistant starts off.' }),
         }),
       ),
     },
   },
-  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean() })) }, default: problemResponse },
+  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean(), learn: z.boolean() })) }, default: problemResponse },
 });
 
 export const addAssistantSourceRoute = createRoute({
@@ -1618,4 +1627,71 @@ export const testAssistantRoute = createRoute({
   security: bearer,
   request: { params: assistantParams, body: { required: true, ...json(z.strictObject({ question: z.string().trim().min(1).max(1000) })) } },
   responses: { 200: { description: 'Answer', ...json(AssistantAnswerSchema) }, default: problemResponse },
+});
+
+const learnedParams = workspaceParams.extend({ learnedId: z.string() });
+const LearnedText = (max: number) => z.string().trim().min(1).max(max);
+
+export const AssistantLearnedSchema = z
+  .object({
+    id: z.string(),
+    conversationId: z.string(),
+    question: z.string(),
+    answer: z.string(),
+    status: z.enum(['pending', 'approved', 'rejected']),
+    inUse: z.boolean().openapi({ description: 'Approved, and indexed, so the assistant answers from it now.' }),
+    decidedAt: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi('AssistantLearned');
+
+export const listLearnedAnswersRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/learned',
+  tags: ['assistant'],
+  operationId: 'listLearnedAnswers',
+  summary: "Questions and answers learned from the website's resolved conversations, newest first, up to 200. For supervisors.",
+  security: bearer,
+  request: { params: assistantParams, query: z.object({ status: z.enum(['pending', 'approved', 'rejected']).default('pending') }) },
+  responses: { 200: { description: 'Learned answers', ...json(z.object({ data: z.array(AssistantLearnedSchema) })) }, default: problemResponse },
+});
+
+export const decideLearnedAnswerRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/learned/{learnedId}',
+  tags: ['assistant'],
+  operationId: 'decideLearnedAnswer',
+  summary: 'Approve a learned answer, optionally with changed words, or reject it. For supervisors.',
+  description: 'An approved answer is used once it is indexed, within a minute or so. Rejecting one stops it being used.',
+  security: bearer,
+  request: {
+    params: learnedParams,
+    body: { required: true, ...json(z.strictObject({ status: z.enum(['approved', 'rejected']), question: LearnedText(300).optional(), answer: LearnedText(1200).optional() })) },
+  },
+  responses: { 200: { description: 'Learned answer', ...json(AssistantLearnedSchema) }, default: problemResponse },
+});
+
+export const deleteLearnedAnswerRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/learned/{learnedId}',
+  tags: ['assistant'],
+  operationId: 'deleteLearnedAnswer',
+  summary: 'Delete a learned answer. For supervisors.',
+  description: 'The conversation is not read again unless it gets new messages and is resolved again.',
+  security: bearer,
+  request: { params: learnedParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+export const setLearnedAutoApproveRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/learning',
+  tags: ['assistant'],
+  operationId: 'setLearnedAutoApprove',
+  summary: "Whether learned answers are used without a supervisor's approval, for every website in the workspace. For supervisors.",
+  description: 'Off by default. A change is recorded in the audit log.',
+  security: bearer,
+  request: { params: workspaceParams, body: { required: true, ...json(z.strictObject({ autoApprove: z.boolean() })) } },
+  responses: { 200: { description: 'Setting', ...json(z.object({ autoApprove: z.boolean() })) }, default: problemResponse },
 });

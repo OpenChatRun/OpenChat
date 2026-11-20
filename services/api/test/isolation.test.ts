@@ -126,6 +126,10 @@ const CASES: Record<string, Case> = {
   updateAssistantSource: { kind: 'workspace', body: { title: 'Taken over' }, ownerStatus: 200 },
   deleteAssistantSource: { kind: 'workspace', ownerStatus: 204 },
   testAssistant: { kind: 'workspace', body: { question: 'Taken over?' }, ownerStatus: 200 },
+  listLearnedAnswers: { kind: 'workspace', ownerStatus: 200 },
+  decideLearnedAnswer: { kind: 'workspace', body: { status: 'rejected' }, ownerStatus: 200 },
+  deleteLearnedAnswer: { kind: 'workspace', ownerStatus: 204 },
+  setLearnedAutoApprove: { kind: 'workspace', body: { autoApprove: true }, ownerStatus: 200 },
 };
 
 /** Served by the app, but not part of the versioned contract. */
@@ -195,8 +199,8 @@ const testEnv = { ...env, EMAIL_QUEUE: { send: async (_job: JobEnvelope) => unde
 
 /** Resources in each workspace, by the name of the path parameter that holds them. */
 const RESOURCES: Record<'a' | 'b', Record<string, string>> = {
-  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a' },
-  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b' },
+  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a' },
+  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b' },
 };
 
 function urlFor(path: string, ...sources: Record<string, string>[]): string {
@@ -229,7 +233,7 @@ const request = async (method: string, path: string, token: string | null, body?
   return response;
 };
 
-const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage'];
+const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned'];
 
 /** Every row belonging to workspace A. A refused request must leave this exactly as it was. */
 async function snapshotOfA(): Promise<string> {
@@ -263,6 +267,7 @@ async function seed() {
       env.DB.prepare(`INSERT INTO assistant_sources (id, workspace_id, website_id, kind, title, content, created_at, updated_at) VALUES (?1, ?2, ?3, 'text', 'Hours', 'Open 9 to 5', 1, 1)`).bind(`asrc_${w}`, `work_${w}`, `site_${w}`),
       env.DB.prepare(`INSERT INTO contacts (id, workspace_id, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?1, ?2, 1, 1, 1, 1)`).bind(`cont_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 1, 1, 1)`).bind(`conv_${w}`, `work_${w}`, `site_${w}`, `cont_${w}`),
+      env.DB.prepare(`INSERT INTO assistant_learned (id, workspace_id, website_id, conversation_id, question, answer, status, learned_seq, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 'Q?', 'A.', 'pending', 0, 1, 1)`).bind(`alrn_${w}`, `work_${w}`, `site_${w}`, `conv_${w}`),
       env.DB.prepare(`INSERT INTO attachments (id, workspace_id, conversation_id, storage_key, filename, content_type, size, status, uploaded_by_type, uploaded_by_id, created_at) VALUES (?1, ?2, ?3, ?4, 'a.png', 'image/png', 11, 'ready', 'member', ?5, 1)`).bind(`att_${w}`, `work_${w}`, `conv_${w}`, `w/work_${w}/c/conv_${w}/att_${w}`, `mem_${w}_agent`),
     ]),
   ]);

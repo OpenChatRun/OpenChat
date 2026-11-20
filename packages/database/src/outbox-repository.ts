@@ -67,7 +67,11 @@ export function conversationForDispatch(database: Database, workspaceId: string,
   return rawHandle(database)
     .prepare(
       `SELECT id, version, status, priority, assigned_member_id AS assignedMemberId, last_message_seq AS lastMessageSeq,
-              last_message_at AS lastMessageAt, updated_at AS updatedAt, ${CONVERSATION_TAGS_JSON} AS tagsJson, assistant_state AS assistantState
+              last_message_at AS lastMessageAt, updated_at AS updatedAt, ${CONVERSATION_TAGS_JSON} AS tagsJson, assistant_state AS assistantState,
+              (c.status = 'resolved'
+                AND EXISTS (SELECT 1 FROM assistant_settings s WHERE s.workspace_id = c.workspace_id AND s.website_id = c.website_id AND s.learn = 1)
+                AND NOT EXISTS (SELECT 1 FROM assistant_learned l WHERE l.workspace_id = c.workspace_id AND l.conversation_id = c.id
+                                   AND (l.learned_seq >= c.last_message_seq OR l.status IN ('approved', 'rejected')))) AS assistantLearnDue
          FROM conversations c WHERE workspace_id = ?1 AND id = ?2`,
     )
     .bind(workspaceId, conversationId)
@@ -82,6 +86,8 @@ export function conversationForDispatch(database: Database, workspaceId: string,
       updatedAt: number;
       tagsJson: string;
       assistantState: AssistantState | null;
+      /** Resolved, on a website whose assistant learns, with something new to learn from (ADR-0022 step 3). */
+      assistantLearnDue: number;
     }>();
 }
 

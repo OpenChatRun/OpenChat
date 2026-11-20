@@ -1,5 +1,5 @@
 /** The assistant's text handling: chunks, answers, robots.txt and HTML. See ADR-0022. */
-import { asksForPerson, chunkText, triesToSteer, cleanAnswer, checkSourceUrl } from '@openchat/core';
+import { asksForPerson, chunkText, findPersonalData, parseLearned, triesToSteer, cleanAnswer, checkSourceUrl } from '@openchat/core';
 import { describe, expect, it } from 'vitest';
 import { decodeEntities, parseHtml, robotsAllows, robotsRules, sameSite, scopeOf } from '../src/assistant/crawl';
 import { generatedText } from '../src/assistant/runtime';
@@ -142,5 +142,40 @@ describe('a visitor giving the model instructions', () => {
     for (const text of ['Can OpenChat act as a help desk?', 'I forgot my password', 'What are the rules for returns?', 'Can I ignore the email you sent?']) {
       expect(triesToSteer(text), text).toBe(false);
     }
+  });
+});
+
+describe('personal data in a learned answer', () => {
+  const people = { names: ['Olivia Bennett', 'Sam Lee', '鈴木 花子'], emails: ['olivia.b@example.com'] };
+  it.each([
+    ['Write to help@shop.example for a refund.', 'email'],
+    ['Call 020 7946 0958.', 'phone'],
+    ['Ring +1 (415) 555-0100 any time.', 'phone'],
+    ['Order 48213 ships tomorrow.', 'long_number'],
+    ['Track it at https://shop.example/track?id=9.', 'url_query'],
+    ['Olivia can return it.', 'name'],
+    ['Ask Sam about it.', 'name'],
+    ['花子さんに聞いてください。', 'name'],
+    ['olivia.b asked about returns.', 'name'],
+  ])('finds it in "%s"', (text, kind) => {
+    expect(findPersonalData(text, people)).toBe(kind);
+  });
+  it.each(['You can return any item within 30 days.', 'Prices start at $4.99 a month, or $49.99 a year.', 'Open 9 to 5, Monday to Friday, since 2019.', 'Our samples are free.', 'See https://shop.example/returns for details.'])(
+    'leaves "%s" alone',
+    (text) => {
+      expect(findPersonalData(text, people)).toBeNull();
+    },
+  );
+});
+
+describe('reading what the model learned', () => {
+  it('takes the question and answer, and web addresses the team wrote', () => {
+    expect(parseLearned('QUESTION: Can I return it?\nANSWER: Yes, see https://shop.example/returns and https://evil.example.', 'See https://shop.example/returns')).toEqual({
+      question: 'Can I return it?',
+      answer: 'Yes, see https://shop.example/returns and',
+    });
+  });
+  it('reads NONE, and anything not in the form, as nothing', () => {
+    for (const raw of ['NONE', ' none. ', 'Sure! Here is a FAQ entry about returns.', 'QUESTION: \nANSWER: NONE', '<think>hmm</think>NONE']) expect(parseLearned(raw, ''), raw).toBeNull();
   });
 });

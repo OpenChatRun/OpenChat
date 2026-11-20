@@ -37,3 +37,4 @@ export * from './messaging';
 export * from './widget';
 export * from './attachments';
 export * from './assistant';
+export * from './assistant-learning';

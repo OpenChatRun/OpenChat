@@ -23,7 +23,9 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 ## The AI assistant
 
-- **Steps 1 and 2.** It answers visitors from sources; learning from your team's answers is step 3 ([ADR-0022](architecture/decisions/0022-ai-assistant.md)).
+- **All three steps of [ADR-0022](architecture/decisions/0022-ai-assistant.md) are built:** sources, answering visitors, and learning from resolved conversations.
+- **The check for personal data in learned answers uses patterns and names.** It can miss a name spelt differently, or a detail with no pattern, such as a street address. Review before approving, and keep approval on until you trust it.
+- **Learning can ask the model twice** for one conversation changed twice in the same moment; only one answer is kept, but both count towards the daily limit.
 - **The iPhone and Android apps label its messages from their next release.** Until then they show its answers as if a visitor wrote them. The dashboard and widget label them AI.
 - **A rare missed push.** A visitor's message is not pushed while the assistant answers. If its job fails three times, or the assistant is turned off at that moment, that message gets no push; the conversation still shows in the inbox.
 - **Spotting a request for a person, or an attempt to steer it, uses word lists.** Other phrasings reach the model, which is told to decline.

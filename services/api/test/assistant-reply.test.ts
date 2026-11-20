@@ -137,7 +137,7 @@ describe('turning it on', () => {
     expect(shown.canReply).toBe(false);
     // Leaving `enabled` out keeps what was chosen.
     expect((await settings({ enabled: true })).status).toBe(200);
-    expect(await (await settings({})).json()).toEqual({ name: 'Sam', model: null, enabled: true });
+    expect(await (await settings({})).json()).toEqual({ name: 'Sam', model: null, enabled: true, learn: false });
   });
 });
 
