@@ -398,6 +398,8 @@ export const es: Messages = {
   helpImagesHelp: 'PNG, JPEG, GIF o WebP, hasta 5 MB. Cualquiera con el enlace puede ver una imagen, como un artículo publicado.',
   helpUpload: 'Subir imagen',
   helpInsert: 'Insertar',
+  fromHelpArticle: 'Llegó desde el artículo de ayuda «{title}»',
+  fromHelpArticleGone: 'Llegó desde un artículo de ayuda ya eliminado',
   helpDraftTitle: 'Redactar con IA',
   helpDraftIntro: 'La IA lee tu sitio web, sus páginas y los archivos que subas, planifica artículos y escribe cada uno como borrador para que lo revises y publiques. Sube solo material de tu empresa, nunca datos de clientes. Los archivos se eliminan al terminar.',
   helpDraftReadWebsite: 'Leer el sitio web',

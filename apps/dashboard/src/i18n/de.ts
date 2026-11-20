@@ -398,6 +398,8 @@ export const de: Messages = {
   helpImagesHelp: 'PNG, JPEG, GIF oder WebP, bis 5 MB. Jeder mit dem Link kann ein Bild sehen, wie einen veröffentlichten Artikel.',
   helpUpload: 'Bild hochladen',
   helpInsert: 'Einfügen',
+  fromHelpArticle: 'Kam vom Hilfeartikel „{title}“',
+  fromHelpArticleGone: 'Kam von einem inzwischen gelöschten Hilfeartikel',
   helpDraftTitle: 'Mit KI entwerfen',
   helpDraftIntro: 'Die KI liest deine Website, Seiten darauf und hochgeladene Dateien, plant Artikel und schreibt jeden als Entwurf, den du prüfst und veröffentlichst. Lade nur eigenes Material deines Unternehmens hoch, nie Kundendaten. Dateien werden danach gelöscht.',
   helpDraftReadWebsite: 'Die Website lesen',

@@ -81,6 +81,18 @@ interface TypingEntry {
   actorId: string;
 }
 
+
+/** "Still need help?" in the widget: the help article the visitor was reading when they wrote (ADR-0023). */
+function FromArticle({ workspaceId, articleId }: { workspaceId: string; articleId: string }) {
+  const article = useQuery({ queryKey: ['help-article', workspaceId, articleId], queryFn: () => api.getHelpArticle(workspaceId, articleId), retry: false, staleTime: 60_000 });
+  if (article.isPending) return null;
+  return (
+    <p className="text-xs text-slate-600 dark:text-slate-400">
+      {article.data ? t('fromHelpArticle', { title: article.data.title }) : t('fromHelpArticleGone')}
+    </p>
+  );
+}
+
 function useInboxSocket(workspaceId: string, selectedRef: { current: string | null }) {
   const client = useQueryClient();
   const [status, setStatus] = useState<RealtimeStatus>('connecting');
@@ -687,6 +699,7 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
             </h2>
           </div>
           {data.assistantState === 'answering' && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{t('assistantAnsweringHelp')}</p>}
+          {data.helpArticleId && <FromArticle workspaceId={workspaceId} articleId={data.helpArticleId} />}
           <div className="flex flex-wrap gap-2">
             <select className="field w-auto" aria-label={t('conversationStatus')} value={data.status} disabled={update.isPending} onChange={(e) => update.mutate({ status: e.target.value as Conversation['status'] })}>
               {STATUSES.map((option) => <option key={option} value={option}>{t(STATUS_LABEL[option])}</option>)}

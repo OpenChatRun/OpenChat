@@ -1942,13 +1942,21 @@
           "messageMaxChars": {
             "type": "integer",
             "description": "The longest message this installation accepts from a visitor. A longer one is refused with `message_too_long`."
+          },
+          "helpLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Languages with published help articles, most articles first. Empty: the widget shows no Help tab."
           }
         },
         "required": [
           "websiteId",
           "settings",
           "availability",
-          "messageMaxChars"
+          "messageMaxChars",
+          "helpLanguages"
         ]
       },
       "WidgetSettings": {
@@ -2330,6 +2338,13 @@
               null
             ],
             "description": "The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part."
+          },
+          "helpArticleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The help article the visitor was reading when they started it, from \"Still need help?\" in the widget. It may since have been deleted."
           }
         },
         "required": [
@@ -2349,7 +2364,8 @@
           "lastReadSeq",
           "createdAt",
           "updatedAt",
-          "assistantState"
+          "assistantState",
+          "helpArticleId"
         ]
       },
       "Message": {
@@ -4074,6 +4090,110 @@
           "bodyMarkdown",
           "bodyHtml",
           "aiSources"
+        ]
+      },
+      "WidgetHelp": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The language shown: the one asked for if it has articles, else English, else the language with most. Null if there are none."
+          },
+          "collections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ]
+            },
+            "description": "Empty for search results."
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WidgetHelpArticleSummary"
+            }
+          }
+        },
+        "required": [
+          "language",
+          "collections",
+          "articles"
+        ]
+      },
+      "WidgetHelpArticleSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "collectionId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "collectionId"
+        ]
+      },
+      "WidgetHelpArticle": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "bodyHtml": {
+            "type": "string",
+            "description": "Rendered on save from an allow-list. Images and help-centre links are absolute, on the installation's address."
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The article on the public help centre, if the website has one."
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "title",
+          "summary",
+          "bodyHtml",
+          "url"
         ]
       }
     },
@@ -5860,6 +5980,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 16000
+                  },
+                  "helpArticleId": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "The help article the visitor came from. Kept only if it is a published article of this website."
                   }
                 },
                 "required": [
@@ -11305,6 +11430,118 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HelpDraftRun"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widget/help": {
+      "get": {
+        "tags": [
+          "widget"
+        ],
+        "operationId": "widgetHelp",
+        "summary": "A website's published help articles in a language, or those matching a search. No session needed; the Origin must be allowed.",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "websiteKey",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "required": false,
+            "name": "language",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetHelp"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widget/help/articles/{articleId}": {
+      "get": {
+        "tags": [
+          "widget"
+        ],
+        "operationId": "widgetHelpArticle",
+        "summary": "One published help article, to read in the widget. No session needed; the Origin must be allowed.",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "articleId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "required": true,
+            "name": "websiteKey",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Article",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetHelpArticle"
                 }
               }
             }

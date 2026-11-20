@@ -70,3 +70,52 @@ export async function searchHelp(db: Database, site: HelpSite, language: string,
   const terms = helpSearchTerms(query.slice(0, HELP_SEARCH_LIMITS.queryChars));
   return publicHelpRepository(db).search(site.websiteId, language, terms, HELP_SEARCH_LIMITS.results);
 }
+
+// ---------- The widget's Help tab (step 3) ----------
+
+/** Images and links to the help centre point at the installation, because the widget runs on another site. */
+export function absoluteHelpHtml(html: string, origin: string): string {
+  return html
+    .replaceAll('src="/help-assets/', `src="${origin}/help-assets/`)
+    .replaceAll('<a href="/help/', `<a target="_blank" rel="noopener" href="${origin}/help/`);
+}
+
+/** The language a widget in `wanted` shows: that, if it has articles, else English, else the one with most. */
+export function widgetHelpLanguage(wanted: string | undefined, available: string[]): string | null {
+  return available.includes(wanted ?? '') ? wanted! : pickHelpLanguage(null, available);
+}
+
+/** The widget's list is short; search reaches the rest. */
+export const WIDGET_HELP_LIST = 100;
+
+export const publishedHelpLanguages = (db: Database, websiteId: string) => publicHelpRepository(db).languages(websiteId);
+
+export async function widgetHelp(db: Database, websiteId: string, input: { language?: string | undefined; q?: string | undefined }) {
+  const repository = publicHelpRepository(db);
+  const language = widgetHelpLanguage(input.language, await repository.languages(websiteId));
+  if (!language) return { language: null, collections: [], articles: [] };
+  const summary = (a: PublicHelpArticle) => ({ id: a.id, title: a.title, summary: a.summary, collectionId: a.collectionId });
+  const query = input.q?.trim();
+  if (query) {
+    const terms = helpSearchTerms(query.slice(0, HELP_SEARCH_LIMITS.queryChars));
+    return { language, collections: [], articles: (await repository.search(websiteId, language, terms, HELP_SEARCH_LIMITS.results)).map(summary) };
+  }
+  const home = await repository.home(websiteId, language);
+  const articles = home.articles.slice(0, WIDGET_HELP_LIST);
+  const shown = new Set(articles.map((a) => a.collectionId));
+  return { language, collections: home.collections.filter((c) => shown.has(c.id)).map((c) => ({ id: c.id, name: c.name })), articles: articles.map(summary) };
+}
+
+export async function widgetHelpArticle(db: Database, websiteId: string, articleId: string, origin: string) {
+  const repository = publicHelpRepository(db);
+  const [article, slug] = await Promise.all([repository.articleById(websiteId, articleId), repository.slugOf(websiteId)]);
+  if (!article) return null;
+  return {
+    id: article.id,
+    language: article.language,
+    title: article.title,
+    summary: article.summary,
+    bodyHtml: absoluteHelpHtml(article.bodyHtml, origin),
+    url: slug ? `${origin}/help/${slug}/${helpLanguagePath(article.language)}/${encodeURIComponent(article.slug)}` : null,
+  };
+}

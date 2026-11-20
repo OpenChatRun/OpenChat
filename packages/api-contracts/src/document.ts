@@ -111,6 +111,8 @@ import {
   createHelpDraftRunRoute,
   uploadHelpDraftFileRoute,
   startHelpDraftRunRoute,
+  widgetHelpRoute,
+  widgetHelpArticleRoute,
   deleteHelpAssetRoute,
 } from './routes';
 
@@ -225,6 +227,8 @@ export const ALL_ROUTES = [
   createHelpDraftRunRoute,
   uploadHelpDraftFileRoute,
   startHelpDraftRunRoute,
+  widgetHelpRoute,
+  widgetHelpArticleRoute,
   deleteHelpAssetRoute,
 ] as const;
 

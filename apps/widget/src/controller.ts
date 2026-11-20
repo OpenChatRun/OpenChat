@@ -38,6 +38,12 @@ export interface ChatState {
   notice: 'rate_limited' | 'daily_limit' | 'unavailable' | 'bad_file' | 'challenge' | null;
   turnstileSiteKey: string | null;
   messageMaxChars: number;
+  /** Languages with help articles. Empty: no Help tab. */
+  helpLanguages: string[];
+  /** Chosen by the visitor. Null: Help while there is no conversation and there are articles, else Chat. */
+  view: 'chat' | 'help' | null;
+  /** The article the visitor left for the chat with "Still need help?", recorded on the conversation they start. */
+  fromArticle: string | null;
 }
 
 export interface ControllerDeps {
@@ -69,6 +75,9 @@ export function createController(deps: ControllerDeps) {
     notice: null,
     turnstileSiteKey: null,
     messageMaxChars: 4000,
+    helpLanguages: [],
+    view: null,
+    fromArticle: null,
   };
   const update = (change: Partial<ChatState>) => {
     state = { ...state, ...change };
@@ -260,8 +269,9 @@ export function createController(deps: ControllerDeps) {
           applyMessages([await deps.api.sendMessage(state.conversation.id, input)]);
         } else {
           // The same client ID reaches the same conversation, so a retry after a lost response cannot start a second.
-          const started = await deps.api.createConversation(input);
+          const started = await deps.api.createConversation(state.fromArticle ? { ...input, helpArticleId: state.fromArticle } : input);
           adoptConversation(started);
+          if (state.fromArticle) update({ fromArticle: null });
           applyMessages([started.message]);
           // Connecting catches up too, and the visitor need not wait for it.
           connectIfWanted();
@@ -310,7 +320,7 @@ export function createController(deps: ControllerDeps) {
       bootstrappedAt = now();
       try {
         const bootstrap = await deps.api.bootstrap();
-        update({ phase: 'ready', settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars });
+        update({ phase: 'ready', settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
       } catch (error) {
         if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
           update({ phase: 'hidden' });
@@ -334,7 +344,7 @@ export function createController(deps: ControllerDeps) {
           .bootstrap()
           .then((bootstrap) => {
             bootstrappedAt = now();
-            update({ settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), notice: null, turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars });
+            update({ settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), notice: null, turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
             // Loading failed earlier, so nothing was restored either.
             return state.conversation ? undefined : resume();
           })
@@ -405,6 +415,18 @@ export function createController(deps: ControllerDeps) {
       deps.storage.set({ profileDone: true });
       update({ profile: 'none' });
     },
+
+    setView(view: 'chat' | 'help') {
+      update({ view });
+    },
+
+    /** "Still need help?" from an article: to the chat, remembering the article for a conversation started now. */
+    needHelp(articleId: string) {
+      update({ view: 'chat', fromArticle: state.conversation ? null : articleId });
+    },
+
+    help: (language: string, q: string) => deps.api.help(language, q),
+    helpArticle: (id: string) => deps.api.helpArticle(id),
 
     dismissProfile() {
       deps.storage.set({ profileDismissed: true });

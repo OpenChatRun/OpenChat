@@ -29,6 +29,7 @@ const toConversation = (row: ConversationRow) => ({
   createdAt: toIso(row.createdAt),
   updatedAt: toIso(row.updatedAt),
   assistantState: row.assistantState,
+  helpArticleId: row.helpArticleId,
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');

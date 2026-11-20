@@ -132,7 +132,7 @@ export async function listVisitorConversations(deps: Pick<AuthDeps, 'db'>, ctx: 
   return { data: (await visitorRepositories(deps.db, ctx).conversations.list()).map(toConversation) };
 }
 
-export async function createVisitorConversation(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, input: { clientMessageId: string; content: string }, ip: string) {
+export async function createVisitorConversation(deps: Pick<AuthDeps, 'db' | 'limiter' | 'limits'>, ctx: VisitorContext, input: { clientMessageId: string; content: string; helpArticleId?: string | undefined }, ip: string) {
   await limitMessage(deps, ctx, ip, input.content);
   const { created, conversation, message } = await visitorRepositories(deps.db, ctx).conversations.create(input);
   return { created, messageId: message.id, conversation: { ...toConversation(conversation), message: toMessage(message, ctx) } };

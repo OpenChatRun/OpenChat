@@ -180,6 +180,8 @@ Its foreign key to the conversation cascades. Erasure and the retention sweep ad
 
 A collection is deleted in one batch that first takes its articles out of it: a composite foreign key cannot `SET NULL`. Websites cascade to all three tables. An image's row is deleted before its file, so a failure leaves a file that nothing points to, never a broken row.
 
+**The widget's Help tab** (step 3) adds `conversations.help_article_id`, nullable and without a foreign key, so that deleting an article does not touch conversations: the inbox then says the article was deleted. It is set only on insert, from a subquery that finds a published article of the conversation's website, so a visitor cannot attach another website's ID. Migration 0021 only adds the column.
+
 **Draft with AI** (step 2) adds `help_draft_runs`: one per run.
 - **What it keeps:** the language, an optional collection, whether to read the website, the links, and the names and sizes of the files. The files themselves are never in it.
 - **`status`:** `uploading` (taking files), `queued`, `reading`, `writing`, `done` or `failed`, with an `error_code` when it failed.

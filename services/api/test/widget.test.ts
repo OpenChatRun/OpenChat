@@ -486,7 +486,7 @@ describe('bootstrap', () => {
   it('returns public settings only', async () => {
     const response = await bootstrap('key_shop');
     expect(response.status).toBe(200);
-    expect(await json(response)).toEqual({ websiteId: 'site_1', settings: { welcomeMessage: 'Hi' }, availability: 'offline', messageMaxChars: 4000 });
+    expect(await json(response)).toEqual({ websiteId: 'site_1', settings: { welcomeMessage: 'Hi' }, availability: 'offline', messageMaxChars: 4000, helpLanguages: [] });
   });
 
   it('refuses an origin the website does not allow, even from the cache', async () => {

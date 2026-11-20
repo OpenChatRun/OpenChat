@@ -150,6 +150,7 @@ export interface ConversationRow {
   createdAt: number;
   updatedAt: number;
   assistantState: AssistantState | null;
+  helpArticleId: string | null;
 }
 
 export interface ConversationChange {
@@ -210,7 +211,7 @@ const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_i
     ${CONVERSATION_TAGS_JSON} AS tagsJson, c.assigned_member_id AS assignedMemberId,
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
     c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
-    c.assistant_state AS assistantState
+    c.assistant_state AS assistantState, c.help_article_id AS helpArticleId
   FROM conversations c
   JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
   LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id

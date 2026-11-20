@@ -315,6 +315,8 @@ export const conversations = sqliteTable(
      * Drizzle rebuild this table, which D1 cannot do in time on a large installation.
      */
     assistantState: text('assistant_state', { enum: ['answering', 'handed_over', 'stopped'] }),
+    /** The help article the visitor was reading when they started it (ADR-0023). Kept if the article goes. */
+    helpArticleId: text('help_article_id'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

@@ -398,6 +398,8 @@ export const ja: Messages = {
   helpImagesHelp: 'PNG、JPEG、GIF、WebP（5 MB まで）。公開済みの記事と同じく、リンクを知っていれば誰でも画像を見られます。',
   helpUpload: '画像をアップロード',
   helpInsert: '挿入',
+  fromHelpArticle: 'ヘルプ記事「{title}」から来ました',
+  fromHelpArticleGone: 'その後削除されたヘルプ記事から来ました',
   helpDraftTitle: 'AI で下書き',
   helpDraftIntro: 'AI がウェブサイトとそのページ、アップロードしたファイルを読み、記事を計画して、それぞれを下書きとして書きます。確認してから公開してください。アップロードするのは自社の資料だけにし、顧客データは入れないでください。ファイルは終了時に削除されます。',
   helpDraftReadWebsite: 'ウェブサイトを読む',

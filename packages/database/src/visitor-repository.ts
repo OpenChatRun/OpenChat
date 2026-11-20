@@ -168,16 +168,19 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
        * The conversation's ID comes from the visitor and the client ID, so a retry reaches the same row and
        * the message insert becomes a replay. The first statement after the insert only runs for a new message.
        */
-      async create(input: { clientMessageId: string; content: string }): Promise<{ created: boolean; conversation: VisitorConversationRow; message: VisitorMessageRow }> {
+      /** `helpArticleId` is kept only if it names a published article of this website. */
+      async create(input: { clientMessageId: string; content: string; helpArticleId?: string | undefined }): Promise<{ created: boolean; conversation: VisitorConversationRow; message: VisitorMessageRow }> {
         const id = await deterministicId('conversation', `${ctx.visitorId}|${input.clientMessageId}`);
         const messageId = newId('message');
         const [, insert] = await d1.batch([
           d1
             .prepare(
-              `INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at)
-               VALUES (?1, ?2, ?3, ?4, ${DB_NOW_MS}, ${DB_NOW_MS}, ${DB_NOW_MS}) ON CONFLICT (id) DO NOTHING`,
+              `INSERT INTO conversations (id, workspace_id, website_id, contact_id, help_article_id, last_message_at, created_at, updated_at)
+               VALUES (?1, ?2, ?3, ?4,
+                       (SELECT id FROM help_articles WHERE workspace_id = ?2 AND website_id = ?3 AND id = ?5 AND status = 'published'),
+                       ${DB_NOW_MS}, ${DB_NOW_MS}, ${DB_NOW_MS}) ON CONFLICT (id) DO NOTHING`,
             )
-            .bind(id, w, ctx.websiteId, ctx.contactId),
+            .bind(id, w, ctx.websiteId, ctx.contactId, input.helpArticleId ?? null),
           ...messageStatements(d1, {
             id: messageId,
             workspaceId: w,

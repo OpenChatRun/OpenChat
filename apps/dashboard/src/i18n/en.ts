@@ -410,6 +410,8 @@ export const en = {
   helpImagesHelp: 'PNG, JPEG, GIF or WebP, up to 5 MB. Anyone with the link can see an image, as anyone can see a published article.',
   helpUpload: 'Upload image',
   helpInsert: 'Insert',
+  fromHelpArticle: 'Came from the help article “{title}”',
+  fromHelpArticleGone: 'Came from a help article that has since been deleted',
   helpDraftTitle: 'Draft with AI',
   helpDraftIntro: 'AI reads your website, pages on it and files you upload, plans articles, and writes each one as a draft for you to check and publish. Upload only your company’s own material, never customer data. Files are deleted when it finishes.',
   helpDraftReadWebsite: 'Read the website',

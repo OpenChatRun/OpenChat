@@ -398,6 +398,8 @@ export const zhHans: Messages = {
   helpImagesHelp: 'PNG、JPEG、GIF 或 WebP，最大 5 MB。与已发布的文章一样，任何拥有链接的人都能看到图片。',
   helpUpload: '上传图片',
   helpInsert: '插入',
+  fromHelpArticle: '来自帮助文章“{title}”',
+  fromHelpArticleGone: '来自一篇已被删除的帮助文章',
   helpDraftTitle: '用 AI 起草',
   helpDraftIntro: 'AI 会阅读你的网站、其中的页面和你上传的文件，规划文章，并把每篇写成草稿，供你检查后发布。只上传贵公司自己的资料，不要上传客户数据。完成后文件会被删除。',
   helpDraftReadWebsite: '读取网站',

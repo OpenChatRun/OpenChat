@@ -5,7 +5,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { BASE_URL } from '../playwright.config';
-import { OWNER, SITE_ORIGIN, STYLED_WEBSITE_KEY, WEBSITE_KEY } from './fixtures';
+import { HELP_ARTICLE, HELP_WEBSITE_KEY, OWNER, SITE_ORIGIN, STYLED_WEBSITE_KEY, WEBSITE_KEY } from './fixtures';
 import { nextIp, signIn } from './helpers';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -69,7 +69,7 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(await violations(page)).toEqual([]);
     });
 
-    for (const [name, key] of [['plain', WEBSITE_KEY], ['styled, asking for an email first', STYLED_WEBSITE_KEY]] as const) {
+    for (const [name, key] of [['plain', WEBSITE_KEY], ['styled, asking for an email first', STYLED_WEBSITE_KEY], ['with a Help tab', HELP_WEBSITE_KEY]] as const) {
       test(`the widget, ${name}`, async ({ browser }) => {
         const context = await browser.newContext({ colorScheme: scheme, extraHTTPHeaders: { 'cf-connecting-ip': nextIp() } });
         await context.route(`${SITE_ORIGIN}/**`, (route) =>
@@ -85,6 +85,11 @@ for (const scheme of ['light', 'dark'] as const) {
         // Contrast is only meaningful once the panel has faded in.
         await page.waitForFunction(() => (document.getElementById('openchat-widget')?.shadowRoot?.getAnimations() ?? []).every((a) => a.playState === 'finished'));
         expect(await violations(page, '#openchat-widget')).toEqual([]);
+        if (key === HELP_WEBSITE_KEY) {
+          await page.getByRole('button', { name: new RegExp(HELP_ARTICLE.title) }).click();
+          await expect(page.getByRole('heading', { name: HELP_ARTICLE.title })).toBeVisible();
+          expect(await violations(page, '#openchat-widget')).toEqual([]);
+        }
         await context.close();
       });
     }

@@ -1,6 +1,10 @@
-/** The panel. Message content is only ever a text node: nothing here renders HTML from anyone. */
+/**
+ * The panel. Message content is only ever a text node. The one HTML set here is a help article's body, which the
+ * server rendered from an allow-list when it was saved, escaping everything else (ADR-0023, help-text.ts).
+ */
 import { createContext } from 'preact';
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { HelpArticle, HelpList } from './api';
 import type { ChatState, Controller } from './controller';
 import { hasOlder, unreadCount, type ChatMessage } from './state';
 import { pickLocale, type Locale } from './locale';
@@ -212,6 +216,95 @@ function Composer({ controller, canAttach, maxChars }: { controller: Controller;
   );
 }
 
+/** The Help tab: published articles of this website, searchable, read inside the panel. */
+function HelpView({ controller, language }: { controller: Controller; language: string }) {
+  const { S } = useContext(Language);
+  const [query, setQuery] = useState('');
+  const [searched, setSearched] = useState('');
+  const [list, setList] = useState<HelpList | null>(null);
+  const [article, setArticle] = useState<HelpArticle | null>(null);
+  const [failed, setFailed] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let gone = false;
+    setFailed(false);
+    controller
+      .help(language, searched)
+      .then((result) => !gone && setList(result))
+      .catch(() => !gone && setFailed(true));
+    return () => {
+      gone = true;
+    };
+  }, [controller, language, searched]);
+  useEffect(() => {
+    if (article) body.current?.focus();
+  }, [article]);
+  const open = (id: string) => {
+    setFailed(false);
+    controller
+      .helpArticle(id)
+      .then(setArticle)
+      .catch(() => setFailed(true));
+  };
+
+  if (article) {
+    return (
+      <div class="oc-help">
+        <button type="button" class="oc-link oc-back" onClick={() => setArticle(null)}>← {S.helpBack}</button>
+        <article lang={article.language} tabIndex={-1} ref={body} class="oc-article">
+          <h3>{article.title}</h3>
+          <div dangerouslySetInnerHTML={{ __html: article.bodyHtml }} />
+        </article>
+        {article.url && <a class="oc-link oc-small" href={article.url} target="_blank" rel="noopener">{S.helpOpen}</a>}
+        <div class="oc-still">
+          <p>{S.helpStill}</p>
+          <button type="button" class="oc-send" onClick={() => controller.needHelp(article.id)}>{S.helpChat}</button>
+        </div>
+      </div>
+    );
+  }
+  const groups = list ? [...list.collections.map((c) => ({ id: c.id as string | null, name: c.name })), { id: null, name: '' }] : [];
+  return (
+    <div class="oc-help">
+      <form
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSearched(query.trim());
+        }}
+      >
+        <input class="oc-input" type="search" aria-label={S.helpSearch} placeholder={S.helpSearch} maxLength={200} value={query} onInput={(e) => setQuery(e.currentTarget.value)} />
+      </form>
+      {failed && <p class="oc-state bad" role="alert">{S.helpFailed}</p>}
+      {list && list.articles.length === 0 && <p class="oc-state" role="status">{searched ? S.helpNoResults : S.helpEmpty}</p>}
+      {list &&
+        groups.map((group) => {
+          const articles = list.articles.filter((a) => (searched ? group.id === null : a.collectionId === group.id || (group.id === null && !list.collections.some((c) => c.id === a.collectionId))));
+          if (articles.length === 0) return null;
+          return (
+            <section key={group.id ?? ''} aria-label={group.name || undefined}>
+              {group.name && <h3 class="oc-group">{group.name}</h3>}
+              <ul class="oc-articles" lang={list.language ?? undefined}>
+                {articles.map((a) => (
+                  <li key={a.id}>
+                    <button type="button" onClick={() => open(a.id)}>
+                      <strong>{a.title}</strong>
+                      {a.summary && <span>{a.summary}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      <div class="oc-still">
+        <p>{S.helpStill}</p>
+        <button type="button" class="oc-send" onClick={() => controller.setView('chat')}>{S.helpChat}</button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * `pageLocale` is what the host page asked for, and wins. Then the website's setting, then the page's and the
  * browser's languages. See docs/architecture/widget.md#languages.
@@ -273,6 +366,8 @@ export function App({
   };
   const presence = state.connection === 'reconnecting' || state.connection === 'polling' ? S.reconnecting : state.availability === 'online' ? S.online : state.availability === 'offline' ? S.offline : '';
   const welcome = state.settings?.welcomeMessage;
+  const hasHelp = state.helpLanguages.length > 0;
+  const view = !hasHelp ? 'chat' : (state.view ?? (state.conversation || state.messages.length > 0 ? 'chat' : 'help'));
 
   return (
     <Language.Provider value={language}>
@@ -310,6 +405,19 @@ export function App({
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.7 9.3a1 1 0 0 1 1.4 0L12 13.2l3.9-3.9a1 1 0 1 1 1.4 1.4l-4.6 4.6a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4z" /></svg>
         </button>
       </header>
+      {hasHelp && (
+        <div class="oc-tabs" role="tablist">
+          {(['chat', 'help'] as const).map((tab) => (
+            <button key={tab} type="button" role="tab" aria-selected={view === tab} class={view === tab ? 'on' : ''} onClick={() => controller.setView(tab)}>
+              {tab === 'chat' ? S.chatTab : S.helpTab}
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'help' ? (
+        <HelpView controller={controller} language={locale} />
+      ) : (
+      <>
       <div
         ref={log}
         class="oc-log"
@@ -347,6 +455,8 @@ export function App({
       {state.conversation?.status === 'resolved' && <p class="oc-note">{S.resolved}</p>}
       {state.profile === 'offered' && state.messages.some((m) => m.mine) && <ProfileForm controller={controller} required={false} />}
       {state.profile === 'required' ? <ProfileForm controller={controller} required /> : <Composer controller={controller} maxChars={state.messageMaxChars} canAttach={state.conversation !== null} />}
+      </>
+      )}
     </div>
     </Language.Provider>
   );

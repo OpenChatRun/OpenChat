@@ -777,6 +777,17 @@ export function publicHelpRepository(database: Database) {
       return results;
     },
 
+    /** The public address of a website's help centre, if it has one. */
+    async slugOf(websiteId: string): Promise<string | null> {
+      return (await d1.prepare(`SELECT help_slug AS slug FROM websites WHERE id = ?1`).bind(websiteId).first<{ slug: string | null }>())?.slug ?? null;
+    },
+
+    /** A published article of this website by its ID, as the widget opens it. */
+    async articleById(websiteId: string, articleId: string): Promise<PublicHelpArticlePage | null> {
+      const row = await d1.prepare(`SELECT language, slug FROM help_articles WHERE ${PUBLISHED} AND id = ?2`).bind(websiteId, articleId).first<{ language: string; slug: string }>();
+      return row ? this.article(websiteId, row.language, row.slug) : null;
+    },
+
     async sitemap(websiteId: string): Promise<PublicHelpArticle[]> {
       const { results } = await d1.prepare(`SELECT ${PUBLIC_COLUMNS} FROM help_articles WHERE ${PUBLISHED} ORDER BY language, position, id`).bind(websiteId).all<PublicHelpArticle>();
       return results;

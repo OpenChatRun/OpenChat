@@ -398,6 +398,8 @@ export const zhHant: Messages = {
   helpImagesHelp: 'PNG、JPEG、GIF 或 WebP，最大 5 MB。與已發布的文章一樣，任何擁有連結的人都能看到圖片。',
   helpUpload: '上傳圖片',
   helpInsert: '插入',
+  fromHelpArticle: '來自說明文章「{title}」',
+  fromHelpArticleGone: '來自一篇已被刪除的說明文章',
   helpDraftTitle: '用 AI 起草',
   helpDraftIntro: 'AI 會閱讀你的網站、其中的頁面和你上傳的檔案，規劃文章，並把每篇寫成草稿，供你檢查後發布。只上傳貴公司自己的資料，不要上傳客戶資料。完成後檔案會被刪除。',
   helpDraftReadWebsite: '讀取網站',
