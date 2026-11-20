@@ -749,6 +749,17 @@ A throwaway installation deployed with `--assistant`, the default text model (Ll
 | "It will arrive within 3 business days. Thank you for your patience!" to a Japanese visitor | "3営業日以内に到着します。ご迷惑をおかけしますが、ご了承ください。" 1.4 seconds. The second sentence became an apology, more formal than the English |
 | From the dashboard | Sent and shown as "Sent translated" 1.3 seconds after Send reply. The visitor's widget showed it live, labelled, with Show original |
 
+## D1 triggers on an upsert (2026-11-20)
+
+OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:
+
+| Question | Result |
+|---|---|
+| Does a `BEFORE INSERT` trigger fire for `INSERT ... ON CONFLICT DO UPDATE` when the row exists? | Yes. `RAISE(IGNORE)` in it skips the update too, and `RETURNING` gives no row, as in SQLite |
+| Does `wrangler d1 export` keep triggers? | Yes, both were in the export |
+
+A trigger is dropped with its table, so a migration that rebuilds a table loses any trigger an operator added to it.
+
 ## Sources
 
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 database API](https://developers.cloudflare.com/d1/worker-api/d1-database/), [migrations](https://developers.cloudflare.com/d1/reference/migrations/), [foreign keys](https://developers.cloudflare.com/d1/sql-api/foreign-keys/), [read replication](https://developers.cloudflare.com/d1/best-practices/read-replication/), [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
