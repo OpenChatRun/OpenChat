@@ -2,22 +2,13 @@
  * Saved replies: text the team wrote once, put into the reply box with a click. Every member uses them, and
  * supervisors add, change and delete them here, where they are used.
  */
-import type { SavedReply } from '@openchat/api-client';
+import { matchSavedReplies } from '@openchat/api-client/inbox-state';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { t } from '../i18n';
 
 export const savedRepliesKey = (workspaceId: string) => ['saved-replies', workspaceId] as const;
-
-/** Those whose title or text holds every word typed, titles first. */
-export function matchSavedReplies(replies: SavedReply[], query: string): SavedReply[] {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return replies;
-  const holds = (text: string) => words.every((word) => text.toLowerCase().includes(word));
-  const byTitle = replies.filter((reply) => holds(reply.title));
-  return [...byTitle, ...replies.filter((reply) => !byTitle.includes(reply) && holds(`${reply.title} ${reply.content}`))];
-}
 
 export function SavedReplies(props: { workspaceId: string; supervisor: boolean; query: string; onQuery: (query: string) => void; onPick: (content: string) => void; onClose: () => void }) {
   const { workspaceId, supervisor, query } = props;
