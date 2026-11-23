@@ -764,6 +764,16 @@ A throwaway installation, `oc-ux2-test`, with three conversations. All of it was
 
 D1's `lower()` changes only A to Z, so a name stored as "ÜBER" is not found by "über".
 
+## Away and inbox counts on real Cloudflare (2026-11-23)
+
+A throwaway installation, `oc-ux3-test`, with migration 0026 applied by `oc deploy`. All of it was deleted afterwards. Each availability check used a new website, because the bootstrap is cached for 30 seconds per key.
+
+| What | Result |
+|---|---|
+| Widget availability in auto mode with no member socket, then with one | `offline`, then `online` |
+| The connected member sets `away: true` | 200 in 199 ms, and availability `offline` with the socket still open. Back to `online` after `away: false` |
+| `GET /inbox-summary` with nothing, then with one open conversation assigned to the caller and unread, one open and read, one pending | All zeros, then `open 2, unassigned 1, mine 1, pending 1, unread 1`, in 156 ms |
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:
