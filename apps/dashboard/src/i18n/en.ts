@@ -486,6 +486,21 @@ export const en = {
   awayHelp: 'While you are away, you do not make the chat widget say the team is online. Notifications still arrive.',
   viewingPage: 'Viewing',
   lastViewedPage: 'Last viewed',
+  savedReplies: 'Saved replies',
+  searchSavedReplies: 'Search saved replies',
+  close: 'Close',
+  noSavedRepliesYet: 'No saved replies yet. Add the answers your team gives most often.',
+  noSavedRepliesAsk: 'No saved replies yet. A supervisor can add them.',
+  noSavedRepliesFound: 'No saved reply matches.',
+  editNamed: 'Edit {name}',
+  deleteNamed: 'Delete {name}',
+  edit: 'Edit',
+  newSavedReply: 'New saved reply',
+  editSavedReply: 'Edit saved reply',
+  savedReplyTitle: 'Title',
+  savedReplyText: 'Reply text',
+  save: 'Save',
+  cancel: 'Cancel',
 };
 
 export type Messages = Record<keyof typeof en, string>;
