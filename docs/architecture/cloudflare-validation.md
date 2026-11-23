@@ -749,6 +749,21 @@ A throwaway installation deployed with `--assistant`, the default text model (Ll
 | "It will arrive within 3 business days. Thank you for your patience!" to a Japanese visitor | "3営業日以内に到着します。ご迷惑をおかけしますが、ご了承ください。" 1.4 seconds. The second sentence became an apology, more formal than the English |
 | From the dashboard | Sent and shown as "Sent translated" 1.3 seconds after Send reply. The visitor's widget showed it live, labelled, with Show original |
 
+## Inbox preview, read position and search on real Cloudflare (2026-11-23)
+
+A throwaway installation, `oc-ux2-test`, with three conversations. All of it was deleted afterwards.
+
+| What | Result |
+|---|---|
+| The conversation list, with `lastMessage` and `visitorReadSeq` read by subquery in the same statement | 245 ms for the request. A 220-character message came back as its first 140 |
+| A member's reply, then an internal note | `lastMessage` named the member, then the note with type `internal_note` |
+| The visitor marks read over REST | A member's socket received `conversation.read` with the public position, and `visitorReadSeq` was 2 on the next read |
+| `q` for part of a name, part of an email in another case, and a resolved conversation | Found, in 110 to 210 ms |
+| `q=0%` and `q=a%a` | The first found "Bo 100% Chan"; the second found nothing, so `%` is not a wildcard |
+| A search cursor used without `q` | 400 |
+
+D1's `lower()` changes only A to Z, so a name stored as "ÜBER" is not found by "über".
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

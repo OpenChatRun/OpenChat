@@ -221,6 +221,29 @@ test('an agent corrects a contact, and the list shows the name', async ({ page }
   await expect(page.getByRole('heading', { name })).toBeVisible();
 });
 
+test('the list previews the newest message, and a search finds a contact whatever the status', async ({ page }) => {
+  await signIn(page, OWNER);
+  const visitor = await startVisitor('Where is my parcel?');
+  const list = page.getByRole('region', { name: 'Conversations' });
+  await expect(row(page, visitor)).toContainText('Where is my parcel?');
+  await visitor.send('It was due on Monday');
+  await expect(row(page, visitor)).toContainText('It was due on Monday');
+  await row(page, visitor).click();
+  const contact = page.getByRole('form', { name: 'Contact' });
+  const name = `Pia ${visitor.conversationId.slice(-6)}`;
+  await contact.getByLabel('Name').fill(name);
+  await contact.getByRole('button', { name: 'Save contact' }).click();
+  await expect(list.getByRole('button', { name: new RegExp(name) })).toBeVisible();
+  await page.getByLabel('Conversation status').selectOption('resolved');
+  await expect(list.getByRole('button', { name: new RegExp(name) })).toHaveCount(0);
+  const search = list.getByRole('searchbox', { name: 'Search by name or email' });
+  await search.fill(name.toUpperCase());
+  await expect(list.getByRole('button')).toHaveCount(1);
+  await expect(list.getByRole('button', { name: new RegExp(name) })).toContainText('Resolved');
+  await search.fill('');
+  await expect(list.getByRole('button', { name: new RegExp(name) })).toHaveCount(0);
+});
+
 test('an installation admin exports a contact, then erases them, and the visitor is gone', async ({ page, browser }) => {
   await signIn(page, OWNER);
   const visitor = await startVisitor('Please delete my data');

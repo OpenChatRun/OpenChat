@@ -2467,6 +2467,55 @@
                 "description": "The visitor's language, as their widget or browser gave it. Null for conversations started before it was recorded, until the visitor writes again."
               }
             ]
+          },
+          "lastMessage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "The start of the message, at most 140 characters. Empty for a message that is only files."
+              },
+              "senderType": {
+                "type": "string",
+                "enum": [
+                  "visitor",
+                  "member",
+                  "assistant",
+                  "system"
+                ]
+              },
+              "senderId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The member who wrote it, or null for anyone else."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "file",
+                  "system",
+                  "internal_note"
+                ]
+              }
+            },
+            "required": [
+              "text",
+              "senderType",
+              "senderId",
+              "type"
+            ],
+            "description": "The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does."
+          },
+          "visitorReadSeq": {
+            "type": "integer",
+            "description": "How far the visitor has read, as a public sequence number: compare it with a message's `publicSeq`. 0 when they have read nothing."
           }
         },
         "required": [
@@ -2488,7 +2537,9 @@
           "updatedAt",
           "assistantState",
           "helpArticleId",
-          "visitorLanguage"
+          "visitorLanguage",
+          "lastMessage",
+          "visitorReadSeq"
         ]
       },
       "Message": {
@@ -7194,6 +7245,18 @@
           {
             "schema": {
               "type": "string",
+              "minLength": 1,
+              "maxLength": 254,
+              "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored."
+            },
+            "required": false,
+            "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored.",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "maxLength": 512,
               "description": "A `syncCursor` from an earlier response. Returns everything changed since, in any status, oldest change first. Other filters are ignored."
             },
@@ -8497,10 +8560,10 @@
             "schema": {
               "type": "string",
               "maxLength": 254,
-              "description": "Only people whose name or email contains this, ignoring case for Latin letters."
+              "description": "Only people whose name or email contains this, ignoring case for the letters A to Z."
             },
             "required": false,
-            "description": "Only people whose name or email contains this, ignoring case for Latin letters.",
+            "description": "Only people whose name or email contains this, ignoring case for the letters A to Z.",
             "name": "q",
             "in": "query"
           }

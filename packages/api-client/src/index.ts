@@ -222,7 +222,7 @@ export function createClient(options: ClientOptions) {
     dismissFailedJob: (id: string) => request<void>('DELETE', `/api/v1/admin/failed-jobs/${encodeURIComponent(id)}`),
     listWebsites: (workspaceId: string) => get<{ data: Website[] }>(`${workspace(workspaceId)}/websites`),
 
-    listConversations: (workspaceId: string, input: { status: Conversation['status']; assignee?: string | undefined; cursor?: string | undefined }) =>
+    listConversations: (workspaceId: string, input: { status: Conversation['status']; assignee?: string | undefined; q?: string | undefined; cursor?: string | undefined }) =>
       get<ConversationPage>(`${workspace(workspaceId)}/conversations${query({ ...input, limit: 50 })}`),
     getConversation: (workspaceId: string, id: string) => get<Conversation>(conversation(workspaceId, id)),
     updateConversation: (workspaceId: string, id: string, input: ConversationUpdate) => request<Conversation>('PATCH', conversation(workspaceId, id), input),

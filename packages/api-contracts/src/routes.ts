@@ -72,7 +72,13 @@ export const getSecurityTxtRoute = createRoute({
   },
 });
 
-export const API_MINOR_VERSION = 0;
+/**
+ * Raised when the API gains something a client must know is there before using it. An unknown query parameter is
+ * ignored, so a client cannot tell from the answer alone.
+ *
+ * - 1: `q` on listConversations, and `lastMessage` and `visitorReadSeq` on a conversation.
+ */
+export const API_MINOR_VERSION = 1;
 
 // ---------- Authentication ----------
 
@@ -593,6 +599,16 @@ export const ConversationSchema = z
     assistantState: AssistantStateSchema.nullable().openapi({ description: 'The AI assistant here: `answering`, `handed_over` to the team, `stopped` because a member stepped in, or null if it never took part.' }),
     helpArticleId: z.string().nullable().openapi({ description: 'The help article the visitor was reading when they started it, from "Still need help?" in the widget. It may since have been deleted.' }),
     visitorLanguage: LanguageTagSchema.nullable().openapi({ description: "The visitor's language, as their widget or browser gave it. Null for conversations started before it was recorded, until the visitor writes again." }),
+    lastMessage: z
+      .object({
+        text: z.string().openapi({ description: 'The start of the message, at most 140 characters. Empty for a message that is only files.' }),
+        senderType: z.enum(['visitor', 'member', 'assistant', 'system']),
+        senderId: z.string().nullable().openapi({ description: 'The member who wrote it, or null for anyone else.' }),
+        type: z.enum(['text', 'image', 'file', 'system', 'internal_note']),
+      })
+      .nullable()
+      .openapi({ description: 'The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does.' }),
+    visitorReadSeq: z.number().int().openapi({ description: 'How far the visitor has read, as a public sequence number: compare it with a message\'s `publicSeq`. 0 when they have read nothing.' }),
   })
   .openapi('Conversation');
 
@@ -636,6 +652,7 @@ export const listConversationsRoute = createRoute({
     query: PaginationQuery.extend({
       status: ConversationStatusSchema.default('open'),
       assignee: z.string().max(64).optional().openapi({ description: 'A member ID, `me`, or `none`.' }),
+      q: z.string().trim().min(1).max(254).optional().openapi({ description: "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored." }),
       updatedAfter: z.string().max(512).optional().openapi({ description: 'A `syncCursor` from an earlier response. Returns everything changed since, in any status, oldest change first. Other filters are ignored.' }),
     }),
   },
@@ -1230,7 +1247,7 @@ export const listPeopleRoute = createRoute({
   summary: 'List every account on the installation. Anyone but an installation admin gets 404.',
   request: {
     query: PaginationQuery.extend({
-      q: z.string().trim().max(254).optional().describe('Only people whose name or email contains this, ignoring case for Latin letters.'),
+      q: z.string().trim().max(254).optional().describe('Only people whose name or email contains this, ignoring case for the letters A to Z.'),
     }),
   },
   responses: { 200: { description: 'People', ...json(page(PersonSchema)) }, default: problemResponse },

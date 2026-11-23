@@ -190,6 +190,48 @@ describe('the inbox', () => {
     expect((await call('GET', `${W}/conversations?assignee=me&cursor=${nextCursor}`, tokens.agent)).status).toBe(400);
     expect((await call('GET', `${W}/conversations?cursor=not-a-cursor`, tokens.agent)).status).toBe(400);
   });
+
+  it('searches by part of the contact’s name or email, in every status and for every assignee', async () => {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO contacts (id, workspace_id, name, email, first_seen_at, last_seen_at, created_at, updated_at) VALUES ('cont_2', 'work_1', 'Otto 100%', 'OTTO@Example.org', 1, 1, 1, 1)`),
+      env.DB.prepare(`UPDATE conversations SET contact_id = 'cont_2', status = 'resolved' WHERE id = 'conv_5'`),
+      env.DB.prepare(`UPDATE conversations SET contact_id = 'cont_2' WHERE id = 'conv_2'`),
+    ]);
+    expect(ids(await list('?q=otto'))).toEqual(['conv_5', 'conv_2']);
+    expect(ids(await list('?q=example.ORG&status=open&assignee=me'))).toEqual(['conv_5', 'conv_2']);
+    expect(ids(await list('?q=ver'))).toEqual(['conv_4', 'conv_3', 'conv_1']);
+    // A percent sign is a character to look for, not a wildcard.
+    expect(ids(await list(`?q=${encodeURIComponent('0%')}`))).toEqual(['conv_5', 'conv_2']);
+    expect(ids(await list(`?q=${encodeURIComponent('t%o')}`))).toEqual([]);
+    const first = await list('?q=otto&limit=1');
+    expect(ids(await list(`?q=otto&limit=1&cursor=${first.nextCursor}`))).toEqual(['conv_2']);
+    expect((await call('GET', `${W}/conversations?limit=1&cursor=${first.nextCursor}`, tokens.agent)).status).toBe(400);
+    expect((await call('GET', `${W}/conversations?q=`, tokens.agent)).status).toBe(400);
+  });
+});
+
+describe('the newest message, for the inbox', () => {
+  type Row = { lastMessage: { text: string; senderType: string; senderId: string | null; type: string } | null; visitorReadSeq: number };
+  const row = async () => json<Row>(await call('GET', C, tokens.agent));
+
+  it('is null before any message, then the start of the newest one, with who wrote it', async () => {
+    expect((await row()).lastMessage).toBeNull();
+    await send({ clientMessageId: 'client-0001', content: 'x'.repeat(300) });
+    expect((await row()).lastMessage).toEqual({ text: 'x'.repeat(140), senderType: 'member', senderId: 'mem_agent', type: 'text' });
+    await send({ clientMessageId: 'client-0002', type: 'internal_note', content: 'Call them' });
+    const listed = await json<{ data: Row[] }>(await call('GET', `${W}/conversations`, tokens.agent));
+    expect(listed.data[0]!.lastMessage).toEqual({ text: 'Call them', senderType: 'member', senderId: 'mem_agent', type: 'internal_note' });
+  });
+
+  it('says how far the visitor has read, from whichever of their browsers has read most', async () => {
+    expect((await row()).visitorReadSeq).toBe(0);
+    await env.DB.batch(
+      [['vis_1', 2], ['vis_2', 1]].map(([visitor, seq]) =>
+        env.DB.prepare(`INSERT INTO conversation_read_cursors (workspace_id, conversation_id, reader_type, reader_id, delivered_seq, read_seq, updated_at) VALUES ('work_1', 'conv_1', 'visitor', ?1, ?2, ?2, 1)`).bind(visitor, seq),
+      ),
+    );
+    expect((await row()).visitorReadSeq).toBe(2);
+  });
 });
 
 describe('read positions', () => {

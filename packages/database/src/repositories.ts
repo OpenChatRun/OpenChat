@@ -160,7 +160,22 @@ export interface ConversationRow {
   assistantState: AssistantState | null;
   helpArticleId: string | null;
   visitorLanguage: string | null;
+  /** A JSON LastMessageRow, or null when the newest message is gone, as retention leaves it. */
+  lastMessageJson: string | null;
+  /** How far any of the contact's browsers has read, as a public sequence number. */
+  visitorReadSeq: number;
 }
+
+/** The newest message, cut short, for a line under the contact's name in the inbox. */
+export interface LastMessageRow {
+  text: string;
+  senderType: 'visitor' | 'member' | 'assistant' | 'system';
+  senderId: string | null;
+  type: 'text' | 'image' | 'file' | 'system' | 'internal_note';
+}
+
+/** As long as a preview needs to be. A phone shows one line of it. */
+export const PREVIEW_CHARS = 140;
 
 export interface ConversationChange {
   /** Null unassigns. Undefined leaves the assignee alone. */
@@ -175,6 +190,8 @@ export interface ConversationChange {
 export interface ConversationFilter {
   status: ConversationStatus;
   assignee?: string | null | undefined;
+  /** Part of the contact's name or email, already in lower case. With it, status and assignee are not applied. */
+  q?: string | undefined;
   before?: { lastMessageAt: number; id: string } | undefined;
   limit: number;
 }
@@ -225,7 +242,13 @@ const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_i
     ${CONVERSATION_TAGS_JSON} AS tagsJson, c.assigned_member_id AS assignedMemberId,
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
     c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
-    c.assistant_state AS assistantState, c.help_article_id AS helpArticleId, c.visitor_language AS visitorLanguage
+    c.assistant_state AS assistantState, c.help_article_id AS helpArticleId, c.visitor_language AS visitorLanguage,
+    (SELECT json_object('text', substr(lm.content, 1, ${PREVIEW_CHARS}),
+              'senderType', CASE WHEN lm.assistant_id IS NOT NULL THEN 'assistant' ELSE lm.sender_type END,
+              'senderId', CASE WHEN lm.sender_type = 'member' AND lm.assistant_id IS NULL THEN lm.sender_id END, 'type', lm.message_type)
+       FROM messages lm WHERE lm.workspace_id = c.workspace_id AND lm.conversation_id = c.id AND lm.seq = c.last_message_seq) AS lastMessageJson,
+    COALESCE((SELECT MAX(vr.read_seq) FROM conversation_read_cursors vr
+       WHERE vr.workspace_id = c.workspace_id AND vr.conversation_id = c.id AND vr.reader_type = 'visitor'), 0) AS visitorReadSeq
   FROM conversations c
   JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
   LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id
@@ -419,11 +442,14 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
        * message in the same batch, so last_message_at is set and the row comparison is safe.
        */
       async list(filter: ConversationFilter): Promise<ConversationRow[]> {
-        const assignee = filter.assignee === undefined ? '' : filter.assignee === null ? 'AND c.assigned_member_id IS NULL' : 'AND c.assigned_member_id = ?4';
         const before = filter.before ? 'AND (c.last_message_at, c.id) < (?5, ?6)' : '';
+        // A search looks in every status, and reads the workspace's conversations newest first until the page is full.
+        // instr, unlike LIKE, gives no meaning to % or _ in what a member types.
+        const assignee = filter.assignee === undefined ? '' : filter.assignee === null ? 'AND c.assigned_member_id IS NULL' : 'AND c.assigned_member_id = ?4';
+        const where = filter.q ? `AND (instr(lower(COALESCE(k.name, '')), ?8) > 0 OR instr(lower(COALESCE(k.email, '')), ?8) > 0)` : `AND c.status = ?3 ${assignee}`;
         const { results } = await d1
-          .prepare(`${CONVERSATION_SELECT} WHERE c.workspace_id = ?2 AND c.status = ?3 ${assignee} ${before} ORDER BY c.last_message_at DESC, c.id DESC LIMIT ?7`)
-          .bind(ctx.memberId, w, filter.status, filter.assignee ?? null, filter.before?.lastMessageAt ?? null, filter.before?.id ?? null, filter.limit)
+          .prepare(`${CONVERSATION_SELECT} WHERE c.workspace_id = ?2 ${where} ${before} ORDER BY c.last_message_at DESC, c.id DESC LIMIT ?7`)
+          .bind(ctx.memberId, w, filter.status, filter.assignee ?? null, filter.before?.lastMessageAt ?? null, filter.before?.id ?? null, filter.limit, ...(filter.q ? [filter.q] : []))
           .all<ConversationRow>();
         return results;
       },
