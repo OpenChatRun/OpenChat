@@ -72,7 +72,13 @@ export const getSecurityTxtRoute = createRoute({
   },
 });
 
-export const API_MINOR_VERSION = 0;
+/**
+ * Raised when the API gains something a client must know is there before using it. An unknown query parameter is
+ * ignored, so a client cannot tell from the answer alone.
+ *
+ * - 1: `q` on listConversations, and `lastMessage` and `visitorReadSeq` on a conversation.
+ */
+export const API_MINOR_VERSION = 1;
 
 // ---------- Authentication ----------
 
