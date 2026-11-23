@@ -7247,10 +7247,10 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 254,
-              "description": "Only conversations whose contact's name or email contains this, ignoring case for Latin letters. A search looks in every status and for every assignee: `status` and `assignee` are ignored."
+              "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored."
             },
             "required": false,
-            "description": "Only conversations whose contact's name or email contains this, ignoring case for Latin letters. A search looks in every status and for every assignee: `status` and `assignee` are ignored.",
+            "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored.",
             "name": "q",
             "in": "query"
           },
@@ -8560,10 +8560,10 @@
             "schema": {
               "type": "string",
               "maxLength": 254,
-              "description": "Only people whose name or email contains this, ignoring case for Latin letters."
+              "description": "Only people whose name or email contains this, ignoring case for the letters A to Z."
             },
             "required": false,
-            "description": "Only people whose name or email contains this, ignoring case for Latin letters.",
+            "description": "Only people whose name or email contains this, ignoring case for the letters A to Z.",
             "name": "q",
             "in": "query"
           }

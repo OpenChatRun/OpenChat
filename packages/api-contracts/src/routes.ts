@@ -652,7 +652,7 @@ export const listConversationsRoute = createRoute({
     query: PaginationQuery.extend({
       status: ConversationStatusSchema.default('open'),
       assignee: z.string().max(64).optional().openapi({ description: 'A member ID, `me`, or `none`.' }),
-      q: z.string().trim().min(1).max(254).optional().openapi({ description: "Only conversations whose contact's name or email contains this, ignoring case for Latin letters. A search looks in every status and for every assignee: `status` and `assignee` are ignored." }),
+      q: z.string().trim().min(1).max(254).optional().openapi({ description: "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored." }),
       updatedAfter: z.string().max(512).optional().openapi({ description: 'A `syncCursor` from an earlier response. Returns everything changed since, in any status, oldest change first. Other filters are ignored.' }),
     }),
   },
@@ -1247,7 +1247,7 @@ export const listPeopleRoute = createRoute({
   summary: 'List every account on the installation. Anyone but an installation admin gets 404.',
   request: {
     query: PaginationQuery.extend({
-      q: z.string().trim().max(254).optional().describe('Only people whose name or email contains this, ignoring case for Latin letters.'),
+      q: z.string().trim().max(254).optional().describe('Only people whose name or email contains this, ignoring case for the letters A to Z.'),
     }),
   },
   responses: { 200: { description: 'People', ...json(page(PersonSchema)) }, default: problemResponse },
