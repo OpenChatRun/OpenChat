@@ -774,6 +774,20 @@ A throwaway installation, `oc-ux3-test`, with migration 0026 applied by `oc depl
 | The connected member sets `away: true` | 200 in 199 ms, and availability `offline` with the socket still open. Back to `online` after `away: false` |
 | `GET /inbox-summary` with nothing, then with one open conversation assigned to the caller and unread, one open and read, one pending | All zeros, then `open 2, unassigned 1, mine 1, pending 1, unread 1`, in 156 ms |
 
+## The visitor's current page on real Cloudflare (2026-11-23)
+
+On a throwaway installation, `oc-pagetest`, since deleted, with migration 0027 applied by the deploy:
+
+- The bootstrap answered `reportPage: true`.
+- `PUT …/widget/conversations/{id}/page` with `https://shop.example/orders/123?email=…&token=abc#pay` answered 204, and the member's view of the conversation showed `https://shop.example/orders/123`. The conversation's `version` and `updatedAt` did not move.
+- A second page replaced the first.
+- A page on another origin, and `javascript:alert(1)`, were refused with 400. The `EXISTS` over `json_each(allowed_origins_json)` inside the `UPDATE` works on D1.
+- Another visitor of the same website got 404, and the stored page did not change.
+- The visitor's own list of conversations does not contain the page.
+- The contact's export answered 200.
+
+Not tried there: the widget itself in a browser (covered by the browser test against local Workers), and `VISITOR_PAGE=off` (covered by the Worker tests).
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:
