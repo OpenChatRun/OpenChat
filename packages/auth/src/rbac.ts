@@ -20,6 +20,7 @@ const CAPABILITIES = {
   'tag.delete': SUPERVISORS,
   'suppression.manage': SUPERVISORS,
   'automation.manage': SUPERVISORS,
+  'savedReply.manage': SUPERVISORS,
   'assistant.manage': SUPERVISORS,
   'help.manage': SUPERVISORS,
 } as const satisfies Record<string, readonly Role[]>;

@@ -14,6 +14,7 @@ const TABLE: Record<Capability, [supervisor: boolean, agent: boolean]> = {
   'contact.merge': [true, false],
   'suppression.manage': [true, false],
   'automation.manage': [true, false],
+  'savedReply.manage': [true, false],
   'assistant.manage': [true, false],
   'help.manage': [true, false],
   'tag.delete': [true, false],

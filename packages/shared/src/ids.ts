@@ -20,6 +20,7 @@ export const ID_PREFIXES = {
   event: 'evt',
   attachment: 'att',
   tag: 'tag',
+  savedReply: 'srep',
   pushSubscription: 'psub',
   emailDelivery: 'mail',
   automationRule: 'rule',
