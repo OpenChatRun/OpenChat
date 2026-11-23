@@ -303,6 +303,49 @@ describe('read positions', () => {
   });
 });
 
+describe('the page a visitor is on', () => {
+  const page = (id: string, token: string, url: string, extra: Options = {}) => call('PUT', `/api/v1/widget/conversations/${id}/page`, { token, body: { url }, ...extra });
+  const kept = () => rows(`SELECT visitor_page_url AS url, version FROM conversations`);
+
+  it('keeps where, and nothing typed or passed along: no query, no fragment, and only the newest', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    const version = ((await kept()) as { version: number }[])[0]!.version;
+    expect((await page(id, token, `${SITE}/orders/123?email=vera%40example.com&token=abc#pay`)).status).toBe(204);
+    expect(await kept()).toEqual([{ url: `${SITE}/orders/123`, version }]);
+    expect((await page(id, token, `https://vera:secret@shop.example/pricing`)).status).toBe(204);
+    expect(await kept()).toEqual([{ url: `${SITE}/pricing`, version }]);
+    const seen = await json<{ visitorPage: { url: string; at: string } }>(await agentCall('GET', `/conversations/${id}`));
+    expect(seen.visitorPage.url).toBe(`${SITE}/pricing`);
+    expect(Date.parse(seen.visitorPage.at)).toBeGreaterThan(0);
+  });
+
+  it('refuses a page on another website, or something that is not a web page', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    for (const url of ['https://elsewhere.example/', 'javascript:alert(1)', 'not a url', 'file:///etc/passwd']) expect((await page(id, token, url)).status).toBe(400);
+    expect(await kept()).toMatchObject([{ url: null }]);
+  });
+
+  it('belongs to the visitor whose conversation it is', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    const { accessToken: other } = await session();
+    expect((await page(id, other, `${SITE}/x`)).status).toBe(404);
+    expect((await call('PUT', `/api/v1/widget/conversations/${id}/page`, { body: { url: `${SITE}/x` } })).status).toBe(401);
+    expect(await kept()).toMatchObject([{ url: null }]);
+  });
+
+  it('keeps nothing when the operator turned it off, and tells the widget not to send', async () => {
+    const off = { ...testEnv, VISITOR_PAGE: 'off' } as Env;
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    expect((await page(id, token, `${SITE}/pricing`, { vars: off })).status).toBe(204);
+    expect(await kept()).toMatchObject([{ url: null }]);
+    expect(await json(await call('GET', '/api/v1/widget/bootstrap?websiteKey=key_shop', { vars: off }))).toMatchObject({ reportPage: false });
+  });
+});
+
 describe('limits on what a visitor can ask for', () => {
   it('stops one visitor at 120 requests a minute', async () => {
     const { accessToken: token } = await session();
@@ -486,7 +529,7 @@ describe('bootstrap', () => {
   it('returns public settings only', async () => {
     const response = await bootstrap('key_shop');
     expect(response.status).toBe(200);
-    expect(await json(response)).toEqual({ websiteId: 'site_1', settings: { welcomeMessage: 'Hi' }, availability: 'offline', messageMaxChars: 4000, helpLanguages: [] });
+    expect(await json(response)).toEqual({ websiteId: 'site_1', settings: { welcomeMessage: 'Hi' }, availability: 'offline', reportPage: true, messageMaxChars: 4000, helpLanguages: [] });
   });
 
   it('refuses an origin the website does not allow, even from the cache', async () => {

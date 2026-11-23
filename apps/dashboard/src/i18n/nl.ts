@@ -472,4 +472,6 @@ export const nl: Messages = {
   jobAssistantIndexLearned: 'Een geleerd antwoord voorbereiden',
   away: 'Afwezig',
   awayHelp: 'Zolang je afwezig bent, toont de chatwidget het team niet als online vanwege jou. Meldingen komen nog steeds binnen.',
+  viewingPage: 'Bekijkt',
+  lastViewedPage: 'Laatst bekeken',
 };

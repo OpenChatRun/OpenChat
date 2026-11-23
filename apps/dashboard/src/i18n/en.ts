@@ -484,6 +484,8 @@ export const en = {
   jobAssistantIndexLearned: 'Prepare a learned answer',
   away: 'Away',
   awayHelp: 'While you are away, you do not make the chat widget say the team is online. Notifications still arrive.',
+  viewingPage: 'Viewing',
+  lastViewedPage: 'Last viewed',
 };
 
 export type Messages = Record<keyof typeof en, string>;

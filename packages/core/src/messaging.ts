@@ -34,6 +34,7 @@ const toConversation = (row: ConversationRow) => ({
   visitorLanguage: row.visitorLanguage,
   lastMessage: row.lastMessageJson === null ? null : (JSON.parse(row.lastMessageJson) as LastMessageRow),
   visitorReadSeq: row.visitorReadSeq,
+  visitorPage: row.visitorPageUrl === null || row.visitorPageAt === null ? null : { url: row.visitorPageUrl, at: toIso(row.visitorPageAt) },
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
@@ -315,6 +316,7 @@ export async function exportContact(db: Database, ctx: WorkspaceContext, contact
       status: c.status,
       subject: c.subject,
       createdAt: toIso(c.createdAt),
+      visitorPage: c.visitorPageUrl === null || c.visitorPageAt === null ? null : { url: c.visitorPageUrl, at: toIso(c.visitorPageAt) },
       messages: (messages.get(c.id) ?? []).map((m) => ({
         id: m.id,
         from: m.senderType,

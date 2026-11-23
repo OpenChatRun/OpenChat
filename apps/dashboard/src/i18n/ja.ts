@@ -472,4 +472,6 @@ export const ja: Messages = {
   jobAssistantIndexLearned: '学習した回答を準備',
   away: '離席中',
   awayHelp: '離席中は、あなたがいてもチャットウィジェットにチームがオンラインと表示されません。通知は引き続き届きます。',
+  viewingPage: '閲覧中',
+  lastViewedPage: '最後に見たページ',
 };

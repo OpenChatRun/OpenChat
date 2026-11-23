@@ -32,6 +32,16 @@ type Membership = Me['memberships'][number];
 
 const STATUSES: Conversation['status'][] = ['open', 'pending', 'resolved', 'archived'];
 const PRIORITIES: Conversation['priority'][] = ['low', 'normal', 'high', 'urgent'];
+/** The host and path, which is what tells one page from another. The address was checked to be http or https. */
+function pageLabel(url: string): string {
+  try {
+    const { host, pathname } = new URL(url);
+    return `${host}${pathname === '/' ? '' : pathname}`;
+  } catch {
+    return url;
+  }
+}
+
 const STATUS_LABEL: Record<Conversation['status'], MessageKey> = { open: 'statusOpen', pending: 'statusPending', resolved: 'statusResolved', archived: 'statusArchived' };
 const PRIORITY_LABEL: Record<Conversation['priority'], MessageKey> = { low: 'priorityLow', normal: 'priorityNormal', high: 'priorityHigh', urgent: 'priorityUrgent' };
 const POLL_MS = 30_000;
@@ -763,7 +773,8 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
   const { workspaceId, conversationId, members, typing, drafts, realtime } = props;
   const client = useQueryClient();
   const key = threadKey(workspaceId, conversationId);
-  const conversation = useQuery({ queryKey: detailKey(workspaceId, conversationId), queryFn: () => api.getConversation(workspaceId, conversationId) });
+  // No event says that the visitor moved to another page, so while they are online the conversation is read again.
+  const conversation = useQuery({ queryKey: detailKey(workspaceId, conversationId), queryFn: () => api.getConversation(workspaceId, conversationId), refetchInterval: props.visitorOnline ? 20_000 : false });
   const messages = useQuery({
     queryKey: key,
     // Merged, so that reading the newest page again keeps earlier pages already loaded.
@@ -844,6 +855,12 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
                 <span className={`size-2 rounded-full ${props.visitorOnline ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden="true" />
                 {t(props.visitorOnline ? 'onlineNow' : 'offline')}
               </span>
+              {data.visitorPage && (
+                <span className="block truncate text-xs font-normal text-slate-600 dark:text-slate-400">
+                  {t(props.visitorOnline ? 'viewingPage' : 'lastViewedPage')}{' '}
+                  <a className="underline" href={data.visitorPage.url} target="_blank" rel="noopener noreferrer">{pageLabel(data.visitorPage.url)}</a>
+                </span>
+              )}
             </h2>
           </div>
           {data.assistantState === 'answering' && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{t('assistantAnsweringHelp')}</p>}

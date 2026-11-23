@@ -133,6 +133,20 @@ test('loads the chat bundle only when idle or clicked, and a page view makes no 
   await context.close();
 });
 
+test('the agent sees which page the visitor is on, without what the address carried', async ({ browser }) => {
+  const agent = await openInbox(browser);
+  const context = await visitorContext(browser);
+  const page = await shop(context);
+  const conversationId = await startChat(page, 'Is this in stock?');
+  await inboxRow(agent, conversationId).click();
+  await expect(agent.getByRole('link', { name: 'shop.example', exact: true })).toBeVisible();
+  // A single-page site moves on without loading anything.
+  await page.evaluate(() => history.pushState({}, '', '/checkout/pay?email=vera%40example.com#card'));
+  const link = agent.getByRole('link', { name: 'shop.example/checkout/pay' });
+  await expect(link).toBeVisible({ timeout: 40_000 });
+  await expect(link).toHaveAttribute('href', 'https://shop.example/checkout/pay');
+});
+
 test('a visitor and an agent talk in real time, with status, typing, and unread', async ({ browser }) => {
   const agent = await openInbox(browser);
   const context = await visitorContext(browser);

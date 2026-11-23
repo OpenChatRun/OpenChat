@@ -7,6 +7,7 @@ import {
   listVisitorConversationsRoute,
   listVisitorMessagesRoute,
   markVisitorConversationReadRoute,
+  setVisitorPageRoute,
   sendVisitorMessageRoute,
   updateVisitorProfileRoute,
   widgetBootstrapRoute,
@@ -30,6 +31,7 @@ import {
   limitKeyForIp,
   publishedHelpLanguages,
   websiteForWidget,
+  setVisitorPage,
   availableMembers,
   widgetHelp,
   widgetHelpArticle,
@@ -155,7 +157,7 @@ export function registerWidgetRoutes(app: App) {
     if (!bootstrap.found) throw notFound();
     const origin = c.req.header('origin');
     if (origin !== undefined && !bootstrap.allowedOrigins!.includes(origin)) throw new AppError(403, 'bad_origin', 'This website does not allow requests from this origin');
-    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [], ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
+    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', reportPage: c.env.VISITOR_PAGE !== 'off', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [], ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
   });
 
   /** The Help tab reads with no session, so it is limited per address, as the public help centre is. */
@@ -222,6 +224,13 @@ export function registerWidgetRoutes(app: App) {
   });
 
   app.openapi(downloadVisitorAttachmentRoute, (async (c: Context<AppEnv>) => sendFile(c, await visitorAttachment(await authDeps(c.env), visitorOf(c), c.req.param('attachmentId')!))) as never);
+
+  app.openapi(setVisitorPageRoute, async (c) => {
+    // Turned off by the operator: a widget from before the change may still send, and nothing is kept.
+    if (c.env.VISITOR_PAGE === 'off') return c.body(null, 204);
+    await setVisitorPage(await authDeps(c.env), visitorOf(c), c.req.valid('param').conversationId, c.req.valid('json').url);
+    return c.body(null, 204);
+  });
 
   app.openapi(markVisitorConversationReadRoute, async (c) => {
     const visitor = visitorOf(c);

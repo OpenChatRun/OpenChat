@@ -472,4 +472,6 @@ export const de: Messages = {
   jobAssistantIndexLearned: 'Eine gelernte Antwort vorbereiten',
   away: 'Abwesend',
   awayHelp: 'Solange Sie abwesend sind, zeigt das Chat-Widget das Team Ihretwegen nicht als online an. Benachrichtigungen kommen weiterhin an.',
+  viewingPage: 'Sieht gerade',
+  lastViewedPage: 'Zuletzt gesehen',
 };

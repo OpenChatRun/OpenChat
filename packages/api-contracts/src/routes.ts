@@ -618,6 +618,8 @@ const conversationParams = workspaceParams.extend({ conversationId: z.string() }
 
 export const TagSchema = z.object({ id: z.string(), name: z.string() }).openapi('Tag');
 
+const VisitorPageSchema = z.object({ url: z.string(), at: z.string().openapi({ description: 'When the widget reported it.' }) });
+
 export const ConversationSchema = z
   .object({
     id: z.string(),
@@ -648,6 +650,7 @@ export const ConversationSchema = z
       })
       .nullable()
       .openapi({ description: 'The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does.' }),
+    visitorPage: VisitorPageSchema.nullable().openapi({ description: "The page the visitor's widget last reported, without its query or fragment. Only the current one is kept. Null when none was reported, or the installation has it turned off." }),
     visitorReadSeq: z.number().int().openapi({ description: 'How far the visitor has read, as a public sequence number: compare it with a message\'s `publicSeq`. 0 when they have read nothing.' }),
   })
   .openapi('Conversation');
@@ -864,6 +867,7 @@ export const WidgetBootstrapSchema = z
     settings: WidgetSettingsSchema,
     availability: z.enum(['online', 'offline']),
     turnstileSiteKey: z.string().optional().openapi({ description: 'Present when this website requires Turnstile for a new visitor.' }),
+    reportPage: z.boolean().openapi({ description: 'Whether the widget should say which page the visitor is on, with setVisitorPage. False when the operator turned it off.' }),
     messageMaxChars: z.number().int().openapi({ description: "The longest message this installation accepts from a visitor. A longer one is refused with `message_too_long`." }),
     helpLanguages: z.array(z.string()).openapi({ description: 'Languages with published help articles, most articles first. Empty: the widget shows no Help tab.' }),
   })
@@ -991,6 +995,17 @@ export const sendVisitorMessageRoute = createRoute({
   },
 });
 
+export const setVisitorPageRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/widget/conversations/{conversationId}/page',
+  tags: ['widget'],
+  operationId: 'setVisitorPage',
+  summary: 'Say which page the visitor is on. The query and fragment are dropped, and it replaces the last page.',
+  security: visitor,
+  request: { params: visitorConversationParams, body: { required: true, ...json(z.strictObject({ url: z.string().min(1).max(4096) })) } },
+  responses: { 204: { description: 'Recorded, or ignored because the installation has it turned off' }, default: problemResponse },
+});
+
 export const markVisitorConversationReadRoute = createRoute({
   method: 'post',
   path: '/api/v1/widget/conversations/{conversationId}/read',
@@ -1113,6 +1128,7 @@ export const ContactExportSchema = z
         status: z.string(),
         subject: z.string().nullable(),
         createdAt: z.string(),
+        visitorPage: VisitorPageSchema.nullable(),
         messages: z.array(
           z.object({
             id: z.string(),

@@ -167,6 +167,10 @@ export function createApi(deps: ApiDeps) {
     async markRead(conversationId: string, seq: number): Promise<void> {
       await authed('POST', `${conversationPath(conversationId)}/read`, { deliveredSeq: seq, readSeq: seq });
     },
+    /** Where the visitor is. The caller passes no query or fragment, and the installation would drop them anyway. */
+    async setPage(conversationId: string, url: string): Promise<void> {
+      await authed('PUT', `${conversationPath(conversationId)}/page`, { url });
+    },
     async ticket(conversationId: string): Promise<{ ticket: string; url: string }> {
       return (await (await authed('POST', `${conversationPath(conversationId)}/realtime/tickets`)).json()) as { ticket: string; url: string };
     },

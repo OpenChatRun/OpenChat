@@ -83,6 +83,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **Server messages stay in English** in the dashboard, such as errors, though its own words are in eleven languages ([languages](architecture/dashboard.md#languages)).
 - **The dashboard does not show a visitor's read position.** The API gives it, as `visitorReadSeq`, which the apps use.
 - **Away is a switch, with no schedule.** A member who forgets to turn it off stays away, and the widget takes up to 30 seconds to follow a change.
+- **The visitor's page follows them with a delay**, of up to 3 seconds in the widget and 20 in the dashboard, because no event announces it. Only the current page is kept, and nothing before the visitor's first message. The phone apps do not show it.
 - **No canned responses.**
 
 ## Email

@@ -472,4 +472,6 @@ export const ko: Messages = {
   jobAssistantIndexLearned: '학습한 답변 준비',
   away: '자리 비움',
   awayHelp: '자리 비움 상태에서는 채팅 위젯이 나 때문에 팀을 온라인으로 표시하지 않습니다. 알림은 계속 도착합니다.',
+  viewingPage: '보는 중',
+  lastViewedPage: '마지막으로 본 페이지',
 };

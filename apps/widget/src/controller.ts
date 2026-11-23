@@ -51,6 +51,8 @@ export interface ControllerDeps {
   storage: WidgetStorage;
   openSocket: RealtimeDeps['openSocket'];
   isVisible: () => boolean;
+  /** The page's address without query or fragment, or null when it must not be reported, as before consent. */
+  currentPage?: () => string | null;
   now?: () => number;
   crypto?: Parameters<typeof newClientMessageId>[0];
   realtime?: typeof createRealtime;
@@ -79,9 +81,23 @@ export function createController(deps: ControllerDeps) {
     view: null,
     fromArticle: null,
   };
+  // Which page the visitor is on, for the team, once there is a conversation to show it on. Sent when it changes,
+  // if the installation wants it. A failure is not retried: the next page says where they are.
+  let reportPage = false;
+  let reportedPage: string | null = null;
+  const pageMaybeChanged = () => {
+    const conversationId = state.conversation?.id;
+    if (!reportPage || !conversationId || !deps.currentPage) return;
+    const page = deps.currentPage();
+    if (!page || page === reportedPage) return;
+    reportedPage = page;
+    deps.api.setPage(conversationId, page).catch(() => undefined);
+  };
+
   const update = (change: Partial<ChatState>) => {
     state = { ...state, ...change };
     for (const listener of listeners) listener();
+    if (change.conversation) pageMaybeChanged();
   };
 
   let realtime: Realtime | null = null;
@@ -312,6 +328,8 @@ export function createController(deps: ControllerDeps) {
 
   return {
     getState: () => state,
+    /** Call when the page's address may have changed, as a single-page site does without loading anything. */
+    pageMaybeChanged,
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -323,6 +341,7 @@ export function createController(deps: ControllerDeps) {
       bootstrappedAt = now();
       try {
         const bootstrap = await deps.api.bootstrap();
+        reportPage = bootstrap.reportPage === true;
         update({ phase: 'ready', settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
       } catch (error) {
         if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
