@@ -210,6 +210,23 @@ describe('the inbox', () => {
   });
 });
 
+describe('the inbox summary', () => {
+  it('counts what this member sees: open, unassigned, theirs, pending and unread', async () => {
+    const summary = async (token = tokens.agent) => json(await call('GET', `${W}/inbox-summary`, token));
+    expect(await summary()).toEqual({ open: 1, unassigned: 1, mine: 0, pending: 0, unread: 0 });
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, assigned_member_id, status, last_message_seq, last_message_at, created_at, updated_at) VALUES
+        ('conv_2', 'work_1', 'site_1', 'cont_1', 'mem_agent', 'open', 3, 200, 1, 1), ('conv_3', 'work_1', 'site_1', 'cont_1', 'mem_other', 'open', 2, 300, 1, 1),
+        ('conv_4', 'work_1', 'site_1', 'cont_1', NULL, 'pending', 5, 400, 1, 1), ('conv_5', 'work_1', 'site_1', 'cont_1', 'mem_agent', 'resolved', 9, 500, 1, 1)`),
+      env.DB.prepare(`INSERT INTO conversation_read_cursors (workspace_id, conversation_id, reader_type, reader_id, delivered_seq, read_seq, updated_at) VALUES
+        ('work_1', 'conv_2', 'member', 'mem_agent', 3, 3, 1), ('work_1', 'conv_3', 'member', 'mem_agent', 1, 1, 1), ('work_1', 'conv_3', 'member', 'mem_other', 2, 2, 1)`),
+    ]);
+    expect(await summary()).toEqual({ open: 3, unassigned: 1, mine: 1, pending: 1, unread: 1 });
+    expect(await summary(tokens.other)).toEqual({ open: 3, unassigned: 1, mine: 1, pending: 1, unread: 1 });
+    expect((await call('GET', `${W}/inbox-summary`)).status).toBe(401);
+  });
+});
+
 describe('the newest message, for the inbox', () => {
   type Row = { lastMessage: { text: string; senderType: string; senderId: string | null; type: string } | null; visitorReadSeq: number };
   const row = async () => json<Row>(await call('GET', C, tokens.agent));

@@ -1,5 +1,5 @@
 import type { Me } from '@openchat/api-client';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage, preference, queryClient, session } from '../app-context';
 import { InboxPanel } from '../inbox/inbox-panel';
@@ -62,10 +62,15 @@ function InboxWithMembers({ membership, conversationId }: { membership: Membersh
 }
 
 function MembersPanel({ membership }: { membership: Membership }) {
+  const client = useQueryClient();
   const members = useQuery({ queryKey: ['members', membership.workspace.id], queryFn: () => api.listMembers(membership.workspace.id) });
+  const setAway = useMutation({
+    mutationFn: (away: boolean) => api.setAway(membership.workspace.id, away),
+    onSettled: () => client.invalidateQueries({ queryKey: ['members', membership.workspace.id] }),
+  });
   return (
     <section className="space-y-4" aria-label={t('sectionMembers')}>
-      <Failure error={members.error} />
+      <Failure error={members.error ?? setAway.error} />
       <ul className="card divide-y divide-slate-200 dark:divide-slate-800">
         {members.data?.data.map((member) => (
           <li key={member.id} className="flex flex-wrap items-center gap-3 py-3">
@@ -76,10 +81,19 @@ function MembersPanel({ membership }: { membership: Membership }) {
             </div>
             {member.status === 'suspended' && <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{t('suspended')}</span>}
             {member.status === 'removed' && <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{t('removed')}</span>}
+            {member.id === membership.memberId ? (
+              <label className="flex items-center gap-2 text-sm" title={t('awayHelp')}>
+                <input type="checkbox" checked={member.away} disabled={setAway.isPending} onChange={(e) => setAway.mutate(e.target.checked)} />
+                {t('away')}
+              </label>
+            ) : (
+              member.away && <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{t('away')}</span>
+            )}
             <span className="text-sm">{t(member.role === 'supervisor' ? 'roleSupervisor' : 'roleAgent')}</span>
           </li>
         ))}
       </ul>
+      <p className="text-xs text-slate-600 dark:text-slate-400">{t('awayHelp')}</p>
       <p className="text-xs text-slate-600 dark:text-slate-400">{t('membersManagedBy')}</p>
     </section>
   );

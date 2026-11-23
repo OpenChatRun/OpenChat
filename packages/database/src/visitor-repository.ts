@@ -91,6 +91,19 @@ export async function findWebsiteByKey(database: Database, websiteKey: string): 
   return { id: row.id, workspaceId: row.workspaceId, allowedOrigins: JSON.parse(row.origins) as string[], settings: row.settings ? (JSON.parse(row.settings) as Record<string, unknown>) : {} };
 }
 
+/**
+ * How many of these members can answer now: active, and not away by their own choice. The IDs are those with an
+ * open socket, from the workspace's hub.
+ */
+export async function countAvailableMembers(database: Database, workspaceId: string, memberIds: string[]): Promise<number> {
+  if (memberIds.length === 0) return 0;
+  const row = await rawHandle(database)
+    .prepare(`SELECT COUNT(*) AS n FROM workspace_members WHERE workspace_id = ?1 AND status = 'active' AND removed_at IS NULL AND away = 0 AND id IN (SELECT value FROM json_each(?2))`)
+    .bind(workspaceId, JSON.stringify(memberIds))
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
 /** A new visitor is always a new contact. An email typed later never joins them to an existing one. */
 export async function createVisitor(database: Database, website: Pick<PublicWebsite, 'id' | 'workspaceId'>, refreshTokenHash: string): Promise<string> {
   const d1 = rawHandle(database);

@@ -612,6 +612,17 @@ describe('availability', () => {
     expect(await bootstrap(online)).toBe('online');
   });
 
+  it('does not count a connected member who set themselves away', async () => {
+    const [away, back] = [key('away'), key('back')];
+    await site('site_a', away, '{}');
+    await site('site_b', back, '{}');
+    await agentSocket();
+    expect((await call('PATCH', `${W}/members/me`, { token: agent, body: { away: true } })).status).toBe(200);
+    expect(await bootstrap(away)).toBe('offline');
+    await call('PATCH', `${W}/members/me`, { token: agent, body: { away: false } });
+    expect(await bootstrap(back)).toBe('online');
+  });
+
   it('obeys a fixed setting, whoever is connected', async () => {
     const [on, off] = [key('on'), key('off')];
     await site('site_a', on, '{"availabilityMode":"online"}');

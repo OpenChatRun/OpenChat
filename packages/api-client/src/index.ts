@@ -14,6 +14,7 @@ import type {
   getDiscoveryRoute,
   getHealthRoute,
   getConversationRoute,
+  getInboxSummaryRoute,
   getMeRoute,
   listConversationsRoute,
   listMembersRoute,
@@ -104,6 +105,7 @@ export type HelpDraftRun = HelpCentre['drafting']['runs'][number];
 export type HelpDraftInput = BodyOf<typeof createHelpDraftRunRoute>;
 export type CreatedWorkspace = Json201<typeof createWorkspaceRoute>;
 export type Conversation = Json200<typeof getConversationRoute>;
+export type InboxSummary = Json200<typeof getInboxSummaryRoute>;
 export type ConversationPage = Json200<typeof listConversationsRoute>;
 export type ConversationUpdate = BodyOf<typeof updateConversationRoute>;
 export type Message = Json200<typeof listMessagesRoute>['data'][number];
@@ -197,6 +199,8 @@ export function createClient(options: ClientOptions) {
     getMe: () => get<Me>('/api/v1/me'),
     updateMe: (input: { language: NonNullable<Me['language']> }) => request<Me>('PATCH', '/api/v1/me', input),
 
+    setAway: (workspaceId: string, away: boolean) => request<Member>('PATCH', `${workspace(workspaceId)}/members/me`, { away }),
+    getInboxSummary: (workspaceId: string) => get<InboxSummary>(`${workspace(workspaceId)}/inbox-summary`),
     listMembers: (workspaceId: string, cursor?: string) => get<MemberPage>(`${workspace(workspaceId)}/members?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
     listPeople: (input: { cursor?: string | undefined; limit?: number; q?: string } = {}) => get<People>(`/api/v1/admin/people${query(input)}`),
     createPerson: (input: PersonInput) => request<Person>('POST', '/api/v1/admin/people', input),

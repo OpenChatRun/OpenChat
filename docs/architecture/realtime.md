@@ -87,13 +87,13 @@ Clients send `typing.set` at most every 3 seconds while typing, and the object f
 
 Presence is advisory. It is derived from `getWebSockets()` when asked.
 
-- **Agent:** online if a socket with their tag exists.
+- **Agent:** online if a socket with their tag exists. A member can also set themselves **away**, which is stored on their membership in D1, not in the hub. It changes nothing in the hub and no frame announces it: clients read it with the member list.
 - **Visitor:** a room tells its hub on the first connect and last disconnect. Disconnects are debounced with a 15-second alarm so that page navigation does not flicker.
 - **Stale sockets:** a dead TCP connection may not produce a prompt close. This alarm is tested in workerd only: on real Cloudflare a socket with no heartbeat was gone at about 62 s, before the alarm could act. While sockets are present, an alarm closes those whose `getWebSocketAutoResponseTimestamp` is older than 90 seconds: every 60 seconds in hubs, every 5 minutes in rooms, and none when empty.
 
 Per spec §8.2, **disconnect is never treated as abandonment**. Follow-up decisions use message timestamps.
 
-The widget's availability comes from `GET /widget/bootstrap`, cached for 30 seconds through the Cache API, so that page views on a busy site do not wake the hub. In `auto` mode it is online if any agent has a socket. The `availability` frame is reserved, because reaching every room from the hub would wake them all, so an open widget learns of a change on its next bootstrap.
+The widget's availability comes from `GET /widget/bootstrap`, cached for 30 seconds through the Cache API, so that page views on a busy site do not wake the hub. In `auto` mode it is online if any agent who is not away has a socket: the hub says who is connected (`principalIds`), and D1 says which of them are away. A hub that has not yet taken a deploy lacks that method, and then any socket counts. The `availability` frame is reserved, because reaching every room from the hub would wake them all, so an open widget learns of a change on its next bootstrap.
 
 ### Publishing
 

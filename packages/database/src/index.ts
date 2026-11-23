@@ -23,6 +23,7 @@ export {
   type ConversationRow, type LastMessageRow, PREVIEW_CHARS, type ContactRow, type ContactExportRows, type TagRow,
   type ConversationStatus,
   type MemberRow,
+  type InboxSummaryRow,
   type Repositories,
   type SendMessageInput,
   type SendResult,

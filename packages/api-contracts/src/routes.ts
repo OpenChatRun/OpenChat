@@ -77,8 +77,9 @@ export const getSecurityTxtRoute = createRoute({
  * ignored, so a client cannot tell from the answer alone.
  *
  * - 1: `q` on listConversations, and `lastMessage` and `visitorReadSeq` on a conversation.
+ * - 2: `away` on a member with updateMyMembership, and getInboxSummary.
  */
-export const API_MINOR_VERSION = 1;
+export const API_MINOR_VERSION = 2;
 
 // ---------- Authentication ----------
 
@@ -271,7 +272,14 @@ const websiteParams = workspaceParams.extend({ websiteId: z.string() });
 
 export const MemberStatusSchema = z.enum(['active', 'suspended', 'removed']);
 export const MemberSchema = z
-  .object({ id: z.string(), name: z.string(), email: z.string(), role: RoleSchema, status: MemberStatusSchema })
+  .object({
+    id: z.string(),
+    name: z.string(),
+    email: z.string(),
+    role: RoleSchema,
+    status: MemberStatusSchema,
+    away: z.boolean().openapi({ description: 'Their own choice. An away member does not make the widget say the team is online, even with the dashboard or app open. Notifications still arrive.' }),
+  })
   .openapi('Member');
 
 export const getWorkspaceRoute = createRoute({
@@ -294,6 +302,38 @@ export const listMembersRoute = createRoute({
   security: bearer,
   request: { params: workspaceParams, query: PaginationQuery },
   responses: { 200: { description: 'Members', ...json(page(MemberSchema)) }, default: problemResponse },
+});
+
+export const updateMyMembershipRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/members/me',
+  tags: ['workspaces'],
+  operationId: 'updateMyMembership',
+  summary: 'Set yourself away, or back. A member changes only their own.',
+  security: bearer,
+  request: { params: workspaceParams, body: { required: true, ...json(z.strictObject({ away: z.boolean() })) } },
+  responses: { 200: { description: 'The member, as changed', ...json(MemberSchema) }, default: problemResponse },
+});
+
+export const InboxSummarySchema = z
+  .object({
+    open: z.number().int().openapi({ description: 'Open conversations.' }),
+    unassigned: z.number().int().openapi({ description: 'Open conversations with no assignee.' }),
+    mine: z.number().int().openapi({ description: 'Open conversations assigned to the caller.' }),
+    pending: z.number().int().openapi({ description: 'Pending conversations.' }),
+    unread: z.number().int().openapi({ description: 'Open conversations with a message the caller has not read.' }),
+  })
+  .openapi('InboxSummary');
+
+export const getInboxSummaryRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/inbox-summary',
+  tags: ['conversations'],
+  operationId: 'getInboxSummary',
+  summary: "Counts for the caller's view of the inbox",
+  security: bearer,
+  request: { params: workspaceParams },
+  responses: { 200: { description: 'Counts', ...json(InboxSummarySchema) }, default: problemResponse },
 });
 
 // ---------- Websites ----------

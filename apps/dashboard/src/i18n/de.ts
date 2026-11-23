@@ -470,4 +470,6 @@ export const de: Messages = {
   auditAutoApproveOff: '{actor} hat festgelegt, dass gelernte Antworten in {target} auf Freigabe warten',
   jobAssistantLearn: 'Mit dem Assistenten aus einer Unterhaltung lernen',
   jobAssistantIndexLearned: 'Eine gelernte Antwort vorbereiten',
+  away: 'Abwesend',
+  awayHelp: 'Solange Sie abwesend sind, zeigt das Chat-Widget das Team Ihretwegen nicht als online an. Benachrichtigungen kommen weiterhin an.',
 };

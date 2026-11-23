@@ -470,4 +470,6 @@ export const ja: Messages = {
   auditAutoApproveOff: '{actor} が {target} で学習した回答に承認が必要になるようにしました',
   jobAssistantLearn: 'アシスタントで会話から学習',
   jobAssistantIndexLearned: '学習した回答を準備',
+  away: '離席中',
+  awayHelp: '離席中は、あなたがいてもチャットウィジェットにチームがオンラインと表示されません。通知は引き続き届きます。',
 };

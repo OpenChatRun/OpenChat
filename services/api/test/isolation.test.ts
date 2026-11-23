@@ -78,6 +78,8 @@ const CASES: Record<string, Case> = {
   listAuditLog: { kind: 'installation' },
   getWorkspace: { kind: 'workspace', ownerStatus: 200 },
   listMembers: { kind: 'workspace', ownerStatus: 200 },
+  updateMyMembership: { kind: 'workspace', body: { away: true }, ownerStatus: 200 },
+  getInboxSummary: { kind: 'workspace', ownerStatus: 200 },
   listWebsites: { kind: 'workspace', ownerStatus: 200 },
   widgetBootstrap: { kind: 'public', reason: 'Public configuration. Only ever the named website' },
   createVisitorSession: { kind: 'public', reason: 'Creates a new anonymous visitor, or resumes the one holding the token' },

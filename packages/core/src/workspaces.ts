@@ -27,4 +27,13 @@ export async function getWorkspace(db: Database, ctx: WorkspaceContext) {
 
 export const listMembers = (db: Database, ctx: WorkspaceContext, input: { cursor?: string | undefined; limit: number }) => repositories(db, ctx).members.list(input);
 
+/** A member sets only their own. The repository takes the member from the context. */
+export async function setMyAway(db: Database, ctx: WorkspaceContext, away: boolean) {
+  const row = await repositories(db, ctx).members.setAway(away);
+  if (!row) throw notFound();
+  return row;
+}
+
+export const inboxSummary = (db: Database, ctx: WorkspaceContext) => repositories(db, ctx).conversations.summary();
+
 export const listWebsites = async (db: Database, ctx: WorkspaceContext) => ({ data: await repositories(db, ctx).websites.list() });

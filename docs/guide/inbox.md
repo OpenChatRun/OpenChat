@@ -51,6 +51,8 @@ At the top of the conversation you can change its **status**, its **priority** (
 
 If someone else changes a conversation at the same moment as you, your change is refused with "This conversation just changed". Check what changed, and try again.
 
+**Away.** On the **Members** page, tick **Away** beside your own name when you have the dashboard open but cannot answer. While you are away you do not make the widget tell visitors the team is online; within half a minute it follows the change. Notifications still reach you. Untick it when you are back.
+
 Whether the visitor is online now is shown on the conversation. The visitor sees when the team is typing a reply, never a note.
 
 ## Contacts and tags
