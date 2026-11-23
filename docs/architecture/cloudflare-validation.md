@@ -788,6 +788,12 @@ On a throwaway installation, `oc-pagetest`, since deleted, with migration 0027 a
 
 Not tried there: the widget itself in a browser (covered by the browser test against local Workers), and `VISITOR_PAGE=off` (covered by the Worker tests).
 
+## Saved replies on real Cloudflare (2026-11-23)
+
+On a throwaway installation, `oc-savedtest`, since deleted, with migration 0028 applied by the deploy: a saved reply was created, listed by title, changed and deleted, and a second delete answered 404. A title differing only in case was refused with `saved_reply_exists`, so D1 reports the `NOCASE` unique index as "UNIQUE constraint failed", as local SQLite does. Without a token the list answered 401.
+
+Not tried there: the limit of 200, which the Worker tests cover, and the dashboard, which the browser test covers against local Workers.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:
