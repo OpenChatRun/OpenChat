@@ -254,16 +254,28 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
   const [status, setStatus] = useState<Conversation['status']>('open');
   const [assignee, setAssignee] = useState<'all' | 'me' | 'none'>('all');
   const filter: InboxFilter = { status, assignee: assignee === 'all' ? undefined : assignee === 'me' ? memberId : 'none' };
+  // A search is in every status and for everyone. It has its own cache key, so that live updates, which keep a
+  // list to its filter, leave what was found alone. The words are sent once typing has paused.
+  const [words, setWords] = useState('');
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(words.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [words]);
   const list = useInfiniteQuery({
-    queryKey: [...listKey(workspaceId), filter],
-    queryFn: ({ pageParam }) => api.listConversations(workspaceId, { status: filter.status, assignee: filter.assignee, cursor: pageParam }),
+    queryKey: q ? ['conversation-search', workspaceId, q] : [...listKey(workspaceId), filter],
+    queryFn: ({ pageParam }) => api.listConversations(workspaceId, q ? { status: filter.status, q, cursor: pageParam } : { status: filter.status, assignee: filter.assignee, cursor: pageParam }),
+    ...(q ? { staleTime: 0 } : {}),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
   const rows = list.data?.pages.flatMap((page) => page.data) ?? [];
   return (
     <section aria-label={t('conversations')} className={`min-w-0 flex-1 flex-col md:flex md:w-80 md:flex-none md:border-r md:border-slate-200 md:dark:border-slate-800 ${props.hidden ? 'hidden' : 'flex'}`}>
-      <div className="flex gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+      <div className="px-3 pt-3">
+        <input className="field w-full" type="search" aria-label={t('peopleSearch')} placeholder={t('peopleSearch')} maxLength={254} value={words} onChange={(e) => setWords(e.target.value)} />
+      </div>
+      <div className={`flex gap-2 border-b border-slate-200 p-3 dark:border-slate-800 ${q ? 'hidden' : ''}`}>
         <select className="field" aria-label={t('status')} value={status} onChange={(e) => setStatus(e.target.value as Conversation['status'])}>
           {STATUSES.map((option) => <option key={option} value={option}>{t(STATUS_LABEL[option])}</option>)}
         </select>
@@ -298,6 +310,13 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate ${unread > 0 ? 'font-semibold' : ''}`}>{label(row)}</span>
                   {row.subject && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.subject}</span>}
+                  {q && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{t(STATUS_LABEL[row.status])}</span>}
+                  {row.lastMessage?.text && (
+                    <span className={`block truncate text-xs ${unread > 0 ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}`}>
+                      {row.lastMessage.type === 'internal_note' ? `${t('internalNote')}: ` : row.lastMessage.senderType === 'assistant' ? `${t('aiLabel')}: ` : ''}
+                      {row.lastMessage.text}
+                    </span>
+                  )}
                   {row.tags.length > 0 && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.tags.map((tag) => tag.name).join(', ')}</span>}
                 </span>
                 {row.assistantState === 'answering' && <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">{t('assistantAnswering')}</span>}

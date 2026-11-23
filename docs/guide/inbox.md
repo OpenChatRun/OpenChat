@@ -25,6 +25,10 @@ A message from the visitor puts a conversation back to **open**, whatever its st
 
 **Assigned to** filters by **Everyone**, **Me** or **Unassigned**. High and urgent conversations are marked in the list.
 
+Each conversation shows the start of its newest message under the contact's name, marked when it is an internal note or from the AI assistant.
+
+To find someone, type part of their name or email address in the box above the list. A search looks in every status and at everyone's conversations, and shows each one's status. It does not look inside messages. Clear the box to return to the list.
+
 New messages appear as they arrive. If live updates are blocked, for example by a company network, the dashboard says so and checks every 30 seconds instead. Sending still works.
 
 If you belong to more than one workspace, choose it at the top right of the page. Each workspace's conversations stay in that workspace.

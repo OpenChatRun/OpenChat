@@ -79,9 +79,9 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 ## The inbox and dashboard
 
 - **No contact list, and no merging of contacts.** A visitor who writes from two browsers is two contacts.
-- **No search.** Planned with M7.
+- **Search finds conversations by the contact's name or email only**, not by what was written. It reads the workspace's conversations newest first until it has a page, so it slows as a workspace grows.
 - **Server messages stay in English** in the dashboard, such as errors, though its own words are in eleven languages ([languages](architecture/dashboard.md#languages)).
-- **A visitor's read position is not shown**, though it is recorded.
+- **The dashboard does not show a visitor's read position.** The API gives it, as `visitorReadSeq`, which the apps use.
 - **No canned responses.**
 
 ## Email

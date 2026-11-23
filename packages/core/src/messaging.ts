@@ -3,7 +3,7 @@
  * repository, which cannot read internal notes. Write rules: docs/architecture/data-model.md.
  */
 import { canAssignConversation, signTicket, TICKET_TTL_SECONDS, verifyTicket, type TicketClaims } from '@openchat/auth';
-import { repositories, type AssistantHandoverReason, type AttachmentJson, type ContactRow, type ConversationChange, type ConversationRow, type ConversationStatus, type Database, type StoredMessage, type WorkspaceContext } from '@openchat/database';
+import { repositories, type AssistantHandoverReason, type AttachmentJson, type ContactRow, type ConversationChange, type ConversationRow, type ConversationStatus, type LastMessageRow, type Database, type StoredMessage, type WorkspaceContext } from '@openchat/database';
 import { AppError, canonicalLanguage, notFound, toIso } from '@openchat/shared';
 import { toAttachment } from './attachments';
 import type { AuthDeps } from './auth-flows';
@@ -32,6 +32,8 @@ const toConversation = (row: ConversationRow) => ({
   assistantState: row.assistantState,
   helpArticleId: row.helpArticleId,
   visitorLanguage: row.visitorLanguage,
+  lastMessage: row.lastMessageJson === null ? null : (JSON.parse(row.lastMessageJson) as LastMessageRow),
+  visitorReadSeq: row.visitorReadSeq,
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
@@ -82,7 +84,7 @@ function decodeCursor(value: string, filters: string): InboxCursor {
 export async function listConversations(
   db: Database,
   ctx: WorkspaceContext,
-  input: { status: ConversationStatus; assignee?: string | undefined; cursor?: string | undefined; updatedAfter?: string | undefined; limit: number },
+  input: { status: ConversationStatus; assignee?: string | undefined; q?: string | undefined; cursor?: string | undefined; updatedAfter?: string | undefined; limit: number },
 ) {
   const repo = repositories(db, ctx).conversations;
   const syncCursorAt = async () => encodeCursor({ v: 1, f: SYNC, at: (await repo.now()) - SYNC_OVERLAP_MS, id: '' });
@@ -95,11 +97,14 @@ export async function listConversations(
     return { data: changed.map(toConversation), nextCursor: position, syncCursor: position ?? (await syncCursorAt()) };
   }
   const assignee = input.assignee === undefined ? undefined : input.assignee === 'none' ? null : input.assignee === 'me' ? ctx.memberId : input.assignee;
-  const filters = `${input.status}|${assignee === undefined ? '*' : (assignee ?? 'none')}`;
+  const q = input.q?.toLowerCase() || undefined;
+  // A search is in every status, for anyone's conversations, so its cursor is for the words alone.
+  const filters = q ? `q|${q}` : `${input.status}|${assignee === undefined ? '*' : (assignee ?? 'none')}`;
   const cursor = input.cursor ? decodeCursor(input.cursor, filters) : undefined;
   const rows = await repo.list({
     status: input.status,
     assignee,
+    q,
     before: cursor ? { lastMessageAt: cursor.at, id: cursor.id } : undefined,
     limit: input.limit + 1,
   });

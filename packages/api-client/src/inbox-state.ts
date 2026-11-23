@@ -26,6 +26,18 @@ export const hasGap = (messages: Message[], incoming: Pick<Message, 'seq'>) => m
 
 export type ConversationPatch = Partial<Conversation> & Pick<Conversation, 'id' | 'version'>;
 
+/** The line the inbox shows for a message, as the installation cuts it for `lastMessage`. */
+export const PREVIEW_CHARS = 140;
+
+export function previewOf(message: Pick<Message, 'content' | 'sender' | 'type' | 'assistant'>): NonNullable<Conversation['lastMessage']> {
+  return {
+    text: [...message.content].slice(0, PREVIEW_CHARS).join(''),
+    senderType: message.assistant ? 'assistant' : message.sender.type,
+    senderId: message.sender.type === 'member' && !message.assistant ? message.sender.id : null,
+    type: message.type,
+  };
+}
+
 export const unreadCount = (conversation: Pick<Conversation, 'lastMessageSeq' | 'lastReadSeq'>) => Math.max(0, conversation.lastMessageSeq - conversation.lastReadSeq);
 
 export interface InboxFilter {
@@ -63,14 +75,14 @@ export function patchPages(data: ConversationPages, patch: ConversationPatch, fi
   return { data: { ...data, pages }, found };
 }
 
-export function recordNewMessage(data: ConversationPages, message: Pick<Message, 'conversationId' | 'seq' | 'createdAt'>): { data: ConversationPages; found: boolean } {
+export function recordNewMessage(data: ConversationPages, message: Pick<Message, 'conversationId' | 'seq' | 'createdAt' | 'content' | 'sender' | 'type' | 'assistant'>): { data: ConversationPages; found: boolean } {
   let found = false;
   const pages = data.pages.map((page) => ({
     ...page,
     data: page.data.map((row) => {
       if (row.id !== message.conversationId) return row;
       found = true;
-      return row.lastMessageSeq >= message.seq ? row : { ...row, lastMessageSeq: message.seq, lastMessageAt: message.createdAt };
+      return row.lastMessageSeq >= message.seq ? row : { ...row, lastMessageSeq: message.seq, lastMessageAt: message.createdAt, lastMessage: previewOf(message) };
     }),
   }));
   if (!found) return { data, found };

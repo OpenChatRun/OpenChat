@@ -1,6 +1,6 @@
 import type { Conversation, Message } from './index';
 import { describe, expect, it } from 'vitest';
-import { applyPatch, hasGap, markReadInPages, matchesFilter, mergeMessages, patchPages, recordNewMessage, shouldSendTyping, unreadCount, type ConversationPages } from './inbox-state';
+import { applyPatch, hasGap, markReadInPages, matchesFilter, mergeMessages, patchPages, previewOf, recordNewMessage, shouldSendTyping, unreadCount, type ConversationPages } from './inbox-state';
 
 const message = (seq: number, content = `m${seq}`): Message => ({
   id: `msg_${seq}`,
@@ -24,7 +24,7 @@ const conversation = (id: string, over: Partial<Conversation> = {}): Conversatio
   contactName: null,
   contactEmail: null,
   assistantState: null,
-  helpArticleId: null, visitorLanguage: null,
+  helpArticleId: null, visitorLanguage: null, lastMessage: null, visitorReadSeq: 0,
   tags: [],
   assignedMemberId: null,
   status: 'open',
@@ -96,20 +96,28 @@ describe('conversations', () => {
 
   it('moves a conversation with a new message to the top, and updates its position', () => {
     const pages = pagesOf([conversation('a', { lastMessageAt: '2026-01-02T00:00:00.000Z' }), conversation('b', { lastMessageAt: '2026-01-01T00:00:00.000Z' })]);
-    const { data, found } = recordNewMessage(pages, { conversationId: 'b', seq: 4, createdAt: '2026-01-03T00:00:00.000Z' });
+    const { data, found } = recordNewMessage(pages, { ...message(4, 'x'.repeat(200)), conversationId: 'b', createdAt: '2026-01-03T00:00:00.000Z' });
     expect(found).toBe(true);
     expect(ids(data)).toEqual([['b', 'a']]);
     expect(data.pages[0]!.data[0]!.lastMessageSeq).toBe(4);
+    expect(data.pages[0]!.data[0]!.lastMessage).toEqual({ text: 'x'.repeat(140), senderType: 'visitor', senderId: null, type: 'text' });
+  });
+
+  it('previews a message as the installation does: a member by ID, the assistant as itself', () => {
+    const mine = { ...message(1, 'Hi'), sender: { type: 'member' as const, id: 'mem_1', displayName: 'Ada' } };
+    expect(previewOf(mine)).toEqual({ text: 'Hi', senderType: 'member', senderId: 'mem_1', type: 'text' });
+    const ai = { ...message(2, 'Hello'), sender: { type: 'system' as const, id: null, displayName: 'Bot' }, assistant: { kind: 'answer' as const } };
+    expect(previewOf(ai)).toMatchObject({ senderType: 'assistant', senderId: null });
   });
 
   it('ignores an older message arriving late', () => {
     const pages = pagesOf([conversation('a', { lastMessageSeq: 9 })]);
-    expect(recordNewMessage(pages, { conversationId: 'a', seq: 4, createdAt: '2026-01-03T00:00:00.000Z' }).data.pages[0]!.data[0]!.lastMessageSeq).toBe(9);
+    expect(recordNewMessage(pages, { ...message(4), conversationId: 'a', createdAt: '2026-01-03T00:00:00.000Z' }).data.pages[0]!.data[0]!.lastMessageSeq).toBe(9);
   });
 
   it('keeps page sizes when sorting across pages', () => {
     const pages = pagesOf([conversation('a', { lastMessageAt: '2026-01-05T00:00:00.000Z' })], [conversation('b', { lastMessageAt: '2026-01-04T00:00:00.000Z' })]);
-    expect(ids(recordNewMessage(pages, { conversationId: 'b', seq: 4, createdAt: '2026-01-06T00:00:00.000Z' }).data)).toEqual([['b'], ['a']]);
+    expect(ids(recordNewMessage(pages, { ...message(4), conversationId: 'b', createdAt: '2026-01-06T00:00:00.000Z' }).data)).toEqual([['b'], ['a']]);
   });
 
   it('only moves a read position forward', () => {
