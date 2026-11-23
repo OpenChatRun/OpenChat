@@ -46,6 +46,8 @@ export interface Env {
   /** Worker secret, with its pair. Without both, no website can require Turnstile. */
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_SITE_KEY?: string;
+  /** 'off' stops the widget reporting which page a visitor is on, and stores none. Anything else, or nothing: on. */
+  VISITOR_PAGE?: string;
   /** Optional. See ABUSE_LIMITS in @openchat/shared for what each means and its default. */
   LIMIT_MESSAGES_PER_WEBSITE_PER_DAY?: string;
   LIMIT_MESSAGES_PER_IP_PER_MINUTE?: string;

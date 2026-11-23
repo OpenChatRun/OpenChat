@@ -172,6 +172,36 @@ export async function markVisitorConversationRead(deps: Pick<AuthDeps, 'db' | 'l
   return position;
 }
 
+export const VISITOR_PAGE_MAX_CHARS = 500;
+
+/**
+ * What is kept of a page's address: where it is, and nothing of what was typed or passed along. A query or
+ * fragment often carries a name, an email address, a token or a search, so both go. Null for anything that is
+ * not a web page.
+ */
+export function pageToKeep(url: string): { url: string; origin: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+  return { url: `${parsed.origin}${parsed.pathname}`.slice(0, VISITOR_PAGE_MAX_CHARS), origin: parsed.origin };
+}
+
+/** Over the limit, a page view is dropped without complaint: the widget has nothing useful to do with an error. */
+export async function setVisitorPage(deps: Pick<AuthDeps, 'db' | 'limiter'>, ctx: VisitorContext, conversationId: string, url: string): Promise<void> {
+  await enforce(deps.limiter, await limitKey('website-visitor-pages', ctx.websiteId), LIMITS.websiteVisitorPages);
+  const repos = visitorRepositories(deps.db, ctx);
+  // Whose conversation it is comes first, so that someone else's answers 404 whatever they send.
+  if (!(await repos.conversations.get(conversationId))) throw notFound();
+  const invalid = () => new AppError(400, 'invalid_page', 'The page must be an address on the website the widget is on');
+  const page = pageToKeep(url);
+  if (!page) throw invalid();
+  if (!(await repos.page.set(conversationId, page.url, page.origin))) throw invalid();
+}
+
 export async function createVisitorTicket(deps: Pick<AuthDeps, 'db' | 'signingKey' | 'installationId'>, ctx: VisitorContext, conversationId: string, origin: string | undefined) {
   if (!(await visitorRepositories(deps.db, ctx).conversations.get(conversationId))) throw notFound();
   return issueTicket(deps, { kind: 'visitor', sub: ctx.visitorId, wid: ctx.workspaceId, conv: conversationId, until: visitorSocketUntil(), ...(origin ? { org: origin } : {}), iss: deps.installationId });

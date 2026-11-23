@@ -23,12 +23,20 @@ if (handoff) {
     loadSession: () => storage.get().session ?? null,
     saveSession: (session: Session) => storage.set({ session }),
   });
+  let consented = !handoff.consentPending;
   const controller = createController({
     api,
     storage,
     openSocket: (url) => new WebSocket(url) as never,
     isVisible: () => document.visibilityState === 'visible',
+    // Nothing about the page before consent. The query and fragment never leave the browser.
+    currentPage: () => (consented ? `${location.origin}${location.pathname}` : null),
   });
+  // A single-page site changes its address without loading anything, and has no one event for it.
+  for (const event of ['popstate', 'hashchange']) window.addEventListener(event, () => controller.pageMaybeChanged());
+  setInterval(() => {
+    if (document.visibilityState === 'visible') controller.pageMaybeChanged();
+  }, 3000);
 
   addStyles(handoff.shadow, CHAT_CSS);
   const root = document.createElement('div');
@@ -36,7 +44,11 @@ if (handoff) {
 
   handoff.chat = {
     setOpen: (open) => controller.setOpen(open),
-    grantConsent: () => storage.grantConsent(),
+    grantConsent: () => {
+      storage.grantConsent();
+      consented = true;
+      controller.pageMaybeChanged();
+    },
   };
   handoff.button.addEventListener('click', () => controller.setOpen(!controller.getState().open));
   document.addEventListener('visibilitychange', () => {

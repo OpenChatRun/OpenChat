@@ -1703,6 +1703,25 @@
                 "createdAt": {
                   "type": "string"
                 },
+                "visitorPage": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "type": "string",
+                      "description": "When the widget reported it."
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "at"
+                  ]
+                },
                 "messages": {
                   "type": "array",
                   "items": {
@@ -1791,6 +1810,7 @@
                 "status",
                 "subject",
                 "createdAt",
+                "visitorPage",
                 "messages"
               ]
             }
@@ -2037,6 +2057,10 @@
             "type": "string",
             "description": "Present when this website requires Turnstile for a new visitor."
           },
+          "reportPage": {
+            "type": "boolean",
+            "description": "Whether the widget should say which page the visitor is on, with setVisitorPage. False when the operator turned it off."
+          },
           "messageMaxChars": {
             "type": "integer",
             "description": "The longest message this installation accepts from a visitor. A longer one is refused with `message_too_long`."
@@ -2053,6 +2077,7 @@
           "websiteId",
           "settings",
           "availability",
+          "reportPage",
           "messageMaxChars",
           "helpLanguages"
         ]
@@ -2513,6 +2538,26 @@
             ],
             "description": "The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does."
           },
+          "visitorPage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string",
+                "description": "When the widget reported it."
+              }
+            },
+            "required": [
+              "url",
+              "at"
+            ],
+            "description": "The page the visitor's widget last reported, without its query or fragment. Only the current one is kept. Null when none was reported, or the installation has it turned off."
+          },
           "visitorReadSeq": {
             "type": "integer",
             "description": "How far the visitor has read, as a public sequence number: compare it with a message's `publicSeq`. 0 when they have read nothing."
@@ -2539,6 +2584,7 @@
           "helpArticleId",
           "visitorLanguage",
           "lastMessage",
+          "visitorPage",
           "visitorReadSeq"
         ]
       },
@@ -7199,6 +7245,66 @@
         "responses": {
           "204": {
             "description": "Recorded"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widget/conversations/{conversationId}/page": {
+      "put": {
+        "tags": [
+          "widget"
+        ],
+        "operationId": "setVisitorPage",
+        "summary": "Say which page the visitor is on. The query and fragment are dropped, and it replaces the last page.",
+        "security": [
+          {
+            "visitorAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded, or ignored because the installation has it turned off"
           },
           "default": {
             "description": "RFC 9457 problem details",

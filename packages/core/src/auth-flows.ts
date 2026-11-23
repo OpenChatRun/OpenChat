@@ -83,6 +83,8 @@ export const LIMITS = {
   visitorRequests: { limit: 120, windowSeconds: 60 },
   /** The writes with no limit of their own. Added to the limit on messages, one website stays under that ceiling. */
   websiteVisitorWrites: { limit: 1200, windowSeconds: 60 },
+  /** Page views, in their own bucket, so that browsing cannot use up what messages need. */
+  websiteVisitorPages: { limit: 1200, windowSeconds: 60 },
   visitorUpload: { limit: 20, windowSeconds: 60 * 60 },
   websiteVisitorUploads: { limit: 500, windowSeconds: 60 * 60 },
 } as const;

@@ -472,4 +472,6 @@ export const fr: Messages = {
   jobAssistantIndexLearned: 'Préparer une réponse apprise',
   away: 'Absent',
   awayHelp: 'Pendant votre absence, le widget de chat n’indique pas l’équipe en ligne à cause de vous. Les notifications continuent d’arriver.',
+  viewingPage: 'Consulte',
+  lastViewedPage: 'Dernière page',
 };

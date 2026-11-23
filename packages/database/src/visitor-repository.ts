@@ -312,6 +312,25 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
       },
     },
 
+    page: {
+      /**
+       * The page this visitor is on, for their own conversation. It replaces the last one: no history is kept.
+       * The conversation's version and updated_at stay, so that a page view is not a change for anyone to sync.
+       * Only a page on one of the website's own origins is kept, decided in the same statement.
+       */
+      async set(conversationId: string, url: string, origin: string): Promise<boolean> {
+        const result = await d1
+          .prepare(
+            `UPDATE conversations SET visitor_page_url = ?1, visitor_page_at = ${DB_NOW_MS}
+              WHERE workspace_id = ?2 AND id = ?3 AND contact_id = ?4
+                AND EXISTS (SELECT 1 FROM websites s, json_each(s.allowed_origins_json) o WHERE s.workspace_id = ?2 AND s.id = conversations.website_id AND o.value = ?5)`,
+          )
+          .bind(url, w, conversationId, ctx.contactId, origin)
+          .run();
+        return result.meta.changes > 0;
+      },
+    },
+
     profile: {
       /** Consent keeps its first timestamp while it stays on, and withdrawing clears it. It was given for one address, so a new address needs it again. */
       async update(input: { name?: string | undefined; email?: string | undefined; followUpConsent?: boolean | undefined }): Promise<void> {

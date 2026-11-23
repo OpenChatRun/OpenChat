@@ -330,6 +330,9 @@ export const conversations = sqliteTable(
      * it. The first one sent is kept; a supervisor can correct it.
      */
     visitorLanguage: text('visitor_language'),
+    /** The page the visitor is on now, without its query or fragment. The current one only: each report replaces the last. */
+    visitorPageUrl: text('visitor_page_url'),
+    visitorPageAt: integer('visitor_page_at'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

@@ -472,4 +472,6 @@ export const zhHant: Messages = {
   jobAssistantIndexLearned: '準備學到的答案',
   away: '離開',
   awayHelp: '離開期間，聊天小工具不會因為你而顯示團隊在線。通知仍會送達。',
+  viewingPage: '正在瀏覽',
+  lastViewedPage: '上次瀏覽',
 };
