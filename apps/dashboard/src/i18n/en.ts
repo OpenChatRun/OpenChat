@@ -482,6 +482,8 @@ export const en = {
   auditAutoApproveOff: '{actor} made learned answers in {target} wait for approval',
   jobAssistantLearn: 'Learn from a conversation with the assistant',
   jobAssistantIndexLearned: 'Prepare a learned answer',
+  away: 'Away',
+  awayHelp: 'While you are away, you do not make the chat widget say the team is online. Notifications still arrive.',
 };
 
 export type Messages = Record<keyof typeof en, string>;

@@ -100,6 +100,21 @@ describe('members', () => {
     const ids = [...first.data, ...second.data].map((m) => m.id).sort();
     expect(ids).toEqual(['mem_agent', 'mem_supervisor', 'mem_teammate']);
   });
+
+  it('lets a member set themselves away, and nobody else', async () => {
+    const away = async () => ((await (await call('GET', `${W1}/members`, tokens.supervisor)).json()) as { data: { id: string; away: boolean }[] }).data.filter((m) => m.away).map((m) => m.id);
+    expect(await away()).toEqual([]);
+    const changed = await call('PATCH', `${W1}/members/me`, tokens.agent, { away: true });
+    expect(changed.status).toBe(200);
+    expect(await changed.json()).toMatchObject({ id: 'mem_agent', away: true });
+    expect(await away()).toEqual(['mem_agent']);
+    await call('PATCH', `${W1}/members/me`, tokens.agent, { away: false });
+    expect(await away()).toEqual([]);
+    // No member ID in the address, so there is nobody else to name. Other fields are refused.
+    expect((await call('PATCH', `${W1}/members/me`, tokens.agent, { away: true, role: 'owner' })).status).toBe(400);
+    expect((await call('PATCH', `${W1}/members/me`, tokens.outsider, { away: true })).status).toBe(404);
+    expect((await call('PATCH', `${W1}/members/me`, undefined, { away: true })).status).toBe(401);
+  });
 });
 
 describe('websites', () => {

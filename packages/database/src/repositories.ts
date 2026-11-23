@@ -31,6 +31,19 @@ export interface MemberRow {
   email: string;
   role: Role;
   status: 'active' | 'suspended' | 'removed';
+  /** Their own choice: an away member does not make the widget say the team is online. */
+  away: boolean;
+}
+type RawMember = Omit<MemberRow, 'away'> & { away: number };
+const toMember = (row: RawMember): MemberRow => ({ ...row, away: row.away === 1 });
+
+/** Counts for one member's view of a workspace's inbox. */
+export interface InboxSummaryRow {
+  open: number;
+  unassigned: number;
+  mine: number;
+  pending: number;
+  unread: number;
 }
 
 export const WEBSITE_COLUMNS = `id, name, website_key AS websiteKey, allowed_origins_json AS originsJson, settings_json AS settingsJson`;
@@ -41,7 +54,7 @@ export const toWebsite = ({ originsJson, settingsJson, ...row }: RawWebsite): We
   settings: settingsJson ? (JSON.parse(settingsJson) as Record<string, unknown>) : {},
 });
 
-const MEMBER_SELECT = `SELECT m.id, u.name, u.email, ${effectiveRole('m')} AS role, CASE WHEN m.removed_at IS NOT NULL THEN 'removed' ELSE m.status END AS status FROM workspace_members m JOIN users u ON u.id = m.user_id`;
+const MEMBER_SELECT = `SELECT m.id, u.name, u.email, ${effectiveRole('m')} AS role, CASE WHEN m.removed_at IS NOT NULL THEN 'removed' ELSE m.status END AS status, m.away FROM workspace_members m JOIN users u ON u.id = m.user_id`;
 
 export type SendableType = 'text' | 'image' | 'file' | 'system' | 'internal_note';
 
@@ -416,12 +429,18 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
         const { results } = await d1
           .prepare(`${MEMBER_SELECT} WHERE m.workspace_id = ?1 AND m.id > ?2 ORDER BY m.id LIMIT ?3`)
           .bind(w, input.cursor ?? '', input.limit + 1)
-          .all<MemberRow>();
-        const data = results.slice(0, input.limit);
+          .all<RawMember>();
+        const data = results.slice(0, input.limit).map(toMember);
         return { data, nextCursor: results.length > input.limit ? (data.at(-1)?.id ?? null) : null };
       },
-      get(memberId: string): Promise<MemberRow | null> {
-        return d1.prepare(`${MEMBER_SELECT} WHERE m.workspace_id = ?1 AND m.id = ?2`).bind(w, memberId).first<MemberRow>();
+      async get(memberId: string): Promise<MemberRow | null> {
+        const row = await d1.prepare(`${MEMBER_SELECT} WHERE m.workspace_id = ?1 AND m.id = ?2`).bind(w, memberId).first<RawMember>();
+        return row && toMember(row);
+      },
+      /** Only ever the caller's own row: the ID comes from the context, not from the request. */
+      async setAway(away: boolean): Promise<MemberRow | null> {
+        await d1.prepare(`UPDATE workspace_members SET away = ?3, updated_at = ${DB_NOW_MS} WHERE workspace_id = ?1 AND id = ?2 AND away <> ?3`).bind(w, ctx.memberId, away ? 1 : 0).run();
+        return this.get(ctx.memberId);
       },
     },
 
@@ -441,6 +460,27 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
        * An inbox view, newest first, using the inbox and assignee indexes. Every conversation starts with a
        * message in the same batch, so last_message_at is set and the row comparison is safe.
        */
+      /**
+       * One pass over the open and pending rows of conversations_inbox_idx. Unread counts open conversations
+       * with a message past this member's read position.
+       */
+      async summary(): Promise<InboxSummaryRow> {
+        const row = await d1
+          .prepare(
+            `SELECT COALESCE(SUM(c.status = 'open'), 0) AS open,
+                    COALESCE(SUM(c.status = 'open' AND c.assigned_member_id IS NULL), 0) AS unassigned,
+                    COALESCE(SUM(c.status = 'open' AND c.assigned_member_id = ?1), 0) AS mine,
+                    COALESCE(SUM(c.status = 'pending'), 0) AS pending,
+                    COALESCE(SUM(c.status = 'open' AND c.last_message_seq > COALESCE(r.read_seq, 0)), 0) AS unread
+               FROM conversations c
+               LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.reader_type = 'member' AND r.reader_id = ?1
+              WHERE c.workspace_id = ?2 AND c.status IN ('open', 'pending')`,
+          )
+          .bind(ctx.memberId, w)
+          .first<InboxSummaryRow>();
+        return row ?? { open: 0, unassigned: 0, mine: 0, pending: 0, unread: 0 };
+      },
+
       async list(filter: ConversationFilter): Promise<ConversationRow[]> {
         const before = filter.before ? 'AND (c.last_message_at, c.id) < (?5, ?6)' : '';
         // A search looks in every status, and reads the workspace's conversations newest first until the page is full.

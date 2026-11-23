@@ -3195,6 +3195,10 @@
               "suspended",
               "removed"
             ]
+          },
+          "away": {
+            "type": "boolean",
+            "description": "Their own choice. An away member does not make the widget say the team is online, even with the dashboard or app open. Notifications still arrive."
           }
         },
         "required": [
@@ -3202,7 +3206,40 @@
           "name",
           "email",
           "role",
-          "status"
+          "status",
+          "away"
+        ]
+      },
+      "InboxSummary": {
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "integer",
+            "description": "Open conversations."
+          },
+          "unassigned": {
+            "type": "integer",
+            "description": "Open conversations with no assignee."
+          },
+          "mine": {
+            "type": "integer",
+            "description": "Open conversations assigned to the caller."
+          },
+          "pending": {
+            "type": "integer",
+            "description": "Pending conversations."
+          },
+          "unread": {
+            "type": "integer",
+            "description": "Open conversations with a message the caller has not read."
+          }
+        },
+        "required": [
+          "open",
+          "unassigned",
+          "mine",
+          "pending",
+          "unread"
         ]
       },
       "RelayStatus": {
@@ -9396,6 +9433,117 @@
                     "data",
                     "nextCursor"
                   ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/members/me": {
+      "patch": {
+        "tags": [
+          "workspaces"
+        ],
+        "operationId": "updateMyMembership",
+        "summary": "Set yourself away, or back. A member changes only their own.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "away": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "away"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The member, as changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/inbox-summary": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "getInboxSummary",
+        "summary": "Counts for the caller's view of the inbox",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxSummary"
                 }
               }
             }

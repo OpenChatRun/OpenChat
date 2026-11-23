@@ -43,7 +43,7 @@ describe('HTTP', () => {
     expect(await client.getDiscovery()).toEqual({
       installationId: 'inst_test',
       name: 'Test installation',
-      api: { versions: ['v1'], minor: 1 },
+      api: { versions: ['v1'], minor: 2 },
       realtime: { protocolVersions: [1] },
       relay: null,
       auth: { signup: 'invite_only' },

@@ -470,4 +470,6 @@ export const nl: Messages = {
   auditAutoApproveOff: '{actor} liet geleerde antwoorden in {target} op goedkeuring wachten',
   jobAssistantLearn: 'Met de assistent van een gesprek leren',
   jobAssistantIndexLearned: 'Een geleerd antwoord voorbereiden',
+  away: 'Afwezig',
+  awayHelp: 'Zolang je afwezig bent, toont de chatwidget het team niet als online vanwege jou. Meldingen komen nog steeds binnen.',
 };

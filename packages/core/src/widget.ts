@@ -7,8 +7,10 @@ import {
   authorizeVisitor,
   createVisitor,
   findWebsiteByKey,
+  countAvailableMembers,
   resumeVisitor,
   visitorRepositories,
+  type Database,
   type PublicWebsite,
   type VisitorContext,
   type VisitorConversationRow,
@@ -58,6 +60,9 @@ const toMessage = (row: VisitorMessageRow, ctx: VisitorContext) => ({
   // A member's reply, translated for the visitor (ADR-0024): what the member wrote, for Show original.
   ...(row.senderType === 'member' && row.originalLanguage && row.originalContent !== null ? { original: { language: row.originalLanguage, content: row.originalContent } } : {}),
 });
+
+/** Of the members with an open socket, how many have not set themselves away. */
+export const availableMembers = (db: Database, workspaceId: string, memberIds: string[]): Promise<number> => countAvailableMembers(db, workspaceId, memberIds);
 
 export const websiteForWidget = (deps: Pick<AuthDeps, 'db'>, websiteKey: string): Promise<PublicWebsite | null> => findWebsiteByKey(deps.db, websiteKey);
 

@@ -259,6 +259,11 @@ abstract class RealtimeObject extends DurableObject<RealtimeEnv> {
   async connectionCount(): Promise<number> {
     return this.openSockets().length;
   }
+
+  /** Who has a socket here, each once. Added after connectionCount, so a caller must expect an older object without it. */
+  async principalIds(): Promise<string[]> {
+    return [...new Set(this.openSockets().flatMap((socket) => attachmentOf(socket)?.principalId ?? []))];
+  }
 }
 
 function parseFrame(message: string | ArrayBuffer): { type: string; data: Record<string, unknown> } | null {

@@ -1,5 +1,5 @@
-import { getWorkspaceRoute, listMembersRoute, listWebsitesRoute } from '@openchat/api-contracts';
-import { getWorkspace, listMembers, listWebsites, workspaceContext } from '@openchat/core';
+import { getInboxSummaryRoute, getWorkspaceRoute, listMembersRoute, listWebsitesRoute, updateMyMembershipRoute } from '@openchat/api-contracts';
+import { getWorkspace, inboxSummary, listMembers, listWebsites, setMyAway, workspaceContext } from '@openchat/core';
 import type { Context } from 'hono';
 import { authDeps, type App, type AppEnv } from '../context';
 import { requireAuth } from './auth';
@@ -23,6 +23,16 @@ export function registerWorkspaceRoutes(app: App) {
   app.openapi(listMembersRoute, async (c) => {
     const { deps, ctx } = await scoped(c, c.req.valid('param').workspaceId);
     return c.json(await listMembers(deps.db, ctx, c.req.valid('query')), 200);
+  });
+
+  app.openapi(updateMyMembershipRoute, async (c) => {
+    const { deps, ctx } = await scoped(c, c.req.valid('param').workspaceId);
+    return c.json(await setMyAway(deps.db, ctx, c.req.valid('json').away), 200);
+  });
+
+  app.openapi(getInboxSummaryRoute, async (c) => {
+    const { deps, ctx } = await scoped(c, c.req.valid('param').workspaceId);
+    return c.json(await inboxSummary(deps.db, ctx), 200);
   });
 
   app.openapi(listWebsitesRoute, async (c) => {

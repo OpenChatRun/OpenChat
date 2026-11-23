@@ -470,4 +470,6 @@ export const zhHans: Messages = {
   auditAutoApproveOff: '{actor} 让 {target} 中学到的答案需等待批准',
   jobAssistantLearn: '用助手从对话中学习',
   jobAssistantIndexLearned: '准备学到的答案',
+  away: '离开',
+  awayHelp: '离开期间，聊天小组件不会因为你而显示团队在线。通知仍会送达。',
 };

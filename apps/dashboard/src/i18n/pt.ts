@@ -470,4 +470,6 @@ export const pt: Messages = {
   auditAutoApproveOff: '{actor} fez as respostas aprendidas em {target} aguardarem aprovação',
   jobAssistantLearn: 'Aprender com uma conversa usando o assistente',
   jobAssistantIndexLearned: 'Preparar uma resposta aprendida',
+  away: 'Ausente',
+  awayHelp: 'Enquanto você estiver ausente, o widget de chat não mostra a equipe online por sua causa. As notificações continuam chegando.',
 };

@@ -30,6 +30,7 @@ import {
   limitKeyForIp,
   publishedHelpLanguages,
   websiteForWidget,
+  availableMembers,
   widgetHelp,
   widgetHelpArticle,
   type VisitorContext,
@@ -97,9 +98,12 @@ interface CachedBootstrap {
 /** Cached with the rest, so that page views on a busy site do not wake the hub. */
 async function availabilityOf(c: Context<AppEnv>, workspaceId: string, mode: unknown): Promise<'online' | 'offline'> {
   if (mode === 'online' || mode === 'offline') return mode;
-  const agents = await c.env.WORKSPACE_HUB.getByName(hubName(workspaceId))
-    .connectionCount()
-    .catch(() => 0);
+  const hub = c.env.WORKSPACE_HUB.getByName(hubName(workspaceId));
+  // A member who set themselves away does not count. A hub from before a deploy cannot say who is connected for
+  // a while, and then anyone connected counts, as before.
+  const members = await hub.principalIds().catch(() => null);
+  if (members) return (await availableMembers(publicDatabase(c.env), workspaceId, members)) > 0 ? 'online' : 'offline';
+  const agents = await hub.connectionCount().catch(() => 0);
   return agents > 0 ? 'online' : 'offline';
 }
 

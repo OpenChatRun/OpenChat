@@ -157,6 +157,8 @@ export const workspaceMembers = sqliteTable(
     status: text('status', { enum: ['active', 'suspended'] }).notNull().default('active'),
     /** Removed members keep this row, with status 'suspended', so that their messages keep a name. See ADR-0015. */
     removedAt: integer('removed_at'),
+    /** Set by the member. While it is, they do not make the widget say the team is online. */
+    away: integer('away', { mode: 'boolean' }).notNull().default(false),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

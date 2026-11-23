@@ -69,7 +69,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 
 - **One conversation per visitor.** The widget shows one, though the API allows more.
 - **No native SDK for mobile apps.** An app shows the widget from a chat page on the company's site, in a web view, and is not told about new replies ([widget guide](guide/widget.md#in-a-mobile-app)).
-- **"We are online" counts open dashboards and app screens only.** An agent who answers from a notification shows as away until the app is open, and an open widget does not see the change until it loads again ([realtime](architecture/realtime.md)).
+- **"We are online" counts open dashboards and app screens only**, and not members who set themselves away. An agent who answers from a notification shows as away until the app is open, and an open widget does not see the change until it loads again ([realtime](architecture/realtime.md)).
 - **"Before the first message" email is enforced only by the widget**, not by the API.
 - **Translations have not been reviewed by native speakers** in the widget, the dashboard or the app ([widget](architecture/widget.md#languages), [dashboard](architecture/dashboard.md#languages)). Right-to-left languages, such as Arabic and Hebrew, are not supported.
 - **No screen-reader user has reviewed it.** It passes automated checks and was checked by hand ([accessibility](architecture/accessibility.md)).
@@ -82,6 +82,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **Search finds conversations by the contact's name or email only**, not by what was written. It reads the workspace's conversations newest first until it has a page, so it slows as a workspace grows.
 - **Server messages stay in English** in the dashboard, such as errors, though its own words are in eleven languages ([languages](architecture/dashboard.md#languages)).
 - **The dashboard does not show a visitor's read position.** The API gives it, as `visitorReadSeq`, which the apps use.
+- **Away is a switch, with no schedule.** A member who forgets to turn it off stays away, and the widget takes up to 30 seconds to follow a change.
 - **No canned responses.**
 
 ## Email
