@@ -78,8 +78,9 @@ export const getSecurityTxtRoute = createRoute({
  *
  * - 1: `q` on listConversations, and `lastMessage` and `visitorReadSeq` on a conversation.
  * - 2: `away` on a member with updateMyMembership, and getInboxSummary.
+ * - 3: saved replies.
  */
-export const API_MINOR_VERSION = 2;
+export const API_MINOR_VERSION = 3;
 
 // ---------- Authentication ----------
 
@@ -566,6 +567,62 @@ export const deleteFollowUpRuleRoute = createRoute({
   summary: 'Delete a rule. For supervisors.',
   security: bearer,
   request: { params: followUpRuleParams },
+  responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+// ---------- Saved replies ----------
+
+export const SavedReplySchema = z.object({ id: z.string(), title: z.string(), content: z.string(), createdAt: z.string(), updatedAt: z.string() }).openapi('SavedReply');
+
+/** As long as a message may be on an installation with the default limit. A longer limit does not lengthen these. */
+const SavedReplyContent = z.string().trim().min(1).max(4000);
+const savedReplyParams = workspaceParams.extend({ savedReplyId: z.string() });
+
+export const listSavedRepliesRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/saved-replies',
+  tags: ['conversations'],
+  operationId: 'listSavedReplies',
+  summary: "The workspace's saved replies, by title. For every member.",
+  security: bearer,
+  request: { params: workspaceParams },
+  responses: { 200: { description: 'Saved replies', ...json(z.object({ data: z.array(SavedReplySchema) })) }, default: problemResponse },
+});
+
+export const createSavedReplyRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/saved-replies',
+  tags: ['conversations'],
+  operationId: 'createSavedReply',
+  summary: 'Add a saved reply. For supervisors.',
+  description: 'A title is unique in its workspace, whatever its case: `saved_reply_exists`. A workspace holds 200: `too_many_saved_replies`.',
+  security: bearer,
+  request: { params: workspaceParams, body: { required: true, ...json(z.strictObject({ title: SafeName, content: SavedReplyContent })) } },
+  responses: { 201: { description: 'Saved reply', ...json(SavedReplySchema) }, default: problemResponse },
+});
+
+export const updateSavedReplyRoute = createRoute({
+  method: 'patch',
+  path: '/api/v1/workspaces/{workspaceId}/saved-replies/{savedReplyId}',
+  tags: ['conversations'],
+  operationId: 'updateSavedReply',
+  summary: 'Change a saved reply. For supervisors.',
+  security: bearer,
+  request: {
+    params: savedReplyParams,
+    body: { required: true, ...json(z.strictObject({ title: SafeName.optional(), content: SavedReplyContent.optional() }).refine((b) => b.title !== undefined || b.content !== undefined, 'Nothing to change')) },
+  },
+  responses: { 200: { description: 'Saved reply', ...json(SavedReplySchema) }, default: problemResponse },
+});
+
+export const deleteSavedReplyRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/saved-replies/{savedReplyId}',
+  tags: ['conversations'],
+  operationId: 'deleteSavedReply',
+  summary: 'Delete a saved reply. For supervisors.',
+  security: bearer,
+  request: { params: savedReplyParams },
   responses: { 204: { description: 'Deleted' }, default: problemResponse },
 });
 

@@ -115,6 +115,10 @@ const CASES: Record<string, Case> = {
   createFollowUpRule: { kind: 'workspace', body: { name: 'Taken over', inactiveMinutes: 30 }, ownerStatus: 201 },
   updateFollowUpRule: { kind: 'workspace', body: { name: 'Taken over' }, ownerStatus: 200 },
   deleteFollowUpRule: { kind: 'workspace', ownerStatus: 204 },
+  listSavedReplies: { kind: 'workspace', ownerStatus: 200 },
+  createSavedReply: { kind: 'workspace', body: { title: 'Taken over', content: 'Hello' }, ownerStatus: 201 },
+  updateSavedReply: { kind: 'workspace', body: { title: 'Taken over' }, ownerStatus: 200 },
+  deleteSavedReply: { kind: 'workspace', ownerStatus: 204 },
   addEmailSuppression: { kind: 'workspace', body: { email: 'blocked@example.com' }, ownerStatus: 204 },
   removeEmailSuppression: { kind: 'workspace', body: { email: 'blocked@example.com' }, ownerStatus: 204 },
   setNotificationPreferences: { kind: 'workspace', body: { preferences: [] }, ownerStatus: 204 },
@@ -235,8 +239,8 @@ const testEnv = { ...env, EMAIL_QUEUE: { send: async (_job: JobEnvelope) => unde
 
 /** Resources in each workspace, by the name of the path parameter that holds them. */
 const RESOURCES: Record<'a' | 'b', Record<string, string>> = {
-  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a', runId: 'hdrf_a', messageId: 'msg_a' },
-  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b', runId: 'hdrf_b', messageId: 'msg_b' },
+  a: { userId: 'user_a_agent', workspaceId: 'work_a', memberId: 'mem_a_agent', websiteId: 'site_a', conversationId: 'conv_a', contactId: 'cont_a', tagId: 'tag_a', attachmentId: 'att_a', subscriptionId: 'psub_a', ruleId: 'rule_a', savedReplyId: 'srep_a', failedJobId: 'fjob_a', sourceId: 'asrc_a', learnedId: 'alrn_a', collectionId: 'hcol_a', articleId: 'hart_a', assetId: 'hast_a', runId: 'hdrf_a', messageId: 'msg_a' },
+  b: { userId: 'user_b_agent', workspaceId: 'work_b', memberId: 'mem_b_agent', websiteId: 'site_b', conversationId: 'conv_b', contactId: 'cont_b', tagId: 'tag_b', attachmentId: 'att_b', subscriptionId: 'psub_b', ruleId: 'rule_b', savedReplyId: 'srep_b', failedJobId: 'fjob_b', sourceId: 'asrc_b', learnedId: 'alrn_b', collectionId: 'hcol_b', articleId: 'hart_b', assetId: 'hast_b', runId: 'hdrf_b', messageId: 'msg_b' },
 };
 
 function urlFor(path: string, ...sources: Record<string, string>[]): string {
@@ -270,7 +274,7 @@ const request = async (method: string, path: string, token: string | null, body?
   return response;
 };
 
-const TABLES = ['automation_rules', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned', 'help_collections', 'help_articles', 'help_assets', 'help_draft_runs'];
+const TABLES = ['automation_rules', 'saved_replies', 'workspaces', 'workspace_members', 'websites', 'invitations', 'audit_log', 'outbox', 'conversation_read_cursors', 'conversation_events', 'messages', 'conversations', 'tags', 'conversation_tags', 'contacts', 'visitors', 'attachments', 'push_subscriptions', 'notification_preferences', 'failed_jobs', 'assistant_settings', 'assistant_sources', 'assistant_chunks', 'assistant_usage', 'assistant_learned', 'help_collections', 'help_articles', 'help_assets', 'help_draft_runs'];
 
 /** Every row belonging to workspace A. A refused request must leave this exactly as it was. */
 async function snapshotOfA(): Promise<string> {
@@ -301,6 +305,7 @@ async function seed() {
       env.DB.prepare(`INSERT INTO push_subscriptions (id, workspace_id, member_id, relay_id, relay_subscription_id, platform, created_at, updated_at) VALUES (?1, ?2, ?3, 'managed', ?4, 'ios', 1, 1)`).bind(`psub_${w}`, `work_${w}`, `mem_${w}_owner`, `sub_${w}`),
       env.DB.prepare(`INSERT INTO tags (id, workspace_id, name, created_at) VALUES (?1, ?2, 'existing', 1)`).bind(`tag_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO automation_rules (id, workspace_id, name, trigger_type, conditions_json, actions_json, created_at, updated_at) VALUES (?1, ?2, 'Rule', 'conversation_inactive', '{"inactiveMinutes":30}', '[]', 1, 1)`).bind(`rule_${w}`, `work_${w}`),
+      env.DB.prepare(`INSERT INTO saved_replies (id, workspace_id, title, content, created_at, updated_at) VALUES (?1, ?2, 'Greeting', 'Hi there', 1, 1)`).bind(`srep_${w}`, `work_${w}`),
       env.DB.prepare(`INSERT INTO failed_jobs (id, workspace_id, queue, job_type, idempotency_key, attempts, envelope_json, failed_at) VALUES (?1, ?2, 'oc-local-jobs', 'automation.evaluate', ?1, 5, ?3, 1)`)
         .bind(`fjob_${w}`, `work_${w}`, JSON.stringify({ v: 1, type: 'automation.evaluate', id: `job_${w}`, idempotencyKey: `fjob_${w}`, workspaceId: `work_${w}`, occurredAt: '2026-01-01T00:00:00.000Z', payload: { conversationId: `conv_${w}` } })),
       env.DB.prepare(`INSERT INTO assistant_sources (id, workspace_id, website_id, kind, title, content, created_at, updated_at) VALUES (?1, ?2, ?3, 'text', 'Hours', 'Open 9 to 5', 1, 1)`).bind(`asrc_${w}`, `work_${w}`, `site_${w}`),

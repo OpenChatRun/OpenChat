@@ -119,3 +119,12 @@ export const TYPING_SEND_INTERVAL_MS = 3000;
 export function shouldSendTyping(lastSent: number, now: number): boolean {
   return now - lastSent >= TYPING_SEND_INTERVAL_MS;
 }
+
+/** The saved replies whose title or text holds every word typed, those matching by title first. */
+export function matchSavedReplies<T extends { title: string; content: string }>(replies: readonly T[], query: string): T[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [...replies];
+  const holds = (text: string) => words.every((word) => text.toLowerCase().includes(word));
+  const byTitle = replies.filter((reply) => holds(reply.title));
+  return [...byTitle, ...replies.filter((reply) => !byTitle.includes(reply) && holds(`${reply.title} ${reply.content}`))];
+}

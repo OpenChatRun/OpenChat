@@ -432,3 +432,37 @@ test('an installation admin changes the widget from the Workspaces page', async 
   await after.getByRole('button', { name: 'Save widget settings' }).click();
   await expect(after.getByRole('status')).toContainText('Saved');
 });
+
+test('a supervisor saves a reply, and an agent puts it in the box with a slash', async ({ browser, page }) => {
+  const visitor = await startVisitor('When do you ship?');
+  await signIn(page, OWNER);
+  await page.getByRole('link', { name: /When do you ship/ }).or(page.getByRole('button', { name: /When do you ship/ })).first().click();
+  await page.getByRole('button', { name: 'Saved replies' }).click();
+  const saved = page.getByRole('region', { name: 'Saved replies' });
+  const title = `Shipping ${Date.now()}`;
+  await saved.getByRole('button', { name: 'New saved reply' }).click();
+  await saved.getByLabel('Title').fill(title);
+  await saved.getByLabel('Reply text').fill('We ship within two working days.');
+  await saved.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(saved.getByRole('button', { name: new RegExp(title) }).first()).toBeVisible();
+
+  // An agent may use it, and not change it.
+  const context = await browser.newContext();
+  const agent = await context.newPage();
+  await signIn(agent, AGENT);
+  await agent.getByRole('link', { name: /When do you ship/ }).or(agent.getByRole('button', { name: /When do you ship/ })).first().click();
+  await agent.getByLabel('Reply').pressSequentially('/');
+  const picker = agent.getByRole('region', { name: 'Saved replies' });
+  await expect(picker.getByRole('button', { name: 'New saved reply' })).toHaveCount(0);
+  await picker.getByLabel('Search saved replies').fill(title);
+  await expect(picker.getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  await picker.getByLabel('Search saved replies').press('Enter');
+  await expect(agent.getByLabel('Reply')).toHaveValue('We ship within two working days.');
+  await agent.getByRole('button', { name: 'Send reply' }).click();
+  await expect.poll(async () => (await visitor.history()).map((m) => m.content)).toContain('We ship within two working days.');
+  await context.close();
+
+  // Gone again, because other tests share this workspace.
+  await saved.getByRole('button', { name: `Delete ${title}` }).click();
+  await expect(saved.getByText(title)).toHaveCount(0);
+});

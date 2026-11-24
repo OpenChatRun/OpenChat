@@ -39,7 +39,7 @@ Installations upgrade on their own schedule, and the official app must cope with
 {
   "installationId": "inst_01JC...",
   "name": "Company A Support",
-  "api": { "versions": ["v1"], "minor": 2 },
+  "api": { "versions": ["v1"], "minor": 3 },
   "realtime": { "protocolVersions": [1] },
   "relay": { "id": "managed", "url": "https://relay.example.org", "bundleIds": ["org.example.app"], "publicKeys": [{ "id": "k1", "alg": "Ed25519", "key": "..." }] },
   "auth": { "signup": "invite_only" },
@@ -47,7 +47,7 @@ Installations upgrade on their own schedule, and the official app must cope with
 }
 ```
 
-The app reads this before showing a login form, and uses it to decide compatibility. It also gates features using `api.minor`, which rises when the API gains something a client cannot detect from an answer, such as a new query parameter that an older installation would ignore. Minor 1 added `q` on the conversation list, and `lastMessage` and `visitorReadSeq` on a conversation. Minor 2 added `away` on a member, with `PATCH /workspaces/{id}/members/me`, and `GET /workspaces/{id}/inbox-summary`. `software` names the release and where its source is, which the AGPL asks an installation to offer its users; see [licensing](../operations/licensing.md#the-source-offer).
+The app reads this before showing a login form, and uses it to decide compatibility. It also gates features using `api.minor`, which rises when the API gains something a client cannot detect from an answer, such as a new query parameter that an older installation would ignore. Minor 1 added `q` on the conversation list, and `lastMessage` and `visitorReadSeq` on a conversation. Minor 2 added `away` on a member, with `PATCH /workspaces/{id}/members/me`, and `GET /workspaces/{id}/inbox-summary`. Minor 3 added saved replies, under `/workspaces/{id}/saved-replies`. `software` names the release and where its source is, which the AGPL asks an installation to offer its users; see [licensing](../operations/licensing.md#the-source-offer).
 
 ## Requests and responses
 

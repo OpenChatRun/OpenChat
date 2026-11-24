@@ -547,6 +547,22 @@ export const tags = sqliteTable(
   (t) => [unique('tags_tenant_uq').on(t.workspaceId, t.id), unique('tags_name_uq').on(t.workspaceId, t.name)],
 );
 
+/** Replies a team writes once and sends often. The title is what a member searches for; the content is what is put in the reply box. */
+export const savedReplies = sqliteTable(
+  'saved_replies',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    title: nocase('title').notNull(),
+    content: text('content').notNull(),
+    createdAt: ts('created_at'),
+    updatedAt: ts('updated_at'),
+  },
+  (t) => [unique('saved_replies_title_uq').on(t.workspaceId, t.title)],
+);
+
 export const conversationTags = sqliteTable(
   'conversation_tags',
   {

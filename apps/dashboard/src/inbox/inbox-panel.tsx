@@ -7,6 +7,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClie
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { Icon, Initials } from '../icons';
+import { SavedReplies } from './saved-replies';
 import { getLocale, intlLocale, t, type MessageKey } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 import { createRealtime, type Realtime, type RealtimeStatus, type ServerFrame } from '@openchat/api-client/realtime';
@@ -520,6 +521,11 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
   const [uploading, setUploading] = useState(0);
   const [uploadError, setUploadError] = useState<unknown>(null);
   const picker = useRef<HTMLInputElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // Null: closed. Otherwise what is being searched for.
+  const [saved, setSaved] = useState<string | null>(null);
+  const me = useQuery({ queryKey: ['me'], queryFn: api.getMe });
+  const supervisor = me.data?.memberships.some((m) => m.workspace.id === workspaceId && m.role === 'supervisor') === true;
   const upload = (picked: File[]) => {
     setUploadError(null);
     setUploading((count) => count + picked.length);
@@ -569,7 +575,25 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
         <button type="button" className="tab" aria-pressed={!note} onClick={() => setMode('text')}>{t('reply')}</button>
         <button type="button" className="tab" aria-pressed={note} onClick={() => setMode('internal_note')}>{t('internalNote')}</button>
       </div>
+      {saved !== null && (
+        <SavedReplies
+          workspaceId={workspaceId}
+          supervisor={supervisor}
+          query={saved}
+          onQuery={setSaved}
+          onClose={() => {
+            setSaved(null);
+            box.current?.focus();
+          }}
+          onPick={(content) => {
+            setDraft(draft.trim() ? `${draft.replace(/\s+$/, '')} ${content}` : content);
+            setSaved(null);
+            box.current?.focus();
+          }}
+        />
+      )}
       <textarea
+        ref={box}
         className="field resize-none"
         rows={3}
         maxLength={16000}
@@ -577,6 +601,11 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
         placeholder={t(note ? 'notePlaceholder' : 'replyPlaceholder')}
         value={draft}
         onChange={(event) => {
+          // A slash in an empty box asks for a saved reply, as in other inboxes.
+          if (event.target.value === '/' && draft === '') {
+            setSaved('');
+            return;
+          }
           setDraft(event.target.value);
           const now = Date.now();
           if (event.target.value && shouldSendTyping(lastTyping.current, now)) {
@@ -619,6 +648,10 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
         <button type="button" className="button-quiet mr-auto border-transparent bg-transparent dark:bg-transparent" onClick={() => picker.current?.click()}>
           <Icon name="attach" className="size-4" />
           {t('attachFile')}
+        </button>
+        <button type="button" className="button-quiet border-transparent bg-transparent dark:bg-transparent" aria-expanded={saved !== null} onClick={() => setSaved(saved === null ? '' : null)}>
+          <Icon name="savedReply" className="size-4" />
+          {t('savedReplies')}
         </button>
         <input
           ref={picker}

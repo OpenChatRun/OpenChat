@@ -126,3 +126,43 @@ describe('websites', () => {
     expect(((await (await call('GET', `${W2}/websites`, tokens.outsider)).json()) as { data: unknown[] }).data).toEqual([]);
   });
 });
+
+describe('saved replies', () => {
+  const path = `${W1}/saved-replies`;
+  type Saved = { id: string; title: string; content: string };
+  const list = async (token = tokens.agent) => ((await (await call('GET', path, token)).json()) as { data: Saved[] }).data;
+
+  it('are read by every member and written by supervisors', async () => {
+    expect((await call('POST', path, tokens.agent, { title: 'Hello', content: 'Hi' })).status).toBe(403);
+    const created = await call('POST', path, tokens.supervisor, { title: 'Shipping', content: '  We ship in two days.  ' });
+    expect(created.status).toBe(201);
+    const saved = (await created.json()) as Saved;
+    expect(saved).toMatchObject({ title: 'Shipping', content: 'We ship in two days.' });
+    expect(await list()).toMatchObject([{ id: saved.id, title: 'Shipping' }]);
+    expect((await call('PATCH', `${path}/${saved.id}`, tokens.agent, { content: 'x' })).status).toBe(403);
+    expect((await call('DELETE', `${path}/${saved.id}`, tokens.agent)).status).toBe(403);
+    expect(await (await call('PATCH', `${path}/${saved.id}`, tokens.supervisor, { content: 'We ship tomorrow.' })).json()).toMatchObject({ title: 'Shipping', content: 'We ship tomorrow.' });
+    expect((await call('DELETE', `${path}/${saved.id}`, tokens.supervisor)).status).toBe(204);
+    expect((await call('DELETE', `${path}/${saved.id}`, tokens.supervisor)).status).toBe(404);
+    expect(await list()).toEqual([]);
+  });
+
+  it('keep titles apart whatever their case, in order, and refuse an empty one', async () => {
+    for (const title of ['Refund', 'Address']) expect((await call('POST', path, tokens.supervisor, { title, content: 'x' })).status).toBe(201);
+    const again = await call('POST', path, tokens.supervisor, { title: 'refund', content: 'y' });
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { code: string }).code).toBe('saved_reply_exists');
+    const rows = await list();
+    expect(rows.map((r) => r.title)).toEqual(['Address', 'Refund']);
+    expect((await call('PATCH', `${path}/${rows[0]!.id}`, tokens.supervisor, { title: 'REFUND' })).status).toBe(409);
+    expect((await call('POST', path, tokens.supervisor, { title: 'Empty', content: '   ' })).status).toBe(400);
+    expect((await call('PATCH', `${path}/${rows[0]!.id}`, tokens.supervisor, {})).status).toBe(400);
+  });
+
+  it('stop at 200 for a workspace', async () => {
+    await env.DB.batch(Array.from({ length: 200 }, (_, i) => env.DB.prepare(`INSERT INTO saved_replies (id, workspace_id, title, content, created_at, updated_at) VALUES (?1, 'work_1', ?2, 'x', 1, 1)`).bind(`srep_${i}`, `Title ${i}`)));
+    const full = await call('POST', path, tokens.supervisor, { title: 'One more', content: 'x' });
+    expect(full.status).toBe(409);
+    expect(((await full.json()) as { code: string }).code).toBe('too_many_saved_replies');
+  });
+});

@@ -41,6 +41,8 @@ Open a conversation to see its messages, and the visitor's contact card beside t
 - **Internal note** is seen only by your team. It never reaches the visitor, in the widget or in an email.
 - **Attach a file** to send up to 25 MB: images (PNG, JPEG, GIF, WebP), PDF, ZIP, Word, Excel, PowerPoint, plain text or CSV. Other types, including HTML and SVG, are refused.
 
+**Saved replies.** For answers you give often, choose **Saved replies** under the reply box, or type `/` in an empty box. Search by title or text, and click one, or press **Enter** for the first, to put it in the box. You can still edit it before sending. A supervisor adds, edits and deletes saved replies in the same place; a workspace can hold 200.
+
 If your workspace translates visitors' messages, a message in another language shows its translation into your dashboard language, labelled **Translated from …**, with **Show original**. A new message shows **Translating…** for a second or two. If there is no translation, choose **Translate**.
 
 Your replies to that visitor are then translated into their language before they are sent, as the line above the reply box says. You see your own words, labelled **Sent translated**, with **Show what was sent**; the visitor sees the translation, labelled **Translated automatically**, and can see your words. If it cannot be translated, nothing is sent: choose **Try again**, or **Send untranslated** to send your words as you wrote them. Internal notes are never translated. The iPhone and Android apps do the same, in your phone's language.

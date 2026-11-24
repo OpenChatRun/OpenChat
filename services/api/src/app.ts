@@ -12,6 +12,7 @@ import { registerWidgetRoutes } from './routes/widget';
 import { registerAdminRoutes } from './routes/admin';
 import { registerHealthRoutes } from './routes/health';
 import { registerEmailRoutes } from './routes/email';
+import { registerSavedReplyRoutes } from './routes/saved-replies';
 import { registerPushRoutes } from './routes/push';
 import { registerWorkspaceRoutes } from './routes/workspaces';
 import { registerAssistantRoutes } from './routes/assistant';
@@ -116,6 +117,7 @@ export function createApp() {
   registerHelpRoutes(app);
   registerPushRoutes(app);
   registerEmailRoutes(app);
+  registerSavedReplyRoutes(app);
   registerAdminRoutes(app);
   registerHealthRoutes(app);
   registerConversationRoutes(app);

@@ -1,6 +1,6 @@
 import type { Conversation, Message } from './index';
 import { describe, expect, it } from 'vitest';
-import { applyPatch, hasGap, markReadInPages, matchesFilter, mergeMessages, patchPages, previewOf, recordNewMessage, shouldSendTyping, unreadCount, type ConversationPages } from './inbox-state';
+import { applyPatch, hasGap, markReadInPages, matchSavedReplies, matchesFilter, mergeMessages, patchPages, previewOf, recordNewMessage, shouldSendTyping, unreadCount, type ConversationPages } from './inbox-state';
 
 const message = (seq: number, content = `m${seq}`): Message => ({
   id: `msg_${seq}`,
@@ -124,6 +124,16 @@ describe('conversations', () => {
     const pages = pagesOf([conversation('a', { lastReadSeq: 5 })]);
     expect(markReadInPages(pages, 'a', 3).pages[0]!.data[0]!.lastReadSeq).toBe(5);
     expect(markReadInPages(pages, 'a', 7).pages[0]!.data[0]!.lastReadSeq).toBe(7);
+  });
+});
+
+describe('saved replies', () => {
+  const replies = [{ title: 'Refund', content: 'Within 14 days.' }, { title: 'Shipping', content: 'Two days. No refund of postage.' }];
+  it('finds by every word, in title or text, titles first', () => {
+    expect(matchSavedReplies(replies, '')).toEqual(replies);
+    expect(matchSavedReplies(replies, 'REFUND').map((r) => r.title)).toEqual(['Refund', 'Shipping']);
+    expect(matchSavedReplies(replies, 'two days').map((r) => r.title)).toEqual(['Shipping']);
+    expect(matchSavedReplies(replies, 'refund banana')).toEqual([]);
   });
 });
 
