@@ -208,6 +208,39 @@ describe('the inbox', () => {
     expect((await call('GET', `${W}/conversations?limit=1&cursor=${first.nextCursor}`, tokens.agent)).status).toBe(400);
     expect((await call('GET', `${W}/conversations?q=`, tokens.agent)).status).toBe(400);
   });
+  it('searches inside messages and notes, and shows the newest that matched', async () => {
+    const message = (id: string, conversation: string, seq: number, type: string, content: string, workspace = 'work_1') =>
+      env.DB.prepare(`INSERT INTO messages (id, workspace_id, conversation_id, seq, public_seq, sender_type, sender_id, message_type, visibility, content, created_at) VALUES (?1, ?6, ?2, ?3, ?4, ?9, ?10, ?5, ?7, ?8, 1)`)
+        .bind(id, conversation, seq, type === 'internal_note' ? null : seq, type, workspace, type === 'internal_note' ? 'internal' : 'public', content, type === 'internal_note' ? 'member' : 'visitor', type === 'internal_note' ? 'mem_agent' : 'vis');
+    const long = `${'a'.repeat(100)} the Zebra-Crossing 50% deal ${'b'.repeat(200)}`;
+    await env.DB.batch([
+      message('msg_s1', 'conv_2', 1001, 'text', 'My ZEBRA order is late'),
+      message('msg_s2', 'conv_2', 1002, 'text', 'Thanks'),
+      message('msg_s3', 'conv_4', 1001, 'text', 'zebra first'),
+      message('msg_s4', 'conv_4', 1002, 'internal_note', 'Customer asked about the zebra twice'),
+      message('msg_s5', 'conv_3', 1001, 'text', long),
+    ]);
+    const found = await list('?q=Zebra');
+    expect(ids(found)).toEqual(['conv_4', 'conv_3', 'conv_2']);
+    const match = (id: string) => (found.data as unknown as { id: string; searchMatch?: { text: string; seq: number; type: string } }[]).find((row) => row.id === id)?.searchMatch;
+    expect(match('conv_2')).toEqual({ text: 'My ZEBRA order is late', seq: 1001, type: 'text' });
+    // The newest message with the words, which here is a note.
+    expect(match('conv_4')).toEqual({ text: 'Customer asked about the zebra twice', seq: 1002, type: 'internal_note' });
+    // A long message is cut to 140 characters, starting 40 before the words.
+    expect(match('conv_3')).toMatchObject({ text: long.slice(65, 205) });
+    expect(match('conv_3')!.text.indexOf('Zebra')).toBe(40);
+    // A percent sign is a character here too, and words must be together.
+    expect(ids(await list(`?q=${encodeURIComponent('50% deal')}`))).toEqual(['conv_3']);
+    expect(ids(await list(`?q=${encodeURIComponent('5% deal')}`))).toEqual([]);
+    expect(ids(await list('?q=zebra%20late'))).toEqual([]);
+    // Pages as any search does.
+    const first = await list('?q=zebra&limit=2');
+    expect(ids(first)).toEqual(['conv_4', 'conv_3']);
+    expect(ids(await list(`?q=zebra&limit=2&cursor=${first.nextCursor}`))).toEqual(['conv_2']);
+    // With no search, and when only the contact matched, there is nothing to show.
+    expect((await list('')).data.every((row) => !('searchMatch' in row))).toBe(true);
+    expect((await list('?q=ver')).data.every((row) => !('searchMatch' in row))).toBe(true);
+  });
 });
 
 describe('the inbox summary', () => {

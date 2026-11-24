@@ -2799,6 +2799,34 @@
             ],
             "description": "The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does."
           },
+          "searchMatch": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "At most 140 characters of the message, starting up to 40 before the words."
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "text",
+                  "image",
+                  "file",
+                  "system",
+                  "internal_note"
+                ]
+              }
+            },
+            "required": [
+              "text",
+              "seq",
+              "type"
+            ],
+            "description": "Only in a search with `q`: the newest message of the conversation that contains the words, which may be an internal note. Absent when only the contact matched."
+          },
           "visitorPage": {
             "type": [
               "object",
@@ -8149,10 +8177,10 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 254,
-              "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored."
+              "description": "Only conversations whose contact's name or email, or one of whose messages or internal notes, contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored. A row whose message matched carries `searchMatch`."
             },
             "required": false,
-            "description": "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored.",
+            "description": "Only conversations whose contact's name or email, or one of whose messages or internal notes, contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored. A row whose message matched carries `searchMatch`.",
             "name": "q",
             "in": "query"
           },

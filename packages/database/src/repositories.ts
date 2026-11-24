@@ -188,6 +188,8 @@ export interface ConversationRow {
   visitorRatedAt: number | null;
   /** A JSON LastMessageRow, or null when the newest message is gone, as retention leaves it. */
   lastMessageJson: string | null;
+  /** In a search only: a JSON SearchMatchRow for the newest message with the words, or null when only the contact matched. */
+  searchMatchJson?: string | null;
   /** How far any of the contact's browsers has read, as a public sequence number. */
   visitorReadSeq: number;
 }
@@ -216,7 +218,7 @@ export interface ConversationChange {
 export interface ConversationFilter {
   status: ConversationStatus;
   assignee?: string | null | undefined;
-  /** Part of the contact's name or email, already in lower case. With it, status and assignee are not applied. */
+  /** Part of the contact's name or email, or of a message, already in lower case. With it, status and assignee are not applied. */
   q?: string | undefined;
   before?: { lastMessageAt: number; id: string } | undefined;
   limit: number;
@@ -264,7 +266,15 @@ export const CONVERSATION_TAGS_JSON = `(SELECT COALESCE(json_group_array(json_ob
        FROM conversation_tags ct JOIN tags t ON t.workspace_id = ct.workspace_id AND t.id = ct.tag_id
       WHERE ct.workspace_id = c.workspace_id AND ct.conversation_id = c.id)`;
 
-const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_id AS contactId, k.name AS contactName, k.email AS contactEmail,
+/** How much of a message a search shows, and how much of that comes before the words. */
+const MATCH_CHARS = 140;
+const MATCH_LEAD_CHARS = 40;
+/** instr, unlike LIKE, gives no meaning to % or _ in what a member types. lower() changes A to Z only, so positions in it are positions in the text. */
+const MESSAGE_HAS = (q: string) => `instr(lower(sm.content), ${q}) > 0`;
+const SEARCH_MATCH = (q: string) => `(SELECT json_object('text', substr(sm.content, max(1, instr(lower(sm.content), ${q}) - ${MATCH_LEAD_CHARS}), ${MATCH_CHARS}), 'seq', sm.seq, 'type', sm.message_type)
+       FROM messages sm WHERE sm.workspace_id = c.workspace_id AND sm.conversation_id = c.id AND ${MESSAGE_HAS(q)} ORDER BY sm.seq DESC LIMIT 1) AS searchMatchJson,`;
+
+const conversationSelect = (extra = '') => `SELECT ${extra} c.id, c.website_id AS websiteId, c.contact_id AS contactId, k.name AS contactName, k.email AS contactEmail,
     ${CONVERSATION_TAGS_JSON} AS tagsJson, c.assigned_member_id AS assignedMemberId,
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
     c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
@@ -280,6 +290,7 @@ const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_i
   JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
   LEFT JOIN conversation_read_cursors r ON r.workspace_id = c.workspace_id AND r.conversation_id = c.id
     AND r.reader_type = 'member' AND r.reader_id = ?1`;
+const CONVERSATION_SELECT = conversationSelect();
 
 export function repositories(database: Database, ctx: WorkspaceContext) {
   const d1 = rawHandle(database);
@@ -524,12 +535,16 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
 
       async list(filter: ConversationFilter): Promise<ConversationRow[]> {
         const before = filter.before ? 'AND (c.last_message_at, c.id) < (?5, ?6)' : '';
-        // A search looks in every status, and reads the workspace's conversations newest first until the page is full.
-        // instr, unlike LIKE, gives no meaning to % or _ in what a member types.
+        // A search looks in every status, and reads the workspace's conversations newest first until the page is full:
+        // the contact first, then that conversation's messages, notes included, up to the first with the words. The
+        // piece of text it shows is worked out only for the rows of the page.
         const assignee = filter.assignee === undefined ? '' : filter.assignee === null ? 'AND c.assigned_member_id IS NULL' : 'AND c.assigned_member_id = ?4';
-        const where = filter.q ? `AND (instr(lower(COALESCE(k.name, '')), ?8) > 0 OR instr(lower(COALESCE(k.email, '')), ?8) > 0)` : `AND c.status = ?3 ${assignee}`;
+        const where = filter.q
+          ? `AND (instr(lower(COALESCE(k.name, '')), ?8) > 0 OR instr(lower(COALESCE(k.email, '')), ?8) > 0
+               OR EXISTS (SELECT 1 FROM messages sm WHERE sm.workspace_id = c.workspace_id AND sm.conversation_id = c.id AND ${MESSAGE_HAS('?8')}))`
+          : `AND c.status = ?3 ${assignee}`;
         const { results } = await d1
-          .prepare(`${CONVERSATION_SELECT} WHERE c.workspace_id = ?2 ${where} ${before} ORDER BY c.last_message_at DESC, c.id DESC LIMIT ?7`)
+          .prepare(`${filter.q ? conversationSelect(SEARCH_MATCH('?8')) : CONVERSATION_SELECT} WHERE c.workspace_id = ?2 ${where} ${before} ORDER BY c.last_message_at DESC, c.id DESC LIMIT ?7`)
           .bind(ctx.memberId, w, filter.status, filter.assignee ?? null, filter.before?.lastMessageAt ?? null, filter.before?.id ?? null, filter.limit, ...(filter.q ? [filter.q] : []))
           .all<ConversationRow>();
         return results;

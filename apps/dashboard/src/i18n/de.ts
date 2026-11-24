@@ -288,6 +288,7 @@ export const de: Messages = {
   foreverLower: 'für immer',
   // People page
   peopleSearch: 'Nach Name oder E-Mail suchen',
+  inboxSearch: 'Namen, E-Mails und Nachrichten durchsuchen',
   filterPeople: 'Anzeigen',
   filterAll: 'Alle',
   filterAdmins: 'Admins',

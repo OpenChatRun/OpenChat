@@ -288,6 +288,7 @@ export const zhHant: Messages = {
   foreverLower: '永久',
   // People page
   peopleSearch: '依姓名或電子郵件搜尋',
+  inboxSearch: '搜尋姓名、電子郵件和訊息',
   filterPeople: '顯示',
   filterAll: '全部',
   filterAdmins: '管理員',

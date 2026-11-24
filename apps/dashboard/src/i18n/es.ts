@@ -288,6 +288,7 @@ export const es: Messages = {
   foreverLower: 'para siempre',
   // People page
   peopleSearch: 'Buscar por nombre o correo',
+  inboxSearch: 'Buscar nombres, correos y mensajes',
   filterPeople: 'Mostrar',
   filterAll: 'Todos',
   filterAdmins: 'Administradores',

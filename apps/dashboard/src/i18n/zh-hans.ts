@@ -288,6 +288,7 @@ export const zhHans: Messages = {
   foreverLower: '永久',
   // People page
   peopleSearch: '按姓名或邮箱搜索',
+  inboxSearch: '搜索姓名、邮箱和消息',
   filterPeople: '显示',
   filterAll: '全部',
   filterAdmins: '管理员',

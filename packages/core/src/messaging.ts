@@ -36,6 +36,7 @@ const toConversation = (row: ConversationRow) => ({
   helpArticleId: row.helpArticleId,
   visitorLanguage: row.visitorLanguage,
   lastMessage: row.lastMessageJson === null ? null : (JSON.parse(row.lastMessageJson) as LastMessageRow),
+  ...(row.searchMatchJson ? { searchMatch: JSON.parse(row.searchMatchJson) as { text: string; seq: number; type: LastMessageRow['type'] } } : {}),
   visitorReadSeq: row.visitorReadSeq,
   visitorPage: row.visitorPageUrl === null || row.visitorPageAt === null ? null : { url: row.visitorPageUrl, at: toIso(row.visitorPageAt) },
   rating: toRating(row),
