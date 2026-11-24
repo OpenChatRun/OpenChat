@@ -1558,6 +1558,104 @@
           }
         ]
       },
+      "Analytics": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The start of the first day, in the viewer's time."
+          },
+          "to": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when the period started more than 10,000 conversations. Only the first 10,000 are counted."
+          },
+          "started": {
+            "type": "integer",
+            "description": "Conversations started in the period. Every other number is about these."
+          },
+          "replied": {
+            "type": "integer",
+            "description": "Those a person has answered. The AI assistant and internal notes do not count."
+          },
+          "resolved": {
+            "type": "integer",
+            "description": "Those resolved or archived now."
+          },
+          "medianFirstReplySeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "From the start of a conversation to a person's first answer, over those answered. Null when none was."
+          },
+          "assistantAnswered": {
+            "type": "integer",
+            "description": "Those the AI assistant wrote in."
+          },
+          "assistantOnly": {
+            "type": "integer",
+            "description": "Those the AI assistant wrote in and no person has answered."
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "example": "2026-11-24"
+                },
+                "started": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "date",
+                "started"
+              ]
+            }
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "memberId": {
+                  "type": "string"
+                },
+                "replies": {
+                  "type": "integer"
+                },
+                "conversations": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "memberId",
+                "replies",
+                "conversations"
+              ]
+            },
+            "description": "Public replies by each member in these conversations, most first. A member who has left keeps their ID."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "truncated",
+          "started",
+          "replied",
+          "resolved",
+          "medianFirstReplySeconds",
+          "assistantAnswered",
+          "assistantOnly",
+          "days",
+          "members"
+        ]
+      },
       "ContactListItem": {
         "allOf": [
           {
@@ -4639,6 +4737,79 @@
     "parameters": {}
   },
   "paths": {
+    "/api/v1/workspaces/{workspaceId}/analytics": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "getAnalytics",
+        "summary": "What happened to the conversations started in the last days. Supervisors only",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 7
+            },
+            "required": false,
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": -840,
+              "maximum": 840,
+              "default": 0,
+              "description": "How far the viewer's clock is ahead of UTC, so that days are theirs."
+            },
+            "required": false,
+            "description": "How far the viewer's clock is ahead of UTC, so that days are theirs.",
+            "name": "utcOffsetMinutes",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Analytics"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/contacts": {
       "get": {
         "tags": [

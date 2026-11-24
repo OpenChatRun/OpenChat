@@ -802,6 +802,14 @@ D1's query planner needed a hint. Written as a row value, or as plain comparison
 
 Not tried there: a contact with several conversations, which the Worker tests cover, and the page itself, which the browser test covers against local Workers.
 
+## Analytics on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-analyticstest`, since deleted, with migration 0029 applied by the deploy: three visitors wrote, a member added a note and two replies in one conversation and one reply in another, and resolved the second. `GET …/analytics` answered 3 started, 2 answered, 1 resolved, a median first reply of 2 seconds, and that member with 3 replies in 2 conversations, so the note was not counted. With `utcOffsetMinutes=480` the period began at 16:00 UTC, and all three were on the last of 7 days. An empty workspace answered zeros and a null median. 91 days answered 400, no token 401, another workspace 404, and `/analytics` served the dashboard.
+
+`EXPLAIN QUERY PLAN` on the remote database shows `conversations_created_idx` for the period, and a search by conversation for each one's messages. Read on a nearly empty database, not timed on a large one.
+
+Not tried there: the AI assistant's numbers, the limit of 10,000, and an agent's 403, which the Worker tests cover, and the page, which the browser test covers against local Workers.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

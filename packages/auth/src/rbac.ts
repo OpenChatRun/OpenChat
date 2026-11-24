@@ -21,6 +21,7 @@ const CAPABILITIES = {
   'suppression.manage': SUPERVISORS,
   'automation.manage': SUPERVISORS,
   'savedReply.manage': SUPERVISORS,
+  'analytics.view': SUPERVISORS,
   'assistant.manage': SUPERVISORS,
   'help.manage': SUPERVISORS,
 } as const satisfies Record<string, readonly Role[]>;

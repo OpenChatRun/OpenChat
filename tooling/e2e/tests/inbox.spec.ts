@@ -486,3 +486,31 @@ test('the Contacts page finds someone who wrote, and opens their conversation', 
   await expect(page).toHaveURL(new RegExp(`/inbox/${visitor.conversationId}$`));
   await expect(page.getByText('Is my parcel on its way?').first()).toBeVisible();
 });
+
+test('the Analytics page counts a conversation and its reply, for supervisors only', async ({ page, browser }) => {
+  const visitor = await startVisitor('Do you count this?');
+  await signIn(page, OWNER);
+  await page.getByRole('link', { name: /Do you count this/ }).or(page.getByRole('button', { name: /Do you count this/ })).first().click();
+  await page.getByLabel('Reply').fill('We do.');
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await expect.poll(async () => (await visitor.history()).map((m) => m.content)).toContain('We do.');
+
+  await page.getByRole('navigation').getByRole('button', { name: 'Analytics' }).click();
+  await expect(page).toHaveURL(/\/analytics$/);
+  const analytics = page.getByRole('region', { name: 'Analytics' });
+  await expect(analytics.getByText('Answered by the team')).toBeVisible();
+  await expect(analytics.getByText('Median first reply')).toBeVisible();
+  // Today's bar names today and a count of at least this conversation.
+  const today = analytics.getByRole('button', { name: /: \d+$/ }).last();
+  await expect(today).not.toHaveAccessibleName(/: 0$/);
+  await expect(analytics.getByRole('row', { name: /Olive Owner/ })).toBeVisible();
+  await analytics.getByRole('button', { name: 'Last 30 days' }).click();
+  await expect(analytics.getByRole('button', { name: /: \d+$/ })).toHaveCount(30);
+
+  const context = await browser.newContext();
+  const agent = await context.newPage();
+  await signIn(agent, AGENT);
+  await agent.getByRole('navigation').getByRole('button', { name: 'Analytics' }).click();
+  await expect(agent.getByText('Analytics are for supervisors.')).toBeVisible();
+  await context.close();
+});

@@ -366,6 +366,8 @@ export const conversations = sqliteTable(
     index('conversations_unanswered_idx').on(t.nextUnansweredAlertAt).where(sql`${t.nextUnansweredAlertAt} IS NOT NULL`),
     index('conversations_updated_idx').on(t.workspaceId, t.updatedAt, t.id),
     index('conversations_website_idx').on(t.workspaceId, t.websiteId),
+    // For the Analytics page, which reads the conversations started in a period.
+    index('conversations_created_idx').on(t.workspaceId, t.createdAt),
     check('conversations_status_ck', sql`${t.status} IN ('open','pending','resolved','archived')`),
     check('conversations_priority_ck', sql`${t.priority} IN ('low','normal','high','urgent')`),
   ],

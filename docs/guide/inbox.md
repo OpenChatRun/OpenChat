@@ -2,7 +2,7 @@
 
 For agents and supervisors. The inbox is the same on the web dashboard and in the iPhone app, though the app has fewer settings.
 
-In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Contacts**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
+In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Contacts**, **Analytics**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
 
 ## Signing in
 
@@ -66,6 +66,22 @@ Tags help find and group conversations. Type a tag to add it to the conversation
 **The Contacts page.** **Contacts**, in the rail, lists everyone who has written to the workspace, the most recently active first, with their email address if they gave one, how many conversations they have, and when the latest one last changed. Search by name or email address. Choose someone to open their latest conversation, with their contact card beside it. A visitor who opened the widget and never wrote is not listed.
 
 An installation admin who is a member of the workspace also sees **Export data** and **Erase contact** on the card. See [privacy and data](privacy.md#a-persons-request-about-their-data).
+
+## Analytics
+
+For supervisors. **Analytics**, in the rail, shows what happened to the conversations started in the last 7, 30 or 90 days, where a day is a day on your own clock:
+
+| Number | Means |
+|---|---|
+| Conversations | Conversations started in the period |
+| Answered by the team | Those a person has answered. The AI assistant's answers and internal notes do not count |
+| Median first reply | From the start of a conversation to a person's first answer: half were answered sooner, half later. A dash when none was answered |
+| Resolved | Those that are resolved or archived now |
+| AI assistant answered | Those the assistant wrote in, and how many of them no person has answered. Shown only when there are any |
+
+Below is a bar for each day's new conversations. Point at a bar, or move to it with the keyboard, for its day and count, or choose **Show as a table**. **Replies by member** lists each member's public replies in these conversations, and in how many conversations they replied.
+
+Every number is about the conversations started in the period, so a reply today in last month's conversation counts under 30 days and not under 7.
 
 ## On iPhone
 
