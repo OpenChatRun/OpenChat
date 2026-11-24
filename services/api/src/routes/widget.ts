@@ -14,6 +14,7 @@ import {
   widgetBootstrapRoute,
   widgetHelpArticleRoute,
   widgetHelpRoute,
+  OpeningHoursSchema,
 } from '@openchat/api-contracts';
 import {
   beginVisitorUpload,
@@ -39,7 +40,7 @@ import {
   widgetHelpArticle,
   type VisitorContext,
 } from '@openchat/core';
-import { AppError, notFound, readAbuseLimits } from '@openchat/shared';
+import { AppError, notFound, openingState, readAbuseLimits, toIso } from '@openchat/shared';
 import type { Context, MiddlewareHandler } from 'hono';
 import { hubName } from '@openchat/realtime';
 import { authDeps, limiterFor, publicDatabase, type App, type AppEnv } from '../context';
@@ -95,20 +96,30 @@ interface CachedBootstrap {
   settings?: Record<string, unknown>;
   allowedOrigins?: string[];
   availability?: 'online' | 'offline';
+  /** When a website with opening hours, closed now, next opens. */
+  opensAt?: string;
   /** Languages with published help articles: the Help tab shows if there are any. */
   helpLanguages?: string[];
 }
 
-/** Cached with the rest, so that page views on a busy site do not wake the hub. */
-async function availabilityOf(c: Context<AppEnv>, workspaceId: string, mode: unknown): Promise<'online' | 'offline'> {
-  if (mode === 'online' || mode === 'offline') return mode;
+/**
+ * Cached with the rest, so that page views on a busy site do not wake the hub. Opening hours come first: a closed
+ * website is away whoever is connected, and says when it opens, unless it is set to be away always.
+ */
+async function availabilityOf(c: Context<AppEnv>, workspaceId: string, settings: Record<string, unknown>): Promise<{ availability: 'online' | 'offline'; opensAt?: string }> {
+  const mode = settings.availabilityMode;
+  if (mode === 'offline') return { availability: 'offline' };
+  const hours = OpeningHoursSchema.safeParse(settings.openingHours);
+  const { open, opensAt } = openingState(hours.success ? hours.data : null, Date.now());
+  if (!open) return { availability: 'offline', ...(opensAt === null ? {} : { opensAt: toIso(opensAt) }) };
+  if (mode === 'online') return { availability: 'online' };
   const hub = c.env.WORKSPACE_HUB.getByName(hubName(workspaceId));
   // A member who set themselves away does not count. A hub from before a deploy cannot say who is connected for
   // a while, and then anyone connected counts, as before.
   const members = await hub.principalIds().catch(() => null);
-  if (members) return (await availableMembers(publicDatabase(c.env), workspaceId, members)) > 0 ? 'online' : 'offline';
+  if (members) return { availability: (await availableMembers(publicDatabase(c.env), workspaceId, members)) > 0 ? 'online' : 'offline' };
   const agents = await hub.connectionCount().catch(() => 0);
-  return agents > 0 ? 'online' : 'offline';
+  return { availability: agents > 0 ? 'online' : 'offline' };
 }
 
 /** Keeps busy pages off D1. A key that does not exist is cached too, so that guessing cannot reach D1 either. */
@@ -121,7 +132,7 @@ async function loadBootstrap(c: Context<AppEnv>, websiteKey: string): Promise<Ca
   const value: CachedBootstrap = website
     ? {
         found: true,
-        availability: await availabilityOf(c, website.workspaceId, website.settings.availabilityMode),
+        ...(await availabilityOf(c, website.workspaceId, website.settings)),
         websiteId: website.id,
         settings: website.settings,
         allowedOrigins: website.allowedOrigins,
@@ -159,7 +170,7 @@ export function registerWidgetRoutes(app: App) {
     if (!bootstrap.found) throw notFound();
     const origin = c.req.header('origin');
     if (origin !== undefined && !bootstrap.allowedOrigins!.includes(origin)) throw new AppError(403, 'bad_origin', 'This website does not allow requests from this origin');
-    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', reportPage: c.env.VISITOR_PAGE !== 'off', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [], ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
+    return c.json({ websiteId: bootstrap.websiteId!, settings: bootstrap.settings!, availability: bootstrap.availability ?? 'offline', ...(bootstrap.opensAt ? { opensAt: bootstrap.opensAt } : {}), reportPage: c.env.VISITOR_PAGE !== 'off', messageMaxChars: readAbuseLimits(c.env).messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [], ...(bootstrap.settings!.requireTurnstile === true && c.env.TURNSTILE_SITE_KEY ? { turnstileSiteKey: c.env.TURNSTILE_SITE_KEY } : {}) }, 200);
   });
 
   /** The Help tab reads with no session, so it is limited per address, as the public help centre is. */

@@ -2249,6 +2249,10 @@
               "offline"
             ]
           },
+          "opensAt": {
+            "type": "string",
+            "description": "When the website next opens, if it has opening hours and is closed now. Up to 30 seconds old, as the rest is."
+          },
           "turnstileSiteKey": {
             "type": "string",
             "description": "Present when this website requires Turnstile for a new visitor."
@@ -2315,6 +2319,9 @@
           "showAgentNames": {
             "type": "boolean"
           },
+          "openingHours": {
+            "$ref": "#/components/schemas/OpeningHours"
+          },
           "language": {
             "type": "string",
             "enum": [
@@ -2335,6 +2342,47 @@
           }
         },
         "additionalProperties": false
+      },
+      "OpeningHours": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The IANA time zone the hours are in, such as Europe/London."
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "open": {
+                  "type": "string",
+                  "pattern": "^(?:(?:[01]\\d|2[0-3]):[0-5]\\d|24:00)$"
+                },
+                "close": {
+                  "type": "string",
+                  "pattern": "^(?:(?:[01]\\d|2[0-3]):[0-5]\\d|24:00)$"
+                }
+              },
+              "required": [
+                "open",
+                "close"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Monday first. One period a day, from `open` until `close`, which may be 24:00. null is a closed day."
+          }
+        },
+        "required": [
+          "timeZone",
+          "days"
+        ],
+        "additionalProperties": false,
+        "description": "When the team answers. Outside these hours the widget says the team is away, whoever is connected, and when it is back. Absent: no hours, so only `availabilityMode` decides."
       },
       "VisitorSession": {
         "type": "object",

@@ -8,7 +8,7 @@ import type { HelpArticle, HelpList } from './api';
 import type { ChatState, Controller } from './controller';
 import { hasOlder, unreadCount, type ChatMessage } from './state';
 import { pickLocale, visitorLanguage, type Locale } from './locale';
-import { formatSize, TRANSLATIONS, type Strings } from './strings';
+import { awayText, formatSize, TRANSLATIONS, type Strings } from './strings';
 
 /** The language every part of the panel speaks, chosen once in App. */
 const Language = createContext<{ locale: Locale; S: Strings }>({ locale: 'en', S: TRANSLATIONS.en });
@@ -427,7 +427,7 @@ export function App({
     if (message !== newestMine) return null;
     return message.seq! <= state.agentReadSeq ? S.seen : S.sent;
   };
-  const presence = state.connection === 'reconnecting' || state.connection === 'polling' ? S.reconnecting : state.availability === 'online' ? S.online : state.availability === 'offline' ? S.offline : '';
+  const presence = state.connection === 'reconnecting' || state.connection === 'polling' ? S.reconnecting : state.availability === 'online' ? S.online : state.availability === 'offline' ? awayText(state.opensAt, locale, S) : '';
   const welcome = state.settings?.welcomeMessage;
   const hasHelp = state.helpLanguages.length > 0;
   const view = !hasHelp ? 'chat' : (state.view ?? (state.conversation || state.messages.length > 0 ? 'chat' : 'help'));

@@ -816,6 +816,12 @@ On a throwaway installation, `oc-ratingtest`, since deleted, with migration 0030
 
 Not tried there: the widget itself, which the browser test covers against local Workers.
 
+## Opening hours on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-hourstest`, since deleted. The Workers runtime knows IANA time zones through `Intl.DateTimeFormat`: for websites in UTC, Asia/Tokyo, America/Los_Angeles and Pacific/Kiritimati, one open all of that zone's today answered `online` from the bootstrap, and one open only the next day from 09:30 answered `offline` with `opensAt` at 09:30 on that zone's clock, such as `2026-11-25T19:30:00.000Z` for Kiritimati, 14 hours ahead. A closed website in `auto` mode gave its opening time too; one set to `offline`, and one with no open day, gave none. A time zone nobody knows, six days instead of seven, and a period closing before it opens answered 400. After the hours were removed, the bootstrap kept its cached answer and gave the new one 31 seconds later.
+
+Not tried there: a change of clocks, which the unit tests cover, and the widget and the dashboard's form, which the browser test covers against local Workers.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

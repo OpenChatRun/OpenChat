@@ -43,9 +43,12 @@ Each website's card has the snippet to paste into the site. See [the website wid
 | Widget language | **Automatic**, or one of eleven languages |
 | Show agents' names to visitors | Off by default, so visitors see "Support", in their language |
 | Ask visitors to rate a resolved conversation | On by default. The widget asks for a thumbs up or down, and a comment if they wish |
+| Opening hours | Off by default. A time zone, and for each day of the week either closed or one period, such as 09:00 to 17:00. See below |
 | Check that new visitors are people | Cloudflare Turnstile, when a new visitor first writes. Needs keys set at deploy time |
 
 The widget picks up a change within a minute.
+
+**Opening hours.** Without them, the widget says "We are online" whenever a member who is not away has the dashboard or the app open. With them, it does so only inside the hours. Outside them it says the team is away, whoever is connected, and when it is back: "We are back at 9:00 AM" today, or "We are back Monday at 9:00 AM", on the visitor's own clock and in the widget's language. Visitors can still write, messages and notifications arrive as always, and the AI assistant still answers if it is on. To stay open until midnight, set the closing time to 00:00. Each day has one period, and a period cannot run past midnight.
 
 ### Retention
 

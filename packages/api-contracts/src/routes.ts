@@ -348,6 +348,26 @@ const isOrigin = (value: string) => {
 };
 const Origin = z.string().max(300).refine(isOrigin, 'Must be an exact origin, such as https://example.com');
 
+const isTimeZone = (value: string) => {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+const ClockTime = z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/, 'Must be a time such as 09:00');
+
+export const OpeningHoursSchema = z
+  .strictObject({
+    timeZone: z.string().max(64).refine(isTimeZone, 'Must be a time zone, such as Europe/London').openapi({ description: 'The IANA time zone the hours are in, such as Europe/London.' }),
+    days: z
+      .array(z.strictObject({ open: ClockTime, close: ClockTime }).refine((day) => day.open < day.close, 'Must close after it opens').nullable())
+      .length(7)
+      .openapi({ description: 'Monday first. One period a day, from `open` until `close`, which may be 24:00. null is a closed day.' }),
+  })
+  .openapi('OpeningHours');
+
 export const WidgetSettingsSchema = z
   .strictObject({
     welcomeMessage: z.string().max(500).optional(),
@@ -357,6 +377,7 @@ export const WidgetSettingsSchema = z
     requireTurnstile: z.boolean().optional(),
     askForRating: z.boolean().optional().openapi({ description: 'Whether the widget asks the visitor to rate a conversation once it is resolved. On unless false.' }),
     showAgentNames: z.boolean().optional(),
+    openingHours: OpeningHoursSchema.optional().openapi({ description: 'When the team answers. Outside these hours the widget says the team is away, whoever is connected, and when it is back. Absent: no hours, so only `availabilityMode` decides.' }),
     language: z
       .enum(['auto', 'en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ja', 'ko', 'zh-Hans', 'zh-Hant'])
       .optional()
@@ -929,6 +950,7 @@ export const WidgetBootstrapSchema = z
     websiteId: z.string(),
     settings: WidgetSettingsSchema,
     availability: z.enum(['online', 'offline']),
+    opensAt: z.string().optional().openapi({ description: "When the website next opens, if it has opening hours and is closed now. Up to 30 seconds old, as the rest is." }),
     turnstileSiteKey: z.string().optional().openapi({ description: 'Present when this website requires Turnstile for a new visitor.' }),
     reportPage: z.boolean().openapi({ description: 'Whether the widget should say which page the visitor is on, with setVisitorPage. False when the operator turned it off.' }),
     messageMaxChars: z.number().int().openapi({ description: "The longest message this installation accepts from a visitor. A longer one is refused with `message_too_long`." }),

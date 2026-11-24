@@ -24,6 +24,8 @@ export interface ChatState {
   phase: 'loading' | 'ready' | 'hidden';
   settings: Settings | null;
   availability: 'online' | 'offline' | null;
+  /** When a website that is closed now next opens, by its opening hours. */
+  opensAt: string | null;
   open: boolean;
   conversation: Pick<VisitorConversation, 'id' | 'status'> | null;
   messages: ChatMessage[];
@@ -67,6 +69,7 @@ export function createController(deps: ControllerDeps) {
     phase: 'loading',
     settings: null,
     availability: null,
+    opensAt: null,
     open: false,
     conversation: null,
     messages: [],
@@ -205,7 +208,7 @@ export function createController(deps: ControllerDeps) {
         typingTimer = setTimeout(stopTyping, TYPING_SHOW_MS);
         return;
       case 'availability':
-        update({ availability: data.availability === 'online' ? 'online' : 'offline' });
+        update({ availability: data.availability === 'online' ? 'online' : 'offline', opensAt: null });
         return;
       case 'sync.required':
         void sync();
@@ -345,7 +348,7 @@ export function createController(deps: ControllerDeps) {
       try {
         const bootstrap = await deps.api.bootstrap();
         reportPage = bootstrap.reportPage === true;
-        update({ phase: 'ready', settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
+        update({ phase: 'ready', settings: bootstrap.settings, availability: bootstrap.availability, opensAt: bootstrap.opensAt ?? null, profile: profileNeed(bootstrap.settings), turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
       } catch (error) {
         if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
           update({ phase: 'hidden' });
@@ -369,7 +372,7 @@ export function createController(deps: ControllerDeps) {
           .bootstrap()
           .then((bootstrap) => {
             bootstrappedAt = now();
-            update({ settings: bootstrap.settings, availability: bootstrap.availability, profile: profileNeed(bootstrap.settings), notice: null, turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
+            update({ settings: bootstrap.settings, availability: bootstrap.availability, opensAt: bootstrap.opensAt ?? null, profile: profileNeed(bootstrap.settings), notice: null, turnstileSiteKey: bootstrap.turnstileSiteKey ?? null, messageMaxChars: bootstrap.messageMaxChars, helpLanguages: bootstrap.helpLanguages ?? [] });
             // Loading failed earlier, so nothing was restored either.
             return state.conversation ? undefined : resume();
           })

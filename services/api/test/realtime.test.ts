@@ -633,6 +633,52 @@ describe('availability', () => {
   });
 });
 
+describe('opening hours', () => {
+  const bootstrap = async (key: string) => await json<{ availability: string; opensAt?: string }>(await call('GET', `/api/v1/widget/bootstrap?websiteKey=${key}`, { origin: SITE }));
+  const site = (id: string, key: string, settings: unknown) =>
+    env.DB.prepare(`INSERT INTO websites (id, workspace_id, name, website_key, allowed_origins_json, settings_json, created_at, updated_at) VALUES (?1, 'work_1', 'Shop', ?2, ?3, ?4, 1, 1)`).bind(id, key, JSON.stringify([SITE]), JSON.stringify(settings)).run();
+  let unique = 0;
+  const key = (name: string) => `key_hours_${name}_${Date.now()}_${++unique}`;
+  const allDay = { open: '00:00', close: '24:00' };
+  // Monday first, in UTC, so that the test knows what day it is.
+  const today = (new Date().getUTCDay() + 6) % 7;
+  const only = (day: number) => ({ timeZone: 'UTC', days: Array.from({ length: 7 }, (_, index) => (index === day ? allDay : null)) });
+  const nextMidnight = new Date(Math.floor(Date.now() / 86_400_000 + 1) * 86_400_000).toISOString();
+
+  it('is away outside the hours, whoever is connected, and says when it opens', async () => {
+    const [closed, fixed, never] = [key('closed'), key('fixed'), key('never')];
+    await site('site_a', closed, { openingHours: only((today + 1) % 7) });
+    await site('site_b', fixed, { availabilityMode: 'online', openingHours: only((today + 1) % 7) });
+    await site('site_c', never, { openingHours: { timeZone: 'UTC', days: [null, null, null, null, null, null, null] } });
+    await agentSocket();
+    expect(await bootstrap(closed)).toMatchObject({ availability: 'offline', opensAt: nextMidnight });
+    expect(await bootstrap(fixed)).toMatchObject({ availability: 'offline', opensAt: nextMidnight });
+    const none = await bootstrap(never);
+    expect([none.availability, none.opensAt]).toEqual(['offline', undefined]);
+  });
+
+  it('follows the team inside the hours, and gives no time', async () => {
+    const [empty, staffed] = [key('empty'), key('staffed')];
+    await site('site_a', empty, { openingHours: only(today) });
+    await site('site_b', staffed, { openingHours: only(today) });
+    const before = await bootstrap(empty);
+    expect([before.availability, before.opensAt]).toEqual(['offline', undefined]);
+    await agentSocket();
+    const after = await bootstrap(staffed);
+    expect([after.availability, after.opensAt]).toEqual(['online', undefined]);
+  });
+
+  it('gives no time when the website is set to be away always, and ignores hours it cannot read', async () => {
+    const [off, bad] = [key('off'), key('bad')];
+    await site('site_a', off, { availabilityMode: 'offline', openingHours: only((today + 1) % 7) });
+    await site('site_b', bad, { openingHours: { timeZone: 'Mars/Olympus', days: [] } });
+    const away = await bootstrap(off);
+    expect([away.availability, away.opensAt]).toEqual(['offline', undefined]);
+    await agentSocket();
+    expect((await bootstrap(bad)).availability).toBe('online');
+  });
+});
+
 describe('catching up without a socket', () => {
   it('finds changes since a cursor, in every status, and repeats nothing forever', async () => {
     const first = await json<{ syncCursor: string; data: { id: string }[] }>(await call('GET', `${W}/conversations`, { token: agent }));

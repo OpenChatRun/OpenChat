@@ -701,14 +701,12 @@ test('a visitor rates a resolved conversation, and the agent sees it', async ({ 
   await expect(thumbs.getByRole('button', { name: 'Good' })).toHaveAttribute('aria-pressed', 'true');
   await expect(panel(page).getByText('Thanks for your feedback.')).toBeVisible();
   await panel(page).getByLabel('Tell us more (optional)').fill('Quick and clear.');
-  if (process.env.OC_SHOT) await page.screenshot({ path: '/private/tmp/claude-501/-Users-patrickng-personal-openchat/ee44e5ac-f5e9-4ed8-99e4-3903a3df57fc/scratchpad/rating-widget.png' });
   await panel(page).locator('.oc-rate').getByRole('button', { name: 'Send', exact: true }).click();
   await expect(panel(page).getByLabel('Tell us more (optional)')).toBeHidden();
 
   // The agent's view asks again within 20 seconds while the visitor is online.
   await expect(agent.getByText('Rated good')).toBeVisible({ timeout: 30_000 });
   await expect(agent.getByText('“Quick and clear.”')).toBeVisible();
-  if (process.env.OC_SHOT) await agent.screenshot({ path: '/private/tmp/claude-501/-Users-patrickng-personal-openchat/ee44e5ac-f5e9-4ed8-99e4-3903a3df57fc/scratchpad/rating-dashboard.png' });
 
   // A new page still knows the answer.
   await page.reload();
@@ -716,4 +714,42 @@ test('a visitor rates a resolved conversation, and the agent sees it', async ({ 
   await expect(panel(page).getByRole('button', { name: 'Good' })).toHaveAttribute('aria-pressed', 'true');
   await context.close();
   await agent.context().close();
+});
+
+test('an admin sets opening hours, and the widget says when the team is back', async ({ browser, page }) => {
+  test.setTimeout(90_000);
+  await signIn(page, OWNER);
+  await page.getByRole('button', { name: 'Workspaces', exact: true }).click();
+  // Other tests make workspaces, and the page opens on the first by name.
+  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
+  const card = () => page.getByRole('listitem').filter({ hasText: 'Styled' }).first();
+  await card().getByLabel('Set opening hours').check();
+  // Closed today on a UTC clock, whatever the time is, and open tomorrow.
+  await card().getByLabel('Time zone').selectOption('UTC');
+  const today = new Intl.DateTimeFormat('en', { weekday: 'long', timeZone: 'UTC' }).format(Date.now());
+  for (const day of ['Saturday', 'Sunday']) await card().getByLabel(day, { exact: true }).check();
+  await card().getByLabel(today, { exact: true }).uncheck();
+  await expect(card().getByLabel(`${today}, opens`)).toBeDisabled();
+  await card().getByRole('button', { name: 'Save widget settings' }).click();
+  await expect(card().getByRole('status')).toContainText('Saved');
+  await page.reload();
+  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
+  await expect(card().getByLabel('Set opening hours')).toBeChecked();
+  await expect(card().getByLabel('Time zone')).toHaveValue('UTC');
+  await expect(card().getByLabel(today, { exact: true })).not.toBeChecked();
+
+  // What the widget is told is up to 30 seconds old.
+  const context = await visitorContext(browser);
+  const visitor = await shop(context, STYLED_WEBSITE_KEY);
+  await expect(async () => {
+    await visitor.reload();
+    await launcher(visitor).click();
+    await expect(panel(visitor).getByRole('status').first()).toHaveText(/^We are back .+ at .+\. Leave a message$/, { timeout: 3_000 });
+  }).toPass({ timeout: 60_000 });
+  await context.close();
+
+  // Back as it was, because other tests here share this website.
+  await card().getByLabel('Set opening hours').uncheck();
+  await card().getByRole('button', { name: 'Save widget settings' }).click();
+  await expect(card().getByRole('status')).toContainText('Saved');
 });

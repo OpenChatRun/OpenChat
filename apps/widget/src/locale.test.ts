@@ -2,7 +2,7 @@
 import { WidgetSettingsSchema } from '@openchat/api-contracts';
 import { describe, expect, it } from 'vitest';
 import { LOCALES, matchLocale, OPEN_LABEL, pickLocale, visitorLanguage } from './locale';
-import { formatSize, TRANSLATIONS } from './strings';
+import { awayText, formatSize, TRANSLATIONS } from './strings';
 
 describe('choosing a language', () => {
   it.each([
@@ -65,5 +65,29 @@ describe('the language sent for translation', () => {
     expect(visitorLanguage([undefined, 'de-AT', 'fr'])).toBe('de');
     expect(visitorLanguage(['', 'ru-RU', 'uk'])).toBe('ru-RU');
     expect(visitorLanguage([])).toBe('en');
+  });
+});
+
+describe('saying when the team is back', () => {
+  const now = new Date(2026, 10, 24, 20, 0).getTime();
+  const iso = (day: number, hour: number) => new Date(2026, 10, day, hour, 0).toISOString();
+
+  it('says only that the team is away with no opening time, or one that has passed', () => {
+    expect(awayText(null, 'en', TRANSLATIONS.en, now)).toBe(TRANSLATIONS.en.offline);
+    expect(awayText(iso(24, 9), 'en', TRANSLATIONS.en, now)).toBe(TRANSLATIONS.en.offline);
+    expect(awayText('nonsense', 'en', TRANSLATIONS.en, now)).toBe(TRANSLATIONS.en.offline);
+  });
+
+  it("gives the time today, and the day too after that, on the visitor's clock", () => {
+    expect(awayText(iso(24, 22), 'en', TRANSLATIONS.en, now)).toMatch(/^We are back at 10:00\sPM\. Leave a message$/);
+    expect(awayText(iso(25, 9), 'en', TRANSLATIONS.en, now)).toMatch(/^We are back Wednesday at 9:00\sAM\. Leave a message$/);
+    expect(awayText(iso(25, 9), 'de', TRANSLATIONS.de, now)).toBe('Wir sind am Mittwoch um 9:00 wieder da. Hinterlassen Sie eine Nachricht');
+  });
+
+  it('has the day and the time in every language', () => {
+    for (const locale of LOCALES) {
+      expect(TRANSLATIONS[locale].backToday('T1')).toContain('T1');
+      expect(TRANSLATIONS[locale].backLater('D1', 'T1')).toMatch(/D1.*T1/s);
+    }
   });
 });
