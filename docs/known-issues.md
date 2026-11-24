@@ -60,7 +60,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **The account's language follows the device used last.** A member whose phone and dashboard are in different languages gets visitors' messages translated into whichever they used last.
 - **A reply waits for its translation,** about a second or two, and up to 15 seconds for a long one before it gives up. A reply with only files is sent as it is; a file's name is not translated.
 - **M2M100, the default, translates plainly and sometimes wrongly,** such as "I gave it up a week ago" for "I placed it a week ago". Llama 3.3 translated the same messages well. Every translation is labelled, with the original one tap away.
-- **M2M100 writes Simplified Chinese** even for a member who reads Traditional Chinese. Choose a text model for that.
+- **M2M100 writes Simplified Chinese** even for a member who reads Traditional Chinese. The dashboard no longer offers another model; the API still accepts one.
 - **Nothing is translated until the visitor's language is known,** which needs the visitor to write once after this release in an older conversation.
 - **A member's language is the dashboard's language.** Members who never opened the dashboard since this release have none, and nothing is translated for them unless they ask.
 - **On OpenChat Cloud within a monthly allowance,** as for the assistant. Past it, nothing more is translated that month, and the dashboard calls it the daily limit.
