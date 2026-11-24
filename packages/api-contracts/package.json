@@ -27,7 +27,7 @@
     "@redocly/cli": "^2.78.0",
     "tsx": "^4.0.0",
     "typescript": "~6.0.3",
-    "vitest": "^5.1.0",
+    "vitest": "^5.1.1",
     "@types/node": "^24.0.0"
   }
 }
