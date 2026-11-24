@@ -62,4 +62,15 @@ test('a supervisor writes an article with the toolbar, and finds it in the list'
   await expect(rows).toHaveText([new RegExp(`Returns ${stamp}`)]);
   await list.getByLabel('Search articles').fill('nothing is called this');
   await expect(list.getByText('No articles match.')).toBeVisible();
+
+  // Both are deleted again: a published article gives the widget a Help tab, which other tests do not expect.
+  page.on('dialog', (dialog) => void dialog.accept());
+  await list.getByLabel('Status').selectOption('all');
+  for (const title of [`Delivery ${stamp}`, `Returns ${stamp}`]) {
+    await list.getByLabel('Search articles').fill(title);
+    await rows.getByRole('button').click();
+    await page.getByRole('button', { name: 'Delete article' }).click();
+    await expect(list.getByRole('heading', { name: 'Articles' })).toBeVisible();
+  }
+  await expect(list.getByText(`${stamp}`)).toHaveCount(0);
 });
