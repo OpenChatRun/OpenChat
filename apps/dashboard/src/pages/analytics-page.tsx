@@ -130,6 +130,9 @@ export function AnalyticsPage({ workspaceId, isSupervisor }: { workspaceId: stri
             <Tile label={t('analyticsReplied')} value={number.format(data.replied)} detail={t('analyticsOfStarted', { percent: percent(data.replied, data.started) })} />
             <Tile label={t('analyticsFirstReply')} value={data.medianFirstReplySeconds === null ? '–' : duration(data.medianFirstReplySeconds)} />
             <Tile label={t('analyticsResolved')} value={number.format(data.resolved)} detail={t('analyticsOfStarted', { percent: percent(data.resolved, data.started) })} />
+            {data.ratedGood + data.ratedBad > 0 && (
+              <Tile label={t('analyticsRatings')} value={percent(data.ratedGood, data.ratedGood + data.ratedBad)} detail={t('analyticsRatingsDetail', { good: number.format(data.ratedGood), bad: number.format(data.ratedBad) })} />
+            )}
             {data.assistantAnswered > 0 && (
               <Tile label={t('analyticsAssistant')} value={number.format(data.assistantAnswered)} detail={t('analyticsAssistantOnly', { count: number.format(data.assistantOnly) })} />
             )}

@@ -515,4 +515,9 @@ export const de: Messages = {
   analyticsNoReplies: 'In diesem Zeitraum hat niemand geantwortet.',
   analyticsBasis: 'Alles hier bezieht sich auf die Unterhaltungen, die im Zeitraum begonnen wurden. Antworten des KI-Assistenten und interne Notizen zählen nicht als Antworten.',
   analyticsTruncated: 'Dieser Zeitraum hat mehr als 10.000 Unterhaltungen. Nur die ersten 10.000 werden gezählt.',
+  askForRating: 'Besucher bitten, eine gelöste Unterhaltung zu bewerten',
+  ratedGood: 'Als gut bewertet',
+  ratedBad: 'Als schlecht bewertet',
+  analyticsRatings: 'Von Besuchern als gut bewertet',
+  analyticsRatingsDetail: '{good} gut, {bad} schlecht',
 };

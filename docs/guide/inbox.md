@@ -57,6 +57,8 @@ If someone else changes a conversation at the same moment as you, your change is
 
 Whether the visitor is online now is shown on the conversation, with the page of your website they are viewing, or last viewed. It follows them within about 20 seconds. The address is shown without anything after `?` or `#`. The visitor sees when the team is typing a reply, never a note.
 
+When you resolve a conversation, the widget asks the visitor to rate it good or bad, unless the website has that turned off. Their answer, and a comment if they left one, shows under their name, within about 20 seconds while they are online. A visitor's rating does not reopen the conversation or notify anyone.
+
 ## Contacts and tags
 
 The contact card shows what the visitor told you: a name, and an email address if the website asked for one. **The address is not verified.** Anyone can type any address, so do not share account details because of it. You can correct the name and address and **Save contact**.
@@ -77,6 +79,7 @@ For supervisors. **Analytics**, in the rail, shows what happened to the conversa
 | Answered by the team | Those a person has answered. The AI assistant's answers and internal notes do not count |
 | Median first reply | From the start of a conversation to a person's first answer: half were answered sooner, half later. A dash when none was answered |
 | Resolved | Those that are resolved or archived now |
+| Rated good by visitors | Of those a visitor rated, the share rated good, with the counts. Shown only when there are ratings |
 | AI assistant answered | Those the assistant wrote in, and how many of them no person has answered. Shown only when there are any |
 
 Below is a bar for each day's new conversations. Point at a bar, or move to it with the keyboard, for its day and count, or choose **Show as a table**. **Replies by member** lists each member's public replies in these conversations, and in how many conversations they replied.

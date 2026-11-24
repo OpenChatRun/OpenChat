@@ -85,6 +85,8 @@ export const LIMITS = {
   websiteVisitorWrites: { limit: 1200, windowSeconds: 60 },
   /** Page views, in their own bucket, so that browsing cannot use up what messages need. */
   websiteVisitorPages: { limit: 1200, windowSeconds: 60 },
+  /** A rating is one or two writes a conversation, so a website rarely comes near this. */
+  websiteVisitorRatings: { limit: 300, windowSeconds: 60 },
   visitorUpload: { limit: 20, windowSeconds: 60 * 60 },
   websiteVisitorUploads: { limit: 500, windowSeconds: 60 * 60 },
 } as const;

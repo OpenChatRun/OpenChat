@@ -527,6 +527,11 @@ export const en = {
   analyticsNoReplies: 'Nobody has replied in this period.',
   analyticsBasis: 'Everything here is about the conversations started in the period. Replies by the AI assistant and internal notes do not count as answers.',
   analyticsTruncated: 'This period has more than 10,000 conversations. Only the first 10,000 are counted.',
+  askForRating: 'Ask visitors to rate a resolved conversation',
+  ratedGood: 'Rated good',
+  ratedBad: 'Rated bad',
+  analyticsRatings: 'Rated good by visitors',
+  analyticsRatingsDetail: '{good} good, {bad} bad',
 };
 
 export type Messages = Record<keyof typeof en, string>;

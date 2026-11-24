@@ -681,3 +681,39 @@ test.describe('the Help tab', () => {
     await context.close();
   });
 });
+
+test('a visitor rates a resolved conversation, and the agent sees it', async ({ browser }) => {
+  const agent = await openInbox(browser);
+  const context = await visitorContext(browser);
+  const page = await shop(context);
+  watch(page);
+  const conversationId = await startChat(page, 'Was my refund sent?');
+  await inboxRow(agent, conversationId).click();
+  await reply(agent, 'Yes, this morning.');
+  await expect(log(page).getByText('Yes, this morning.')).toBeVisible();
+  // Not asked while it is open.
+  await expect(panel(page).getByText('How did we do?')).toBeHidden();
+
+  await agent.getByLabel('Conversation status').selectOption('resolved');
+  const thumbs = panel(page).getByRole('group', { name: 'How did we do?' });
+  await expect(thumbs).toBeVisible();
+  await thumbs.getByRole('button', { name: 'Good' }).click();
+  await expect(thumbs.getByRole('button', { name: 'Good' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel(page).getByText('Thanks for your feedback.')).toBeVisible();
+  await panel(page).getByLabel('Tell us more (optional)').fill('Quick and clear.');
+  if (process.env.OC_SHOT) await page.screenshot({ path: '/private/tmp/claude-501/-Users-patrickng-personal-openchat/ee44e5ac-f5e9-4ed8-99e4-3903a3df57fc/scratchpad/rating-widget.png' });
+  await panel(page).locator('.oc-rate').getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(panel(page).getByLabel('Tell us more (optional)')).toBeHidden();
+
+  // The agent's view asks again within 20 seconds while the visitor is online.
+  await expect(agent.getByText('Rated good')).toBeVisible({ timeout: 30_000 });
+  await expect(agent.getByText('“Quick and clear.”')).toBeVisible();
+  if (process.env.OC_SHOT) await agent.screenshot({ path: '/private/tmp/claude-501/-Users-patrickng-personal-openchat/ee44e5ac-f5e9-4ed8-99e4-3903a3df57fc/scratchpad/rating-dashboard.png' });
+
+  // A new page still knows the answer.
+  await page.reload();
+  await launcher(page).click();
+  await expect(panel(page).getByRole('button', { name: 'Good' })).toHaveAttribute('aria-pressed', 'true');
+  await context.close();
+  await agent.context().close();
+});

@@ -119,6 +119,60 @@ function Message({ message, first, state, onRetry, controller }: { message: Chat
   );
 }
 
+/** Asked once a conversation is resolved. A thumb saves at once; a comment is a second, optional step. */
+function Rating({ controller, rating }: { controller: Controller; rating: 'good' | 'bad' | null }) {
+  const { S } = useContext(Language);
+  const [comment, setComment] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const save = (value: 'good' | 'bad', text?: string) => {
+    setBusy(true);
+    setFailed(false);
+    return controller
+      .rate(value, text)
+      .then(() => true)
+      .catch(() => {
+        setFailed(true);
+        return false;
+      })
+      .finally(() => setBusy(false));
+  };
+  return (
+    <form
+      class="oc-form oc-rate"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (rating && comment.trim()) void save(rating, comment.trim()).then((ok) => setSent(ok));
+      }}
+    >
+      <p id="oc-rate-q">{S.rateQuestion}</p>
+      <div class="oc-thumbs" role="group" aria-labelledby="oc-rate-q">
+        {(['good', 'bad'] as const).map((value) => (
+          <button key={value} type="button" class="oc-thumb" aria-pressed={rating === value} disabled={busy} onClick={() => void save(value, sent ? comment.trim() : undefined)}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style={value === 'bad' ? 'transform:rotate(180deg)' : undefined}>
+              <path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.5 2.5V9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" />
+            </svg>
+            {value === 'good' ? S.rateGood : S.rateBad}
+          </button>
+        ))}
+      </div>
+      {rating && !sent && (
+        <>
+          <label>
+            {S.rateComment}
+            <textarea class="oc-input" rows={2} maxLength={500} value={comment} onInput={(e) => setComment(e.currentTarget.value)} />
+          </label>
+          <div class="oc-actions">
+            <button class="oc-send" disabled={busy || !comment.trim()}>{S.send}</button>
+          </div>
+        </>
+      )}
+      {failed ? <span class="oc-state bad" role="alert">{S.profileFailed}</span> : rating && <span class="oc-state" role="status">{S.rateThanks}</span>}
+    </form>
+  );
+}
+
 function ProfileForm({ controller, required }: { controller: Controller; required: boolean }) {
   const { S } = useContext(Language);
   const [name, setName] = useState('');
@@ -361,7 +415,8 @@ export function App({
   useLayoutEffect(() => {
     const element = log.current;
     if (element && atBottom.current) element.scrollTop = element.scrollHeight;
-  }, [state.messages, state.open, state.typing]);
+    // The rating form takes room from the messages when it appears, and again when it asks for a comment.
+  }, [state.messages, state.open, state.typing, state.conversation?.status, state.rating]);
 
   if (state.phase === 'hidden') return null;
 
@@ -461,6 +516,7 @@ export function App({
       <div class="oc-typing" aria-live="polite">{state.typing ? S.typing(state.typing.displayName) : ''}</div>
       {state.notice && <p class="oc-note bad" role="alert">{state.notice === 'rate_limited' ? S.rateLimited : state.notice === 'daily_limit' ? S.dailyLimit : state.notice === 'bad_file' ? S.badFile : state.notice === 'challenge' ? S.challengeFailed : S.unavailable}</p>}
       {state.conversation?.status === 'resolved' && <p class="oc-note">{S.resolved}</p>}
+      {state.conversation?.status === 'resolved' && state.settings?.askForRating !== false && <Rating key={state.conversation.id} controller={controller} rating={state.rating} />}
       {state.profile === 'offered' && state.messages.some((m) => m.mine) && <ProfileForm controller={controller} required={false} />}
       {state.profile === 'required' ? <ProfileForm controller={controller} required /> : <Composer controller={controller} maxChars={state.messageMaxChars} canAttach={state.conversation !== null} />}
       </>

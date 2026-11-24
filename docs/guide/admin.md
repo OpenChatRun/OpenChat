@@ -42,6 +42,7 @@ Each website's card has the snippet to paste into the site. See [the website wid
 | Ask for an email | **Never**, **Offer it, after the first message**, or **Before the first message** |
 | Widget language | **Automatic**, or one of eleven languages |
 | Show agents' names to visitors | Off by default, so visitors see "Support", in their language |
+| Ask visitors to rate a resolved conversation | On by default. The widget asks for a thumbs up or down, and a comment if they wish |
 | Check that new visitors are people | Cloudflare Turnstile, when a new visitor first writes. Needs keys set at deploy time |
 
 The widget picks up a change within a minute.

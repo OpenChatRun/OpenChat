@@ -9,6 +9,7 @@ export interface AnalyticsConversationRow {
   firstReplyAt: number | null;
   /** 1 when the AI assistant wrote in it. */
   assistant: number;
+  rating: 'good' | 'bad' | null;
 }
 
 export interface AnalyticsMemberRow {
@@ -20,7 +21,7 @@ export interface AnalyticsMemberRow {
 /** A period with more than this is counted up to here, oldest first, and says so. */
 export const ANALYTICS_MAX_CONVERSATIONS = 10_000;
 
-const COHORT = `SELECT id, workspace_id, created_at, status FROM conversations WHERE workspace_id = ?1 AND created_at >= ?2 AND created_at < ?3 ORDER BY created_at LIMIT`;
+const COHORT = `SELECT id, workspace_id, created_at, status, visitor_rating FROM conversations WHERE workspace_id = ?1 AND created_at >= ?2 AND created_at < ?3 ORDER BY created_at LIMIT`;
 const BY_A_PERSON = `m.sender_type = 'member' AND m.visibility = 'public' AND m.assistant_id IS NULL`;
 
 export function analyticsRepository(database: Database, ctx: WorkspaceContext) {
@@ -31,7 +32,7 @@ export function analyticsRepository(database: Database, ctx: WorkspaceContext) {
       const [conversations, members] = await d1.batch([
         d1
           .prepare(
-            `SELECT c.created_at AS createdAt, c.status,
+            `SELECT c.created_at AS createdAt, c.status, c.visitor_rating AS rating,
                     (SELECT MIN(m.created_at) FROM messages m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND ${BY_A_PERSON}) AS firstReplyAt,
                     EXISTS (SELECT 1 FROM messages m WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.assistant_id IS NOT NULL) AS assistant
                FROM (${COHORT} ?4) c`,

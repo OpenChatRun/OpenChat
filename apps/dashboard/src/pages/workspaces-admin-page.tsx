@@ -44,11 +44,12 @@ function WidgetSettingsForm({ website, workspaceId }: { website: Website; worksp
   const [collectEmail, setCollectEmail] = useState(initial.collectEmail ?? 'never');
   const [showAgentNames, setShowNames] = useState(initial.showAgentNames ?? false);
   const [requireTurnstile, setTurnstile] = useState(initial.requireTurnstile ?? false);
+  const [askForRating, setAskForRating] = useState(initial.askForRating ?? true);
   const [language, setLanguage] = useState(initial.language ?? 'auto');
   const save = useMutation({
     mutationFn: () =>
       api.updateWebsite(workspaceId, website.id, {
-        settings: { ...initial, ...(primaryColor === DEFAULT_WIDGET_COLOR && !initial.primaryColor ? {} : { primaryColor }), collectEmail, showAgentNames, requireTurnstile, language, ...(welcomeMessage.trim() ? { welcomeMessage: welcomeMessage.trim() } : { welcomeMessage: undefined }) },
+        settings: { ...initial, ...(primaryColor === DEFAULT_WIDGET_COLOR && !initial.primaryColor ? {} : { primaryColor }), collectEmail, showAgentNames, requireTurnstile, askForRating, language, ...(welcomeMessage.trim() ? { welcomeMessage: welcomeMessage.trim() } : { welcomeMessage: undefined }) },
       }),
     onSuccess: () => refreshWebsites(client, workspaceId),
   });
@@ -92,6 +93,10 @@ function WidgetSettingsForm({ website, workspaceId }: { website: Website; worksp
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={requireTurnstile} onChange={(e) => setTurnstile(e.target.checked)} />
         {t('turnstile')}
+      </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={askForRating} onChange={(e) => setAskForRating(e.target.checked)} />
+        {t('askForRating')}
       </label>
       <Failure error={save.error} />
       {save.isSuccess && <p className="notice" role="status">{t('widgetSaved')}</p>}

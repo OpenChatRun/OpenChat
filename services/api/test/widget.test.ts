@@ -153,7 +153,7 @@ describe('starting a conversation', () => {
     const { accessToken } = await session();
     const conversation = await start(accessToken);
     expect(conversation).toMatchObject({ status: 'open', lastSeq: 1 });
-    expect(Object.keys(conversation).sort()).toEqual(['agentReadSeq', 'createdAt', 'id', 'lastSeq', 'message', 'readSeq', 'status']);
+    expect(Object.keys(conversation).sort()).toEqual(['agentReadSeq', 'createdAt', 'id', 'lastSeq', 'message', 'rating', 'readSeq', 'status']);
     expect((await rows(`SELECT topic FROM outbox ORDER BY topic`))).toEqual([{ topic: 'conversation.created' }, { topic: 'message.created' }]);
   });
 
@@ -343,6 +343,58 @@ describe('the page a visitor is on', () => {
     expect((await page(id, token, `${SITE}/pricing`, { vars: off })).status).toBe(204);
     expect(await kept()).toMatchObject([{ url: null }]);
     expect(await json(await call('GET', '/api/v1/widget/bootstrap?websiteKey=key_shop', { vars: off }))).toMatchObject({ reportPage: false });
+  });
+});
+
+describe('rating a conversation', () => {
+  const rate = (id: string, token: string | undefined, body: unknown) => call('PUT', `/api/v1/widget/conversations/${id}/rating`, { ...(token ? { token } : {}), body });
+  const kept = () => rows(`SELECT visitor_rating AS rating, visitor_rating_comment AS comment, version FROM conversations`);
+  const resolve = (id: string) => env.DB.prepare(`UPDATE conversations SET status = 'resolved' WHERE id = ?1`).bind(id).run();
+
+  it('takes a rating once the conversation is resolved, and the newest replaces the last', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    const refused = await rate(id, token, { rating: 'good' });
+    expect(refused.status).toBe(409);
+    expect(await json(refused)).toMatchObject({ code: 'rating_not_open' });
+    await resolve(id);
+    const version = ((await kept()) as { version: number }[])[0]!.version;
+    expect((await rate(id, token, { rating: 'bad', comment: '  Too slow.  ' })).status).toBe(204);
+    expect(await kept()).toEqual([{ rating: 'bad', comment: 'Too slow.', version }]);
+    const seen = await json<{ rating: { value: string; comment: string | null; at: string } }>(await agentCall('GET', `/conversations/${id}`));
+    expect(seen.rating).toMatchObject({ value: 'bad', comment: 'Too slow.' });
+    expect(Date.parse(seen.rating.at)).toBeGreaterThan(0);
+    expect((await rate(id, token, { rating: 'good' })).status).toBe(204);
+    expect(await kept()).toEqual([{ rating: 'good', comment: null, version }]);
+    const mine = await json<{ data: { id: string; rating: string | null }[] }>(await call('GET', '/api/v1/widget/conversations', { token }));
+    expect(mine.data[0]).toMatchObject({ id, rating: 'good' });
+  });
+
+  it('refuses anything but good or bad, and a comment that is too long', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    await resolve(id);
+    for (const body of [{ rating: 'great' }, {}, { rating: 'good', comment: 'x'.repeat(501) }, { rating: 'good', stars: 5 }]) expect((await rate(id, token, body)).status).toBe(400);
+    expect(await kept()).toMatchObject([{ rating: null }]);
+  });
+
+  it('belongs to the visitor whose conversation it is', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    await resolve(id);
+    const { accessToken: other } = await session();
+    expect((await rate(id, other, { rating: 'bad' })).status).toBe(404);
+    expect((await rate(id, undefined, { rating: 'bad' })).status).toBe(401);
+    expect(await kept()).toMatchObject([{ rating: null }]);
+  });
+
+  it('keeps nothing for a website that does not ask', async () => {
+    const { accessToken: token } = await session();
+    const { id } = await start(token);
+    await resolve(id);
+    await env.DB.prepare(`UPDATE websites SET settings_json = json_set(COALESCE(settings_json, '{}'), '$.askForRating', json('false'))`).run();
+    expect((await rate(id, token, { rating: 'good' })).status).toBe(409);
+    expect(await kept()).toMatchObject([{ rating: null }]);
   });
 });
 

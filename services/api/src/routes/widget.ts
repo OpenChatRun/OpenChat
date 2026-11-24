@@ -8,6 +8,7 @@ import {
   listVisitorMessagesRoute,
   markVisitorConversationReadRoute,
   setVisitorPageRoute,
+  rateVisitorConversationRoute,
   sendVisitorMessageRoute,
   updateVisitorProfileRoute,
   widgetBootstrapRoute,
@@ -32,6 +33,7 @@ import {
   publishedHelpLanguages,
   websiteForWidget,
   setVisitorPage,
+  rateVisitorConversation,
   availableMembers,
   widgetHelp,
   widgetHelpArticle,
@@ -229,6 +231,11 @@ export function registerWidgetRoutes(app: App) {
     // Turned off by the operator: a widget from before the change may still send, and nothing is kept.
     if (c.env.VISITOR_PAGE === 'off') return c.body(null, 204);
     await setVisitorPage(await authDeps(c.env), visitorOf(c), c.req.valid('param').conversationId, c.req.valid('json').url);
+    return c.body(null, 204);
+  });
+
+  app.openapi(rateVisitorConversationRoute, async (c) => {
+    await rateVisitorConversation(await authDeps(c.env), visitorOf(c), c.req.valid('param').conversationId, c.req.valid('json'));
     return c.body(null, 204);
   });
 

@@ -38,6 +38,8 @@ export interface VisitorConversationRow {
   readSeq: number;
   /** How far any agent has read, as a public sequence number, so that it says nothing about notes. */
   agentReadSeq: number;
+  /** What this visitor said of it, once resolved. */
+  rating: 'good' | 'bad' | null;
 }
 
 export interface VisitorMessageRow {
@@ -149,7 +151,7 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
   const w = ctx.workspaceId;
 
   /** Takes the visitor's ID as ?3. */
-  const CONVERSATION_COLUMNS = `c.id, c.status, c.last_public_seq AS lastSeq, c.created_at AS createdAt,
+  const CONVERSATION_COLUMNS = `c.id, c.status, c.last_public_seq AS lastSeq, c.created_at AS createdAt, c.visitor_rating AS rating,
     COALESCE((SELECT r.read_seq FROM conversation_read_cursors r
                WHERE r.workspace_id = c.workspace_id AND r.conversation_id = c.id AND r.reader_type = 'visitor' AND r.reader_id = ?3), 0) AS readSeq,
     COALESCE((SELECT m.public_seq FROM messages m
@@ -326,6 +328,26 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
                 AND EXISTS (SELECT 1 FROM websites s, json_each(s.allowed_origins_json) o WHERE s.workspace_id = ?2 AND s.id = conversations.website_id AND o.value = ?5)`,
           )
           .bind(url, w, conversationId, ctx.contactId, origin)
+          .run();
+        return result.meta.changes > 0;
+      },
+    },
+
+    rating: {
+      /**
+       * The visitor's rating of their own conversation, replacing any earlier one. Only while it is resolved, and
+       * only if its website asks for ratings, both decided in the same statement. Like a page view, it leaves the
+       * conversation's version and updated_at alone: it is not a change a member's client has to merge.
+       */
+      async set(conversationId: string, rating: 'good' | 'bad', comment: string | null): Promise<boolean> {
+        const result = await d1
+          .prepare(
+            `UPDATE conversations SET visitor_rating = ?1, visitor_rating_comment = ?2, visitor_rated_at = ${DB_NOW_MS}
+              WHERE workspace_id = ?3 AND id = ?4 AND contact_id = ?5 AND status = 'resolved'
+                AND EXISTS (SELECT 1 FROM websites s WHERE s.workspace_id = ?3 AND s.id = conversations.website_id
+                             AND COALESCE(json_extract(s.settings_json, '$.askForRating'), 1) <> 0)`,
+          )
+          .bind(rating, comment, w, conversationId, ctx.contactId)
           .run();
         return result.meta.changes > 0;
       },

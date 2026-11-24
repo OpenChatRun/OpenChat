@@ -894,6 +894,12 @@ function Thread(props: { workspaceId: string; conversationId: string; members: M
                   <a className="underline" href={data.visitorPage.url} target="_blank" rel="noopener noreferrer">{pageLabel(data.visitorPage.url)}</a>
                 </span>
               )}
+              {data.rating && (
+                <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">
+                  <span className={`font-medium ${data.rating.value === 'good' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{t(data.rating.value === 'good' ? 'ratedGood' : 'ratedBad')}</span>
+                  {data.rating.comment && <span className="ml-1 break-words">“{data.rating.comment}”</span>}
+                </span>
+              )}
             </h2>
           </div>
           {data.assistantState === 'answering' && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{t('assistantAnsweringHelp')}</p>}

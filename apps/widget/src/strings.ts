@@ -61,6 +61,11 @@ const en = {
   helpChat: 'Chat with us',
   helpOpen: 'Open in a new tab',
   helpFailed: 'Help articles did not load. Try again.',
+  rateQuestion: 'How did we do?',
+  rateGood: 'Good',
+  rateBad: 'Bad',
+  rateComment: 'Tell us more (optional)',
+  rateThanks: 'Thanks for your feedback.',
   /** Kilobytes and megabytes, as file sizes are written. */
   units: ['KB', 'MB'] as [string, string],
 };
@@ -123,6 +128,11 @@ const es: Strings = {
   helpChat: 'Escríbenos',
   helpOpen: 'Abrir en una pestaña nueva',
   helpFailed: 'No se cargaron los artículos. Inténtalo de nuevo.',
+  rateQuestion: '¿Qué tal lo hicimos?',
+  rateGood: 'Bien',
+  rateBad: 'Mal',
+  rateComment: 'Cuéntanos más (opcional)',
+  rateThanks: 'Gracias por tu opinión.',
   units: ['KB', 'MB'],
 };
 
@@ -182,6 +192,11 @@ const fr: Strings = {
   helpChat: 'Écrivez-nous',
   helpOpen: 'Ouvrir dans un nouvel onglet',
   helpFailed: 'Les articles n’ont pas pu être chargés. Réessayez.',
+  rateQuestion: 'Comment s’est passée cette conversation ?',
+  rateGood: 'Bien',
+  rateBad: 'Mal',
+  rateComment: 'Dites-nous en plus (facultatif)',
+  rateThanks: 'Merci pour votre avis.',
   units: ['Ko', 'Mo'],
 };
 
@@ -241,6 +256,11 @@ const de: Strings = {
   helpChat: 'Schreib uns',
   helpOpen: 'In neuem Tab öffnen',
   helpFailed: 'Die Artikel wurden nicht geladen. Versuche es noch einmal.',
+  rateQuestion: 'Wie war diese Unterhaltung?',
+  rateGood: 'Gut',
+  rateBad: 'Schlecht',
+  rateComment: 'Erzählen Sie uns mehr (optional)',
+  rateThanks: 'Danke für Ihre Rückmeldung.',
   units: ['KB', 'MB'],
 };
 
@@ -300,6 +320,11 @@ const it: Strings = {
   helpChat: 'Scrivici',
   helpOpen: 'Apri in una nuova scheda',
   helpFailed: 'Gli articoli non sono stati caricati. Riprova.',
+  rateQuestion: 'Com’è andata?',
+  rateGood: 'Bene',
+  rateBad: 'Male',
+  rateComment: 'Dicci di più (facoltativo)',
+  rateThanks: 'Grazie per il tuo parere.',
   units: ['KB', 'MB'],
 };
 
@@ -359,6 +384,11 @@ const pt: Strings = {
   helpChat: 'Fale conosco',
   helpOpen: 'Abrir em uma nova aba',
   helpFailed: 'Os artigos não carregaram. Tente de novo.',
+  rateQuestion: 'Como nos saímos?',
+  rateGood: 'Bom',
+  rateBad: 'Ruim',
+  rateComment: 'Conte mais (opcional)',
+  rateThanks: 'Obrigado pela sua opinião.',
   units: ['KB', 'MB'],
 };
 
@@ -418,6 +448,11 @@ const nl: Strings = {
   helpChat: 'Chat met ons',
   helpOpen: 'Openen in een nieuw tabblad',
   helpFailed: 'De artikelen zijn niet geladen. Probeer het opnieuw.',
+  rateQuestion: 'Hoe ging het?',
+  rateGood: 'Goed',
+  rateBad: 'Slecht',
+  rateComment: 'Vertel ons meer (optioneel)',
+  rateThanks: 'Bedankt voor je feedback.',
   units: ['KB', 'MB'],
 };
 
@@ -477,6 +512,11 @@ const ja: Strings = {
   helpChat: 'チャットで問い合わせる',
   helpOpen: '新しいタブで開く',
   helpFailed: '記事を読み込めませんでした。もう一度お試しください。',
+  rateQuestion: '今回の対応はいかがでしたか？',
+  rateGood: '良い',
+  rateBad: '悪い',
+  rateComment: '詳しくお聞かせください（任意）',
+  rateThanks: 'ご意見ありがとうございます。',
   units: ['KB', 'MB'],
 };
 
@@ -536,6 +576,11 @@ const ko: Strings = {
   helpChat: '채팅으로 문의하기',
   helpOpen: '새 탭에서 열기',
   helpFailed: '문서를 불러오지 못했습니다. 다시 시도하세요.',
+  rateQuestion: '이번 상담은 어떠셨나요?',
+  rateGood: '좋아요',
+  rateBad: '별로예요',
+  rateComment: '더 알려 주세요(선택)',
+  rateThanks: '의견을 보내 주셔서 감사합니다.',
   units: ['KB', 'MB'],
 };
 
@@ -595,6 +640,11 @@ const zhHans: Strings = {
   helpChat: '与我们聊天',
   helpOpen: '在新标签页中打开',
   helpFailed: '文章未能加载。请重试。',
+  rateQuestion: '这次服务怎么样？',
+  rateGood: '满意',
+  rateBad: '不满意',
+  rateComment: '告诉我们更多（可选）',
+  rateThanks: '感谢你的反馈。',
   units: ['KB', 'MB'],
 };
 
@@ -654,6 +704,11 @@ const zhHant: Strings = {
   helpChat: '與我們聊天',
   helpOpen: '在新分頁中開啟',
   helpFailed: '文章未能載入。請再試一次。',
+  rateQuestion: '這次服務如何？',
+  rateGood: '滿意',
+  rateBad: '不滿意',
+  rateComment: '告訴我們更多（選填）',
+  rateThanks: '感謝你的意見。',
   units: ['KB', 'MB'],
 };
 

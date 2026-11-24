@@ -810,6 +810,12 @@ On a throwaway installation, `oc-analyticstest`, since deleted, with migration 0
 
 Not tried there: the AI assistant's numbers, the limit of 10,000, and an agent's 403, which the Worker tests cover, and the page, which the browser test covers against local Workers.
 
+## Chat rating on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-ratingtest`, since deleted, with migration 0030 applied by the deploy: a visitor's rating was refused with 409 `rating_not_open` while the conversation was open, and accepted once a member resolved it. The member's view showed the rating and its trimmed comment, with the conversation's `version` and `updatedAt` unchanged. A second rating replaced the first and its comment. A value other than good or bad, and a comment of 501 characters, answered 400; another visitor 404; no token 401. The visitor's own list, the analytics counts and the contact export all carried it. After the website's `askForRating` was set to false, a rating answered 409 and the earlier one stayed, so D1 reads the JSON `false` in `settings_json` as 0, as local SQLite does.
+
+Not tried there: the widget itself, which the browser test covers against local Workers.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

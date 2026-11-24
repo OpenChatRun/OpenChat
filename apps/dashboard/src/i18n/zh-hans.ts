@@ -515,4 +515,9 @@ export const zhHans: Messages = {
   analyticsNoReplies: '这段时间内没有人回复。',
   analyticsBasis: '这里的所有数字都针对这段时间内开始的对话。AI 助手的回复和内部备注不算作回复。',
   analyticsTruncated: '这段时间的对话超过 10,000 个，只统计前 10,000 个。',
+  askForRating: '请访客为已解决的对话评分',
+  ratedGood: '评价：满意',
+  ratedBad: '评价：不满意',
+  analyticsRatings: '访客评价为满意',
+  analyticsRatingsDetail: '满意 {good}，不满意 {bad}',
 };

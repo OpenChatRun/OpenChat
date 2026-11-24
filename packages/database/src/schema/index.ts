@@ -333,6 +333,13 @@ export const conversations = sqliteTable(
     /** The page the visitor is on now, without its query or fragment. The current one only: each report replaces the last. */
     visitorPageUrl: text('visitor_page_url'),
     visitorPageAt: integer('visitor_page_at'),
+    /**
+     * What the visitor said of a resolved conversation: 'good' or 'bad', a comment if they left one, and when. One per
+     * conversation: a new rating replaces the last. Its CHECK is in migration 0030, as for assistant_state above.
+     */
+    visitorRating: text('visitor_rating', { enum: ['good', 'bad'] }),
+    visitorRatingComment: text('visitor_rating_comment'),
+    visitorRatedAt: integer('visitor_rated_at'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },
