@@ -288,6 +288,7 @@ export const nl: Messages = {
   foreverLower: 'voor altijd',
   // People page
   peopleSearch: 'Zoeken op naam of e-mail',
+  inboxSearch: 'Zoek in namen, e-mails en berichten',
   filterPeople: 'Tonen',
   filterAll: 'Iedereen',
   filterAdmins: 'Beheerders',

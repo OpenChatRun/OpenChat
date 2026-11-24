@@ -288,6 +288,7 @@ export const ja: Messages = {
   foreverLower: '無期限',
   // People page
   peopleSearch: '名前またはメールで検索',
+  inboxSearch: '名前、メール、メッセージを検索',
   filterPeople: '表示',
   filterAll: 'すべて',
   filterAdmins: '管理者',

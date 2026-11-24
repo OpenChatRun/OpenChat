@@ -300,6 +300,7 @@ export const en = {
   foreverLower: 'forever',
   // People page
   peopleSearch: 'Search by name or email',
+  inboxSearch: 'Search names, emails and messages',
   filterPeople: 'Show',
   filterAll: 'All',
   filterAdmins: 'Admins',

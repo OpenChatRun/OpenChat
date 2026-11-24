@@ -288,6 +288,7 @@ export const ko: Messages = {
   foreverLower: '영구 보관',
   // People page
   peopleSearch: '이름 또는 이메일로 검색',
+  inboxSearch: '이름, 이메일, 메시지 검색',
   filterPeople: '표시',
   filterAll: '전체',
   filterAdmins: '관리자',

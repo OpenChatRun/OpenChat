@@ -236,10 +236,13 @@ test('the list previews the newest message, and a search finds a contact whateve
   await expect(list.getByRole('button', { name: new RegExp(name) })).toBeVisible();
   await page.getByLabel('Conversation status').selectOption('resolved');
   await expect(list.getByRole('button', { name: new RegExp(name) })).toHaveCount(0);
-  const search = list.getByRole('searchbox', { name: 'Search by name or email' });
+  const search = list.getByRole('searchbox', { name: 'Search names, emails and messages' });
   await search.fill(name.toUpperCase());
   await expect(list.getByRole('button')).toHaveCount(1);
   await expect(list.getByRole('button', { name: new RegExp(name) })).toContainText('Resolved');
+  // What was written is searched too, and the list shows where.
+  await search.fill('DUE ON monday');
+  await expect(list.getByRole('button', { name: new RegExp(name) }).locator('mark')).toHaveText('due on Monday');
   await search.fill('');
   await expect(list.getByRole('button', { name: new RegExp(name) })).toHaveCount(0);
 });

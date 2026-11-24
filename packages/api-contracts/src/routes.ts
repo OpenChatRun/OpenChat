@@ -733,6 +733,14 @@ export const ConversationSchema = z
       })
       .nullable()
       .openapi({ description: 'The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does.' }),
+    searchMatch: z
+      .object({
+        text: z.string().openapi({ description: 'At most 140 characters of the message, starting up to 40 before the words.' }),
+        seq: z.number().int(),
+        type: z.enum(['text', 'image', 'file', 'system', 'internal_note']),
+      })
+      .optional()
+      .openapi({ description: 'Only in a search with `q`: the newest message of the conversation that contains the words, which may be an internal note. Absent when only the contact matched.' }),
     visitorPage: VisitorPageSchema.nullable().openapi({ description: "The page the visitor's widget last reported, without its query or fragment. Only the current one is kept. Null when none was reported, or the installation has it turned off." }),
     rating: ConversationRatingSchema.nullable().openapi({ description: 'What the visitor said of the conversation once it was resolved. Null when they have not rated it. A new rating replaces the last.' }),
     visitorReadSeq: z.number().int().openapi({ description: 'How far the visitor has read, as a public sequence number: compare it with a message\'s `publicSeq`. 0 when they have read nothing.' }),
@@ -779,7 +787,7 @@ export const listConversationsRoute = createRoute({
     query: PaginationQuery.extend({
       status: ConversationStatusSchema.default('open'),
       assignee: z.string().max(64).optional().openapi({ description: 'A member ID, `me`, or `none`.' }),
-      q: z.string().trim().min(1).max(254).optional().openapi({ description: "Only conversations whose contact's name or email contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored." }),
+      q: z.string().trim().min(1).max(254).optional().openapi({ description: "Only conversations whose contact's name or email, or one of whose messages or internal notes, contains this, ignoring case for the letters A to Z. A search looks in every status and for every assignee: `status` and `assignee` are ignored. A row whose message matched carries `searchMatch`." }),
       updatedAfter: z.string().max(512).optional().openapi({ description: 'A `syncCursor` from an earlier response. Returns everything changed since, in any status, oldest change first. Other filters are ignored.' }),
     }),
   },

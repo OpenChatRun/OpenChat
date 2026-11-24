@@ -822,6 +822,14 @@ On a throwaway installation, `oc-hourstest`, since deleted. The Workers runtime 
 
 Not tried there: a change of clocks, which the unit tests cover, and the widget and the dashboard's form, which the browser test covers against local Workers.
 
+## Search inside messages on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-searchtest`, since deleted. Two visitors wrote, and a member added a note and a reply: a search found a visitor's message and the note whatever the capitals, returned the newest match as `searchMatch`, took `%` as a character, found nothing for words not together, and refused 255 characters with 400.
+
+Then 4,000 conversations of 25 messages each, about 190 characters long, were added in SQL: 100,004 messages in one workspace. A search for words in one old message, and one for words nobody wrote, which reads every message, each answered in 180 to 260 ms from a laptop; a word in every message answered its first page in about 150 ms. The plan reads each conversation's messages through `messages_seq_uq` or `messages_client_uq`, both of which start with the workspace and the conversation, and sorts the conversations in a temporary B-tree, as the search by contact always did.
+
+Not tried there: more than 100,000 messages, long messages, or several searches at once.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

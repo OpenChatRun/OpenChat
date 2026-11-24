@@ -260,6 +260,19 @@ function ConnectionNotice({ status }: { status: RealtimeStatus }) {
   );
 }
 
+/** The piece of a message a search found, with the words marked. The server matched ignoring case for A to Z. */
+function Marked({ text, words }: { text: string; words: string }) {
+  const at = words ? text.toLowerCase().indexOf(words.toLowerCase()) : -1;
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <mark className="rounded-sm bg-brand-100 text-inherit dark:bg-brand-900">{text.slice(at, at + words.length)}</mark>
+      {text.slice(at + words.length)}
+    </>
+  );
+}
+
 function ConversationList(props: { workspaceId: string; memberId: string; selected: string | null; onSelect: (id: string) => void; visitorsOnline: ReadonlySet<string>; hidden: boolean }) {
   const { workspaceId, memberId, selected, onSelect, visitorsOnline } = props;
   const [status, setStatus] = useState<Conversation['status']>('open');
@@ -284,7 +297,7 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
   return (
     <section aria-label={t('conversations')} className={`min-w-0 flex-1 flex-col md:flex md:w-80 md:flex-none md:border-r md:border-slate-200 md:dark:border-slate-800 ${props.hidden ? 'hidden' : 'flex'}`}>
       <div className="px-3 pt-3">
-        <input className="field w-full" type="search" aria-label={t('peopleSearch')} placeholder={t('peopleSearch')} maxLength={254} value={words} onChange={(e) => setWords(e.target.value)} />
+        <input className="field w-full" type="search" aria-label={t('inboxSearch')} placeholder={t('inboxSearch')} maxLength={254} value={words} onChange={(e) => setWords(e.target.value)} />
       </div>
       <div className={`flex gap-2 border-b border-slate-200 p-3 dark:border-slate-800 ${q ? 'hidden' : ''}`}>
         <select className="field" aria-label={t('status')} value={status} onChange={(e) => setStatus(e.target.value as Conversation['status'])}>
@@ -322,12 +335,17 @@ function ConversationList(props: { workspaceId: string; memberId: string; select
                   <span className={`block truncate ${unread > 0 ? 'font-semibold' : ''}`}>{label(row)}</span>
                   {row.subject && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.subject}</span>}
                   {q && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{t(STATUS_LABEL[row.status])}</span>}
-                  {row.lastMessage?.text && (
+                  {row.searchMatch ? (
+                    <span className="block truncate text-xs text-slate-600 dark:text-slate-400">
+                      {row.searchMatch.type === 'internal_note' ? `${t('internalNote')}: ` : ''}
+                      <Marked text={row.searchMatch.text} words={q} />
+                    </span>
+                  ) : row.lastMessage?.text ? (
                     <span className={`block truncate text-xs ${unread > 0 ? 'text-slate-900 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}`}>
                       {row.lastMessage.type === 'internal_note' ? `${t('internalNote')}: ` : row.lastMessage.senderType === 'assistant' ? `${t('aiLabel')}: ` : ''}
                       {row.lastMessage.text}
                     </span>
-                  )}
+                  ) : null}
                   {row.tags.length > 0 && <span className="block truncate text-xs text-slate-600 dark:text-slate-400">{row.tags.map((tag) => tag.name).join(', ')}</span>}
                 </span>
                 {row.assistantState === 'answering' && <span className="rounded-full border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300">{t('assistantAnswering')}</span>}
