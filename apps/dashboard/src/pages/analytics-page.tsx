@@ -9,12 +9,12 @@ const PERIODS = [7, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
 
 /** A wait as people say it: seconds under a minute, then minutes, hours, and days from two days on. */
-function duration(seconds: number): string {
+export function duration(seconds: number): string {
   const [value, unit] = seconds < 60 ? [seconds, 'second'] : seconds < 3600 ? [seconds / 60, 'minute'] : seconds < 172_800 ? [seconds / 3600, 'hour'] : [seconds / 86_400, 'day'];
   return new Intl.NumberFormat(intlLocale(), { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: value < 10 && unit !== 'second' ? 1 : 0 }).format(value);
 }
 
-const percent = (part: number, whole: number) => new Intl.NumberFormat(intlLocale(), { style: 'percent', maximumFractionDigits: 0 }).format(whole === 0 ? 0 : part / whole);
+export const percent = (part: number, whole: number) => new Intl.NumberFormat(intlLocale(), { style: 'percent', maximumFractionDigits: 0 }).format(whole === 0 ? 0 : part / whole);
 // A date with no time is read as UTC, and shown as UTC, so that it stays the day the server named.
 const dayLabel = (date: string, style: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(intlLocale(), { ...style, timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
 

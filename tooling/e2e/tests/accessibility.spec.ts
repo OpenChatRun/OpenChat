@@ -49,6 +49,21 @@ for (const scheme of ['light', 'dark'] as const) {
       });
     }
 
+    test('the dashboard', async ({ page }) => {
+      await signIn(page, OWNER);
+      await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+      await expect(page.getByRole('region', { name: 'In the inbox now' }).getByRole('button', { name: /^Open \d/ })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Last 7 days' })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
+
+    test('a member’s settings', async ({ page }) => {
+      await signIn(page, OWNER);
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await expect(page.getByRole('region', { name: 'Your availability' })).toBeVisible();
+      expect(await violations(page)).toEqual([]);
+    });
+
     const admin = { People: (p: Page) => p.getByRole('listitem').filter({ hasText: OWNER.email }), Workspaces: (p: Page) => p.getByRole('region', { name: 'Retention' }), 'Failed jobs': (p: Page) => p.getByRole('region', { name: 'Failed jobs' }).getByRole('listitem').or(p.getByText('No failed jobs.')), 'Audit log': (p: Page) => p.getByRole('region', { name: 'Audit log' }).getByRole('listitem').or(p.getByText('Nothing recorded yet.')) };
     for (const [name, loaded] of Object.entries(admin)) {
       test(`the ${name} page`, async ({ page }) => {
@@ -108,6 +123,11 @@ test('every dashboard screen fits 320 pixels without scrolling sideways', async 
     await page.waitForTimeout(500);
     await fits(section);
   }
+  for (const name of ['Dashboard', 'Settings']) {
+    await page.getByRole('button', { name, exact: true }).click();
+    await page.waitForTimeout(500);
+    await fits(name);
+  }
   for (const name of ['People', 'Workspaces', 'Failed jobs', 'Audit log']) {
     await page.getByRole('navigation', { name: 'Administration' }).getByRole('button', { name, exact: true }).click();
     await page.waitForTimeout(500);
@@ -120,6 +140,7 @@ test('a chosen theme wins over the device’s, and is remembered', async ({ page
   await signIn(page, OWNER);
   const body = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(await body()).not.toBe('rgb(0, 0, 0)');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('combobox', { name: 'Theme' }).selectOption('dark');
   await expect.poll(body).toBe('rgb(0, 0, 0)');
   expect(await violations(page)).toEqual([]);

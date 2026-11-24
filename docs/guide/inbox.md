@@ -2,13 +2,19 @@
 
 For agents and supervisors. The inbox is the same on the web dashboard and in the iPhone app, though the app has fewer settings.
 
-In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Contacts**, **Analytics**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
+In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Contacts**, **Analytics**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The OpenChat mark at the top of the rail opens the **Dashboard**, and your initials at the bottom open your **Settings**. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
 
 ## Signing in
 
 Open your installation's address, such as `https://chat.company.com`, and sign in with your email address and password. Your first password comes from the link your administrator's account email sent you. It lasts seven days. If it has run out, ask for a new one.
 
 Forgot your password? Choose **Forgot your password?** and enter your address. If the account exists, a link arrives by email. Using it signs you out everywhere else.
+
+## The dashboard and your settings
+
+**Dashboard**, opened with the OpenChat mark, shows what is in the inbox now: open conversations, those with messages you have not read, those assigned to you, unassigned and pending ones. Choose a number to open the inbox. A supervisor also sees the last 7 days from [Analytics](#analytics). Your **Away** switch is there too.
+
+**Settings**, opened with your initials, holds your profile, the dashboard's theme (light, dark, or as your device) and language, your **Away** switch, and **Email me a link** to choose a new password. An installation admin changes your name and email address. Signing in still opens the inbox.
 
 ## Finding conversations
 

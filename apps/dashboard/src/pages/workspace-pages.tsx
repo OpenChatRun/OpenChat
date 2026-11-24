@@ -8,6 +8,8 @@ import { AnalyticsPage } from './analytics-page';
 import { AssistantPage } from './assistant-page';
 import { ContactsPage } from './contacts-page';
 import { HelpPage } from './help-page';
+import { HomePage } from './home-page';
+import { SettingsPage } from './settings-page';
 import { AuditLogPage } from './audit-log-page';
 import { FailedJobsPage } from './failed-jobs-page';
 import { PeoplePage } from './people-page';
@@ -15,8 +17,7 @@ import { CopyableSnippet, WorkspacesAdminPage } from './workspaces-admin-page';
 import { SoftwareFooter } from '../software-footer';
 import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
-import { LanguagePicker, useServerLanguage } from '../language-picker';
-import { ThemePicker } from '../theme-picker';
+import { useServerLanguage } from '../language-picker';
 import { navigate, useRoute, type AdminPage, type Section } from '../routes';
 
 type Membership = Me['memberships'][number];
@@ -70,6 +71,8 @@ function MembersPanel({ membership }: { membership: Membership }) {
     mutationFn: (away: boolean) => api.setAway(membership.workspace.id, away),
     onSettled: () => client.invalidateQueries({ queryKey: ['members', membership.workspace.id] }),
   });
+  // What was just chosen, shown at once, until the list has been asked for again.
+  const [wanted, setWanted] = useState<boolean | null>(null);
   return (
     <section className="space-y-4" aria-label={t('sectionMembers')}>
       <Failure error={members.error ?? setAway.error} />
@@ -85,7 +88,7 @@ function MembersPanel({ membership }: { membership: Membership }) {
             {member.status === 'removed' && <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{t('removed')}</span>}
             {member.id === membership.memberId ? (
               <label className="flex items-center gap-2 text-sm" title={t('awayHelp')}>
-                <input type="checkbox" checked={member.away} disabled={setAway.isPending} onChange={(e) => setAway.mutate(e.target.checked)} />
+                <input type="checkbox" checked={wanted ?? member.away} disabled={setAway.isPending} onChange={(e) => { setWanted(e.target.checked); void setAway.mutateAsync(e.target.checked).catch(() => undefined).then(() => client.invalidateQueries({ queryKey: ['members', membership.workspace.id] })).finally(() => setWanted(null)); }} />
                 {t('away')}
               </label>
             ) : (
@@ -123,6 +126,8 @@ const SECTIONS = [
   ['assistant', 'sectionAssistant', 'assistant'],
   ['help', 'sectionHelp', 'help'],
 ] as const satisfies readonly (readonly [Section, MessageKey, IconName])[];
+/** Not in the rail's list: the mark at the top opens the dashboard, and the member's initials their settings. */
+const SECTION_TITLES: Partial<Record<Section, MessageKey>> = { home: 'sectionHome', settings: 'sectionSettings' };
 const ADMIN_PAGES = [
   ['people', 'adminPeople', 'people'],
   ['workspaces', 'adminWorkspaces', 'workspaces'],
@@ -160,15 +165,17 @@ export function WorkspaceApp() {
     // An open conversation belongs to the workspace being left.
     if (route.conversationId) navigate({ section: 'inbox', adminPage: null, conversationId: null }, { replace: true });
   };
-  const title = adminPage ? t(ADMIN_PAGES.find(([page]) => page === adminPage)![1]) : current ? t(SECTIONS.find(([name]) => name === tab)![1]) : 'OpenChat';
+  const title = adminPage ? t(ADMIN_PAGES.find(([page]) => page === adminPage)![1]) : current ? t(SECTION_TITLES[tab] ?? SECTIONS.find(([name]) => name === tab)![1]) : tab === 'settings' ? t('sectionSettings') : 'OpenChat';
   const wide = tab === 'inbox' && !adminPage;
   // Lists of people and their workspaces read better with more room than a form page.
-  const width = wide ? '' : adminPage === 'people' || adminPage === 'audit' || (!adminPage && tab === 'help') ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl';
+  const width = wide ? '' : adminPage === 'people' || adminPage === 'audit' || (!adminPage && (tab === 'help' || tab === 'home')) ? 'mx-auto max-w-5xl' : 'mx-auto max-w-3xl';
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
       <aside className="flex shrink-0 items-center gap-2 bg-navy-deep px-3 py-2 dark:border-b dark:border-white/10 md:sticky md:top-0 md:h-dvh md:w-[72px] md:flex-col md:px-0 md:py-4 md:dark:border-r md:dark:border-b-0">
-        <img className="size-9 shrink-0 md:mb-4 md:size-10" src="/brand/mark-96.png" width={40} height={40} alt="OpenChat" />
+        <button type="button" className="shrink-0 cursor-pointer rounded-xl md:mb-4" aria-current={!adminPage && tab === 'home' ? 'page' : undefined} onClick={() => openSection('home')}>
+          <img className="size-9 md:size-10" src="/brand/mark-96.png" width={40} height={40} alt={t('sectionHome')} />
+        </button>
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto md:flex-col md:overflow-visible">
           {current && (
             <nav className="flex shrink-0 gap-1 md:flex-col" aria-label={t('navSections')}>
@@ -185,7 +192,10 @@ export function WorkspaceApp() {
             </nav>
           )}
         </div>
-        <span className="avatar hidden ring-2 ring-white/20 md:inline-flex" aria-hidden="true"><Initials name={me.data?.name} /></span>
+        <button type="button" className={`avatar relative cursor-pointer ring-2 ${!adminPage && tab === 'settings' ? 'ring-white' : 'ring-white/20 hover:ring-white/60'}`} aria-current={!adminPage && tab === 'settings' ? 'page' : undefined} onClick={() => openSection('settings')}>
+          <span aria-hidden="true"><Initials name={me.data?.name} /></span>
+          <span className="sr-only">{t('sectionSettings')}</span>
+        </button>
         <button type="button" className="rail-item shrink-0" onClick={() => void signOut()}>
           <Icon name="signOut" />
           <span className="sr-only">{t('signOut')}</span>
@@ -200,9 +210,6 @@ export function WorkspaceApp() {
               {memberships.map((m) => <option key={m.workspace.id} value={m.workspace.id}>{m.workspace.name}</option>)}
             </select>
           )}
-          <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-400">{me.data?.name}</span>
-          <ThemePicker className="text-sm" />
-          <LanguagePicker className="text-sm" />
         </header>
         <main className={`w-full flex-1 space-y-6 px-4 py-6 md:px-6 ${width}`}>
           <Failure error={me.error} />
@@ -210,13 +217,14 @@ export function WorkspaceApp() {
           {isAdmin && adminPage === 'workspaces' && <WorkspacesAdminPage />}
           {isAdmin && adminPage === 'jobs' && <FailedJobsPage />}
           {isAdmin && adminPage === 'audit' && <AuditLogPage />}
-          {me.data && !current && !adminPage && (
+          {me.data && !adminPage && tab === 'settings' && <SettingsPage me={me.data} membership={current} onSignOut={() => void signOut()} />}
+          {me.data && !current && !adminPage && tab !== 'settings' && (
             <p className="card text-sm">{t(isAdmin ? 'notInWorkspaceAdmin' : 'notInWorkspace')}</p>
           )}
-          {current && !adminPage && (
+          {current && !adminPage && tab !== 'settings' && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'contacts' ? <ContactsPage workspaceId={current.workspace.id} /> : tab === 'analytics' ? <AnalyticsPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'home' ? <HomePage membership={current} name={me.data?.name ?? ''} onOpenInbox={() => openSection('inbox')} onOpenAnalytics={() => openSection('analytics')} /> : tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'contacts' ? <ContactsPage workspaceId={current.workspace.id} /> : tab === 'analytics' ? <AnalyticsPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>

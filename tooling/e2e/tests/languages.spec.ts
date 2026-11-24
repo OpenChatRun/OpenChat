@@ -19,6 +19,7 @@ test.describe('languages', () => {
 
     await page.getByRole('combobox', { name: '言語' }).selectOption('en');
     await signIn(page, OWNER);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
   });
 });
