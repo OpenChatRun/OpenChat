@@ -719,10 +719,14 @@ test('a visitor rates a resolved conversation, and the agent sees it', async ({ 
 test('an admin sets opening hours, and the widget says when the team is back', async ({ browser, page }) => {
   test.setTimeout(90_000);
   await signIn(page, OWNER);
-  await page.getByRole('button', { name: 'Workspaces', exact: true }).click();
-  // Other tests make workspaces, and the page opens on the first by name.
-  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
-  const card = () => page.getByRole('listitem').filter({ hasText: 'Styled' }).first();
+  // The admin's own workspace, E2E, on the Websites page.
+  await page.getByRole('button', { name: 'Websites', exact: true }).click();
+  const openHours = async () => {
+    await page.getByRole('button', { name: 'Settings for Styled' }).click();
+    await page.getByRole('tab', { name: 'Opening hours' }).click();
+  };
+  await openHours();
+  const card = () => page.getByRole('region', { name: 'Styled' });
   await card().getByLabel('Set opening hours').check();
   // Closed today on a UTC clock, whatever the time is, and open tomorrow.
   await card().getByLabel('Time zone').selectOption('UTC');
@@ -730,10 +734,10 @@ test('an admin sets opening hours, and the widget says when the team is back', a
   for (const day of ['Saturday', 'Sunday']) await card().getByLabel(day, { exact: true }).check();
   await card().getByLabel(today, { exact: true }).uncheck();
   await expect(card().getByLabel(`${today}, opens`)).toBeDisabled();
-  await card().getByRole('button', { name: 'Save widget settings' }).click();
+  await card().getByRole('button', { name: 'Save changes' }).click();
   await expect(card().getByRole('status')).toContainText('Saved');
   await page.reload();
-  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
+  await openHours();
   await expect(card().getByLabel('Set opening hours')).toBeChecked();
   await expect(card().getByLabel('Time zone')).toHaveValue('UTC');
   await expect(card().getByLabel(today, { exact: true })).not.toBeChecked();
@@ -750,6 +754,6 @@ test('an admin sets opening hours, and the widget says when the team is back', a
 
   // Back as it was, because other tests here share this website.
   await card().getByLabel('Set opening hours').uncheck();
-  await card().getByRole('button', { name: 'Save widget settings' }).click();
+  await card().getByRole('button', { name: 'Save changes' }).click();
   await expect(card().getByRole('status')).toContainText('Saved');
 });

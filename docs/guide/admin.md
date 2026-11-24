@@ -6,6 +6,8 @@ Being an admin lets you change settings, not read conversations. To read a works
 
 ## People
 
+**People** is every account on the installation, across all workspaces, and only installation admins see it. **Members**, in each workspace's own sections, is the people in that workspace with their roles, and every member sees it. You add someone under People, then give them a role in a workspace; they then appear under that workspace's Members.
+
 **Add someone.** Enter their name and email, then **Add**. OpenChat emails them a link to choose a password, which lasts seven days. Then add them to a workspace, as an agent or a supervisor. Without a workspace they can sign in but see nothing.
 
 This needs email. Without it, run `pnpm oc recover --env <name> --email <address>` on the computer you deploy from, which prints a reset link to pass on yourself.
@@ -27,13 +29,13 @@ Nobody can delete an account. That keeps the history of who said what. A former 
 
 ## Workspaces
 
-Choose a workspace under **Workspace to manage**. Creating one with **Create workspace** does not add you to it.
+Choose a workspace under **Workspace to manage**. Creating one with **Create workspace** does not add you to it. **General** holds its name and how long it keeps conversations, and **Websites** its websites. Push notifications, for the whole installation, are at the foot of the page.
 
 ### Websites
 
-Each website has its own chat button. **Add a website** with a name and its **allowed origins**: the exact addresses of the sites it may appear on, one per line, such as `https://www.company.com`. No paths and no wildcards. The widget refuses to load anywhere else.
+Each website has its own chat button. Websites are on a workspace's **Websites** tab here, and, for a workspace you belong to, on its own **Websites** page in the side rail, where members who are not admins can copy the code and nothing more. **Add website** with a name and its **allowed origins**: the exact addresses of the sites it may appear on, one per line, such as `https://www.company.com`. No paths and no wildcards. The widget refuses to load anywhere else.
 
-Each website's card has the snippet to paste into the site. See [the website widget](widget.md) for that, and for these **Widget** settings:
+Choose **Settings** beside a website to open it. **Install** has the code to paste into the site, with **Copy code**; **Appearance** the colour, welcome message and language, beside a sketch of the widget; **Chat** what it asks of visitors; **Opening hours**; and **Details** the name and allowed origins. **Save changes** saves every tab at once. See [the website widget](widget.md) for installing, and for these settings:
 
 | Setting | Choices |
 |---|---|
@@ -97,8 +99,10 @@ The assistant can be wrong, even with good sources. Try the questions your custo
 
 **Help centre**, in the side rail, holds articles your visitors can read and search, one help centre for each website. Every member can read it, drafts included, so that they can find an article to send; supervisors change it.
 
-1. Under **Public address**, choose an address, such as `shop`. Your help centre is then at `https://<your installation>/help/shop`. Until you choose one, nothing is public. **Turn off** takes it down; changing it breaks links to the old address.
-2. Choose a **Language**, and add **Collections**, the sections of your help centre in that language, if you want them.
+The page has four tabs: **Articles**, **Collections**, **Images** and **Settings**. Until the help centre has a public address, a line at the top says it is off.
+
+1. On **Settings**, under **Public address**, choose an address, such as `shop`. Your help centre is then at `https://<your installation>/help/shop`. Until you choose one, nothing is public. **Turn off** takes it down; changing it breaks links to the old address.
+2. Choose a **Language** at the top, and on **Collections** add collections, the sections of your help centre in that language, if you want them.
 3. Under **Articles**, give a title and choose **New article**. Write it with the preview beside it. The buttons above the text add a heading, bold, italic, a bulleted or numbered list, a quote, a link or code to what you have selected, and take it away again; **Ctrl+B**, **Ctrl+I** and **Ctrl+K** (⌘ on a Mac) do bold, italic and a link. What they write is Markdown, which you can also type: `#` for a heading, `**bold**`, `_italic_`, `-` or `1.` for lists, `[text](https://…)` for a link, `>` for a quote. HTML is not allowed. Upload images under **Images**, and **Insert** one where the cursor is.
 4. **Save** keeps a draft. **Publish** makes it public at once; **Back to draft** takes it down. Publishing, taking down and deleting are recorded in the audit log.
 5. **Translate into** makes a copy in another language for you to translate. Visitors are offered the other languages of an article, and a visitor who opens your help centre's address is taken to their browser's language, if you have articles in it, or else English.
