@@ -58,6 +58,12 @@ export const CHAT_CSS = `
 .oc-send:disabled{opacity:.35;cursor:default}
 .oc-form{display:flex;flex-direction:column;gap:10px;margin:0 12px 12px;padding:16px;border:1px solid var(--oc-line);border-radius:16px;background:var(--oc-bg)}
 .oc-form p{margin:0;font-weight:600}
+.oc-form.oc-rate{gap:8px;padding:12px}
+.oc-thumbs{display:flex;gap:8px}
+.oc-thumb{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid var(--oc-line);border-radius:12px;background:var(--oc-bg);color:var(--oc-fg);font:inherit;font-weight:600;cursor:pointer}
+.oc-thumb[aria-pressed=true]{border-color:var(--oc-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--oc-primary) 30%,transparent)}
+.oc-thumb:focus-visible{outline:2px solid var(--oc-primary);outline-offset:1px}
+.oc-thumb:disabled{opacity:.6;cursor:default}
 .oc-form label{display:flex;flex-direction:column;gap:4px;font-size:12px}
 .oc-form label.oc-check{flex-direction:row;align-items:flex-start;gap:6px}
 .oc-actions{display:flex;gap:12px;align-items:center}

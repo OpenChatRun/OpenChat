@@ -515,4 +515,9 @@ export const fr: Messages = {
   analyticsNoReplies: 'Personne n’a répondu pendant cette période.',
   analyticsBasis: 'Tout ce qui figure ici concerne les conversations commencées pendant la période. Les réponses de l’assistant IA et les notes internes ne comptent pas comme des réponses.',
   analyticsTruncated: 'Cette période compte plus de 10 000 conversations. Seules les 10 000 premières sont comptées.',
+  askForRating: 'Demander aux visiteurs d’évaluer une conversation résolue',
+  ratedGood: 'Évaluée : bien',
+  ratedBad: 'Évaluée : mal',
+  analyticsRatings: 'Bien évaluées par les visiteurs',
+  analyticsRatingsDetail: '{good} bien, {bad} mal',
 };

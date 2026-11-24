@@ -91,6 +91,8 @@ const CASES: Record<string, Case> = {
   listVisitorMessages: { kind: 'visitor', ownerStatus: 200 },
   sendVisitorMessage: { kind: 'visitor', body: { clientMessageId: 'isolation-3', content: 'Taken over' }, ownerStatus: 201 },
   markVisitorConversationRead: { kind: 'visitor', body: { deliveredSeq: 0, readSeq: 0 }, ownerStatus: 204 },
+  // 409, not 404: it is their own conversation, and it is not resolved.
+  rateVisitorConversation: { kind: 'visitor', body: { rating: 'good' }, ownerStatus: 409 },
   setVisitorPage: { kind: 'visitor', body: { url: 'https://site-a.example/pricing' }, ownerStatus: 204 },
   getAnalytics: { kind: 'workspace', ownerStatus: 200 },
   listContacts: { kind: 'workspace', ownerStatus: 200 },

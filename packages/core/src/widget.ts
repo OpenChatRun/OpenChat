@@ -40,6 +40,7 @@ const toConversation = (row: VisitorConversationRow) => ({
   lastSeq: row.lastSeq,
   readSeq: row.readSeq,
   agentReadSeq: row.agentReadSeq,
+  rating: row.rating,
   createdAt: toIso(row.createdAt),
 });
 
@@ -200,6 +201,17 @@ export async function setVisitorPage(deps: Pick<AuthDeps, 'db' | 'limiter'>, ctx
   const page = pageToKeep(url);
   if (!page) throw invalid();
   if (!(await repos.page.set(conversationId, page.url, page.origin))) throw invalid();
+}
+
+/** A thumbs up or down for a resolved conversation, with a comment if the visitor leaves one. It replaces the last. */
+export async function rateVisitorConversation(deps: Pick<AuthDeps, 'db' | 'limiter'>, ctx: VisitorContext, conversationId: string, input: { rating: 'good' | 'bad'; comment?: string | undefined }): Promise<void> {
+  await enforce(deps.limiter, await limitKey('website-visitor-ratings', ctx.websiteId), LIMITS.websiteVisitorRatings);
+  const repos = visitorRepositories(deps.db, ctx);
+  // Whose conversation it is comes first, so that someone else's answers 404 whatever they send.
+  if (!(await repos.conversations.get(conversationId))) throw notFound();
+  if (!(await repos.rating.set(conversationId, input.rating, input.comment || null))) {
+    throw new AppError(409, 'rating_not_open', 'A conversation can be rated while it is resolved, on a website that asks for ratings');
+  }
 }
 
 export async function createVisitorTicket(deps: Pick<AuthDeps, 'db' | 'signingKey' | 'installationId'>, ctx: VisitorContext, conversationId: string, origin: string | undefined) {

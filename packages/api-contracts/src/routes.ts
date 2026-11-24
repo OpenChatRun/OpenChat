@@ -355,6 +355,7 @@ export const WidgetSettingsSchema = z
     availabilityMode: z.enum(['auto', 'online', 'offline']).optional(),
     collectEmail: z.enum(['never', 'optional', 'required']).optional(),
     requireTurnstile: z.boolean().optional(),
+    askForRating: z.boolean().optional().openapi({ description: 'Whether the widget asks the visitor to rate a conversation once it is resolved. On unless false.' }),
     showAgentNames: z.boolean().optional(),
     language: z
       .enum(['auto', 'en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'ja', 'ko', 'zh-Hans', 'zh-Hant'])
@@ -677,6 +678,10 @@ export const TagSchema = z.object({ id: z.string(), name: z.string() }).openapi(
 
 const VisitorPageSchema = z.object({ url: z.string(), at: z.string().openapi({ description: 'When the widget reported it.' }) });
 
+export const ConversationRatingSchema = z
+  .object({ value: z.enum(['good', 'bad']), comment: z.string().nullable(), at: z.string() })
+  .openapi('ConversationRating');
+
 export const ConversationSchema = z
   .object({
     id: z.string(),
@@ -708,6 +713,7 @@ export const ConversationSchema = z
       .nullable()
       .openapi({ description: 'The newest message, cut short, for a line in the inbox. It may be an internal note. Null when that message has been removed, as retention does.' }),
     visitorPage: VisitorPageSchema.nullable().openapi({ description: "The page the visitor's widget last reported, without its query or fragment. Only the current one is kept. Null when none was reported, or the installation has it turned off." }),
+    rating: ConversationRatingSchema.nullable().openapi({ description: 'What the visitor said of the conversation once it was resolved. Null when they have not rated it. A new rating replaces the last.' }),
     visitorReadSeq: z.number().int().openapi({ description: 'How far the visitor has read, as a public sequence number: compare it with a message\'s `publicSeq`. 0 when they have read nothing.' }),
   })
   .openapi('Conversation');
@@ -935,7 +941,7 @@ export const VisitorSessionSchema = z
   .openapi('VisitorSession');
 
 export const VisitorConversationSchema = z
-  .object({ id: z.string(), status: ConversationStatusSchema, lastSeq: z.number().int().openapi({ description: 'The latest public sequence number.' }), readSeq: z.number().int().openapi({ description: "This visitor's own read position." }), agentReadSeq: z.number().int().openapi({ description: 'How far any agent has read, as a public sequence number.' }), createdAt: z.string() })
+  .object({ id: z.string(), status: ConversationStatusSchema, lastSeq: z.number().int().openapi({ description: 'The latest public sequence number.' }), readSeq: z.number().int().openapi({ description: "This visitor's own read position." }), agentReadSeq: z.number().int().openapi({ description: 'How far any agent has read, as a public sequence number.' }), rating: z.enum(['good', 'bad']).nullable().openapi({ description: "This visitor's rating of it, if they gave one." }), createdAt: z.string() })
   .openapi('VisitorConversation', { description: 'A deliberately reduced view, with no assignee, priority, or internal counters.' });
 
 const VisitorConversationStartedSchema = VisitorConversationSchema.extend({ message: VisitorWireMessageSchema }).openapi('VisitorConversationStarted', {
@@ -1063,6 +1069,20 @@ export const setVisitorPageRoute = createRoute({
   responses: { 204: { description: 'Recorded, or ignored because the installation has it turned off' }, default: problemResponse },
 });
 
+export const rateVisitorConversationRoute = createRoute({
+  method: 'put',
+  path: '/api/v1/widget/conversations/{conversationId}/rating',
+  tags: ['widget'],
+  operationId: 'rateVisitorConversation',
+  summary: 'Rate a resolved conversation good or bad, with a comment if wanted. It replaces an earlier rating.',
+  security: visitor,
+  request: {
+    params: visitorConversationParams,
+    body: { required: true, ...json(z.strictObject({ rating: z.enum(['good', 'bad']), comment: z.string().trim().max(500).optional() })) },
+  },
+  responses: { 204: { description: 'Recorded' }, default: problemResponse },
+});
+
 export const markVisitorConversationReadRoute = createRoute({
   method: 'post',
   path: '/api/v1/widget/conversations/{conversationId}/read',
@@ -1141,6 +1161,8 @@ export const AnalyticsSchema = z
     medianFirstReplySeconds: z.number().int().nullable().openapi({ description: 'From the start of a conversation to a person\'s first answer, over those answered. Null when none was.' }),
     assistantAnswered: z.number().int().openapi({ description: 'Those the AI assistant wrote in.' }),
     assistantOnly: z.number().int().openapi({ description: 'Those the AI assistant wrote in and no person has answered.' }),
+    ratedGood: z.number().int().openapi({ description: 'Those their visitor rated good.' }),
+    ratedBad: z.number().int().openapi({ description: 'Those their visitor rated bad.' }),
     days: z.array(z.object({ date: z.string().openapi({ example: '2026-11-24' }), started: z.number().int() })),
     members: z.array(z.object({ memberId: z.string(), replies: z.number().int(), conversations: z.number().int() })).openapi({ description: 'Public replies by each member in these conversations, most first. A member who has left keeps their ID.' }),
   })
@@ -1249,6 +1271,7 @@ export const ContactExportSchema = z
         subject: z.string().nullable(),
         createdAt: z.string(),
         visitorPage: VisitorPageSchema.nullable(),
+        rating: ConversationRatingSchema.nullable(),
         messages: z.array(
           z.object({
             id: z.string(),

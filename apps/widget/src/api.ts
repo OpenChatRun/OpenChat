@@ -171,6 +171,9 @@ export function createApi(deps: ApiDeps) {
     async setPage(conversationId: string, url: string): Promise<void> {
       await authed('PUT', `${conversationPath(conversationId)}/page`, { url });
     },
+    async rate(conversationId: string, rating: 'good' | 'bad', comment?: string): Promise<void> {
+      await authed('PUT', `${conversationPath(conversationId)}/rating`, { rating, ...(comment ? { comment } : {}) });
+    },
     async ticket(conversationId: string): Promise<{ ticket: string; url: string }> {
       return (await (await authed('POST', `${conversationPath(conversationId)}/realtime/tickets`)).json()) as { ticket: string; url: string };
     },

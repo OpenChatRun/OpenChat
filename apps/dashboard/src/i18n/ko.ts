@@ -515,4 +515,9 @@ export const ko: Messages = {
   analyticsNoReplies: '이 기간에 답변한 사람이 없습니다.',
   analyticsBasis: '여기의 모든 내용은 기간 내에 시작된 대화에 관한 것입니다. AI 어시스턴트의 답변과 내부 메모는 답변으로 세지 않습니다.',
   analyticsTruncated: '이 기간의 대화가 10,000개를 넘습니다. 처음 10,000개만 집계됩니다.',
+  askForRating: '해결된 대화에 대해 방문자에게 평가 요청',
+  ratedGood: '좋음으로 평가됨',
+  ratedBad: '나쁨으로 평가됨',
+  analyticsRatings: '방문자가 좋다고 평가함',
+  analyticsRatingsDetail: '좋음 {good}, 나쁨 {bad}',
 };

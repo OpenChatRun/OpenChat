@@ -152,6 +152,8 @@ A visitor's history is tied to their browser, not their email address. Someone w
 
 The widget stores a visitor's chat session in the browser's local storage, or only for the tab's lifetime with `data-consent="pending"`. It sets no cookies and loads nothing from third parties, except Cloudflare Turnstile for websites that require it. Mention it in your site's privacy notice; see [privacy and data](privacy.md).
 
+**Ratings.** When your team resolves a conversation, the widget asks the visitor "How did we do?", with **Good** and **Bad**, and then for a comment if they wish, of up to 500 characters. Answering is optional, and they can change their answer while the conversation stays resolved. Your team sees the rating and the comment at the top of the conversation, and supervisors see the totals under Analytics. Only the latest rating of a conversation is kept. An installation admin turns the question off for a website under its widget settings.
+
 **The page a visitor is on.** Once a visitor has started a conversation, the widget tells your team which page of your site they are on, and again when they move to another. Your team sees it at the top of the conversation. What is kept:
 
 - The address without its query or fragment: `https://shop.example/orders/123`, never `?email=…` or `#…`. Those parts do not leave the visitor's browser.

@@ -515,4 +515,9 @@ export const ja: Messages = {
   analyticsNoReplies: 'この期間に返信した人はいません。',
   analyticsBasis: 'ここに表示される内容はすべて、期間内に開始された会話についてのものです。AI アシスタントの返信と内部メモは回答に数えません。',
   analyticsTruncated: 'この期間の会話は 10,000 件を超えています。最初の 10,000 件のみ集計されます。',
+  askForRating: '解決済みの会話の評価を訪問者に依頼する',
+  ratedGood: '評価: 良い',
+  ratedBad: '評価: 悪い',
+  analyticsRatings: '訪問者が「良い」と評価',
+  analyticsRatingsDetail: '良い {good}、悪い {bad}',
 };

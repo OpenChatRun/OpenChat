@@ -1599,6 +1599,14 @@
             "type": "integer",
             "description": "Those the AI assistant wrote in and no person has answered."
           },
+          "ratedGood": {
+            "type": "integer",
+            "description": "Those their visitor rated good."
+          },
+          "ratedBad": {
+            "type": "integer",
+            "description": "Those their visitor rated bad."
+          },
           "days": {
             "type": "array",
             "items": {
@@ -1652,6 +1660,8 @@
           "medianFirstReplySeconds",
           "assistantAnswered",
           "assistantOnly",
+          "ratedGood",
+          "ratedBad",
           "days",
           "members"
         ]
@@ -1848,6 +1858,9 @@
                     "at"
                   ]
                 },
+                "rating": {
+                  "$ref": "#/components/schemas/ConversationRating"
+                },
                 "messages": {
                   "type": "array",
                   "items": {
@@ -1937,6 +1950,7 @@
                 "subject",
                 "createdAt",
                 "visitorPage",
+                "rating",
                 "messages"
               ]
             }
@@ -1974,6 +1988,35 @@
           "emailSuppressions"
         ],
         "description": "Everything this workspace holds about one contact, for a request from that person. Files are listed, not included."
+      },
+      "ConversationRating": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "good",
+              "bad"
+            ]
+          },
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "comment",
+          "at"
+        ]
       },
       "MessageTranslation": {
         "type": "object",
@@ -2265,6 +2308,10 @@
           "requireTurnstile": {
             "type": "boolean"
           },
+          "askForRating": {
+            "type": "boolean",
+            "description": "Whether the widget asks the visitor to rate a conversation once it is resolved. On unless false."
+          },
           "showAgentNames": {
             "type": "boolean"
           },
@@ -2339,6 +2386,18 @@
             "type": "integer",
             "description": "How far any agent has read, as a public sequence number."
           },
+          "rating": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "good",
+              "bad",
+              null
+            ],
+            "description": "This visitor's rating of it, if they gave one."
+          },
           "createdAt": {
             "type": "string"
           }
@@ -2349,6 +2408,7 @@
           "lastSeq",
           "readSeq",
           "agentReadSeq",
+          "rating",
           "createdAt"
         ],
         "description": "A deliberately reduced view, with no assignee, priority, or internal counters."
@@ -2711,6 +2771,16 @@
             ],
             "description": "The page the visitor's widget last reported, without its query or fragment. Only the current one is kept. Null when none was reported, or the installation has it turned off."
           },
+          "rating": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConversationRating"
+              },
+              {
+                "description": "What the visitor said of the conversation once it was resolved. Null when they have not rated it. A new rating replaces the last."
+              }
+            ]
+          },
           "visitorReadSeq": {
             "type": "integer",
             "description": "How far the visitor has read, as a public sequence number: compare it with a message's `publicSeq`. 0 when they have read nothing."
@@ -2738,6 +2808,7 @@
           "visitorLanguage",
           "lastMessage",
           "visitorPage",
+          "rating",
           "visitorReadSeq"
         ]
       },
@@ -7879,6 +7950,72 @@
         "responses": {
           "204": {
             "description": "Recorded, or ignored because the installation has it turned off"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widget/conversations/{conversationId}/rating": {
+      "put": {
+        "tags": [
+          "widget"
+        ],
+        "operationId": "rateVisitorConversation",
+        "summary": "Rate a resolved conversation good or bad, with a comment if wanted. It replaces an earlier rating.",
+        "security": [
+          {
+            "visitorAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "conversationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "string",
+                    "enum": [
+                      "good",
+                      "bad"
+                    ]
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "rating"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
           },
           "default": {
             "description": "RFC 9457 problem details",

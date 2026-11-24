@@ -27,6 +27,8 @@ export async function getAnalytics(db: Database, ctx: WorkspaceContext, input: {
   let resolved = 0;
   let assistantAnswered = 0;
   let assistantOnly = 0;
+  let ratedGood = 0;
+  let ratedBad = 0;
   for (const row of conversations) {
     const day = days[Math.floor((row.createdAt + offset - firstDay) / DAY_MS)];
     if (day) day.started += 1;
@@ -35,6 +37,8 @@ export async function getAnalytics(db: Database, ctx: WorkspaceContext, input: {
       waits.push(Math.max(0, row.firstReplyAt - row.createdAt));
     }
     if (row.status === 'resolved' || row.status === 'archived') resolved += 1;
+    if (row.rating === 'good') ratedGood += 1;
+    else if (row.rating === 'bad') ratedBad += 1;
     if (row.assistant) {
       assistantAnswered += 1;
       if (row.firstReplyAt === null) assistantOnly += 1;
@@ -51,6 +55,8 @@ export async function getAnalytics(db: Database, ctx: WorkspaceContext, input: {
     medianFirstReplySeconds: wait === null ? null : Math.round(wait / 1000),
     assistantAnswered,
     assistantOnly,
+    ratedGood,
+    ratedBad,
     days,
     members,
   };

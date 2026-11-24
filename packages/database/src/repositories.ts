@@ -151,7 +151,7 @@ export interface ContactExportRows {
   contact: ContactRow & { attributesJson: string | null; followUpConsentAt: number | null; followUpConsentSource: string | null; createdAt: number };
   tags: string[];
   browsers: { id: string; websiteId: string; firstSeenAt: number; lastSeenAt: number }[];
-  conversations: { id: string; websiteId: string; status: string; subject: string | null; createdAt: number; visitorPageUrl: string | null; visitorPageAt: number | null }[];
+  conversations: { id: string; websiteId: string; status: string; subject: string | null; createdAt: number; visitorPageUrl: string | null; visitorPageAt: number | null; visitorRating: 'good' | 'bad' | null; visitorRatingComment: string | null; visitorRatedAt: number | null }[];
   messages: { id: string; conversationId: string; senderType: 'visitor' | 'member' | 'system'; type: string; visibility: 'public' | 'internal'; content: string; createdAt: number; translationsJson: string; originalLanguage: string | null; originalContent: string | null }[];
   files: { messageId: string; filename: string; contentType: string; size: number }[];
   suppressions: { email: string; reason: string; createdAt: number }[];
@@ -183,6 +183,9 @@ export interface ConversationRow {
   /** The page the visitor is on now, as their widget last reported it, without query or fragment. */
   visitorPageUrl: string | null;
   visitorPageAt: number | null;
+  visitorRating: 'good' | 'bad' | null;
+  visitorRatingComment: string | null;
+  visitorRatedAt: number | null;
   /** A JSON LastMessageRow, or null when the newest message is gone, as retention leaves it. */
   lastMessageJson: string | null;
   /** How far any of the contact's browsers has read, as a public sequence number. */
@@ -266,6 +269,7 @@ const CONVERSATION_SELECT = `SELECT c.id, c.website_id AS websiteId, c.contact_i
     c.status, c.priority, c.subject, c.version, c.last_message_seq AS lastMessageSeq, c.last_public_seq AS lastPublicSeq,
     c.last_message_at AS lastMessageAt, COALESCE(r.read_seq, 0) AS lastReadSeq, c.created_at AS createdAt, c.updated_at AS updatedAt,
     c.assistant_state AS assistantState, c.help_article_id AS helpArticleId, c.visitor_language AS visitorLanguage, c.visitor_page_url AS visitorPageUrl, c.visitor_page_at AS visitorPageAt,
+    c.visitor_rating AS visitorRating, c.visitor_rating_comment AS visitorRatingComment, c.visitor_rated_at AS visitorRatedAt,
     (SELECT json_object('text', substr(lm.content, 1, ${PREVIEW_CHARS}),
               'senderType', CASE WHEN lm.assistant_id IS NOT NULL THEN 'assistant' ELSE lm.sender_type END,
               'senderId', CASE WHEN lm.sender_type = 'member' AND lm.assistant_id IS NULL THEN lm.sender_id END, 'type', lm.message_type)
@@ -348,7 +352,7 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
             .bind(w, contactId),
           d1.prepare(`SELECT t.name FROM contact_tags ct JOIN tags t ON t.workspace_id = ct.workspace_id AND t.id = ct.tag_id WHERE ct.workspace_id = ?1 AND ct.contact_id = ?2 ORDER BY t.name`).bind(w, contactId),
           d1.prepare(`SELECT id, website_id AS websiteId, created_at AS firstSeenAt, last_seen_at AS lastSeenAt FROM visitors WHERE workspace_id = ?1 AND contact_id = ?2 ORDER BY created_at`).bind(w, contactId),
-          d1.prepare(`SELECT id, website_id AS websiteId, status, subject, created_at AS createdAt, visitor_page_url AS visitorPageUrl, visitor_page_at AS visitorPageAt FROM conversations WHERE workspace_id = ?1 AND contact_id = ?2 ORDER BY created_at`).bind(w, contactId),
+          d1.prepare(`SELECT id, website_id AS websiteId, status, subject, created_at AS createdAt, visitor_page_url AS visitorPageUrl, visitor_page_at AS visitorPageAt, visitor_rating AS visitorRating, visitor_rating_comment AS visitorRatingComment, visitor_rated_at AS visitorRatedAt FROM conversations WHERE workspace_id = ?1 AND contact_id = ?2 ORDER BY created_at`).bind(w, contactId),
           d1
             .prepare(
               `SELECT m.id, m.conversation_id AS conversationId, m.sender_type AS senderType, m.message_type AS type, m.visibility, m.content, m.created_at AS createdAt,

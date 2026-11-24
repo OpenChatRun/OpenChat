@@ -160,8 +160,9 @@ describe('analytics', () => {
       conversation('conv_old', now - 40 * DAY, 'resolved'), message('conv_old', now - 40 * DAY + 5000, 'member'),
     ]);
     // 30 days, so that the hours above cannot fall before the first day. conv_1, from the setup, is from 1970.
+    await env.DB.batch([env.DB.prepare(`UPDATE conversations SET visitor_rating = 'good', visitor_rated_at = 1 WHERE id IN ('conv_a1', 'conv_old')`), env.DB.prepare(`UPDATE conversations SET visitor_rating = 'bad', visitor_rated_at = 1 WHERE id = 'conv_a3'`)]);
     const result = await get('?days=30');
-    expect(result).toMatchObject({ truncated: false, started: 4, replied: 3, resolved: 2, medianFirstReplySeconds: 180, assistantAnswered: 2, assistantOnly: 1 });
+    expect(result).toMatchObject({ truncated: false, started: 4, replied: 3, resolved: 2, medianFirstReplySeconds: 180, assistantAnswered: 2, assistantOnly: 1, ratedGood: 1, ratedBad: 1 });
     expect(result.members).toEqual([{ memberId: 'mem_a', replies: 3, conversations: 2 }, { memberId: 'mem_o', replies: 1, conversations: 1 }]);
     expect(result.days).toHaveLength(30);
     expect(result.days.reduce((sum, day) => sum + day.started, 0)).toBe(4);

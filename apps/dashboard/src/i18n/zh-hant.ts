@@ -515,4 +515,9 @@ export const zhHant: Messages = {
   analyticsNoReplies: '這段期間內沒有人回覆。',
   analyticsBasis: '這裡的所有數字都針對這段期間內開始的對話。AI 助理的回覆和內部備註不算作回覆。',
   analyticsTruncated: '這段期間的對話超過 10,000 個，只統計前 10,000 個。',
+  askForRating: '請訪客為已解決的對話評分',
+  ratedGood: '評價：滿意',
+  ratedBad: '評價：不滿意',
+  analyticsRatings: '訪客評價為滿意',
+  analyticsRatingsDetail: '滿意 {good}，不滿意 {bad}',
 };

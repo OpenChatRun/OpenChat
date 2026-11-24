@@ -515,4 +515,9 @@ export const nl: Messages = {
   analyticsNoReplies: 'Niemand heeft in deze periode geantwoord.',
   analyticsBasis: 'Alles hier gaat over de gesprekken die in de periode zijn gestart. Antwoorden van de AI-assistent en interne notities tellen niet als antwoord.',
   analyticsTruncated: 'Deze periode heeft meer dan 10.000 gesprekken. Alleen de eerste 10.000 worden geteld.',
+  askForRating: 'Bezoekers vragen een opgelost gesprek te beoordelen',
+  ratedGood: 'Goed beoordeeld',
+  ratedBad: 'Slecht beoordeeld',
+  analyticsRatings: 'Goed beoordeeld door bezoekers',
+  analyticsRatingsDetail: '{good} goed, {bad} slecht',
 };

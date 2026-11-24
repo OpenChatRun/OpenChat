@@ -12,6 +12,9 @@ import { requireCapability } from './workspaces';
 
 const invalidCursor = () => new AppError(400, 'invalid_cursor', 'This cursor is not valid for these filters');
 
+const toRating = (row: { visitorRating: 'good' | 'bad' | null; visitorRatingComment: string | null; visitorRatedAt: number | null }) =>
+  row.visitorRating === null || row.visitorRatedAt === null ? null : { value: row.visitorRating, comment: row.visitorRatingComment, at: toIso(row.visitorRatedAt) };
+
 const toConversation = (row: ConversationRow) => ({
   id: row.id,
   websiteId: row.websiteId,
@@ -35,6 +38,7 @@ const toConversation = (row: ConversationRow) => ({
   lastMessage: row.lastMessageJson === null ? null : (JSON.parse(row.lastMessageJson) as LastMessageRow),
   visitorReadSeq: row.visitorReadSeq,
   visitorPage: row.visitorPageUrl === null || row.visitorPageAt === null ? null : { url: row.visitorPageUrl, at: toIso(row.visitorPageAt) },
+  rating: toRating(row),
 });
 
 const invalidAttachments = () => new AppError(400, 'invalid_attachments', 'A file on this message was not uploaded by you to this conversation, or has already been sent');
@@ -332,6 +336,7 @@ export async function exportContact(db: Database, ctx: WorkspaceContext, contact
       subject: c.subject,
       createdAt: toIso(c.createdAt),
       visitorPage: c.visitorPageUrl === null || c.visitorPageAt === null ? null : { url: c.visitorPageUrl, at: toIso(c.visitorPageAt) },
+      rating: toRating(c),
       messages: (messages.get(c.id) ?? []).map((m) => ({
         id: m.id,
         from: m.senderType,

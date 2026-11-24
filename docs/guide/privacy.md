@@ -19,7 +19,7 @@ The project runs one relay, for the official app. Its [privacy policy](../legal/
 
 | About | What |
 |---|---|
-| Visitors | What they write and send, a name and email address if they give them, whether they allowed follow-up emails, tags your team adds, an ID for each browser they used, and the page of your site they are on now, without its query or fragment ([the website widget](widget.md#privacy-on-your-site)). Not their IP address, which is used for rate limits and not stored |
+| Visitors | What they write and send, a name and email address if they give them, whether they allowed follow-up emails, tags your team adds, an ID for each browser they used, their rating of a resolved conversation and the comment they left with it, if any, and the page of your site they are on now, without its query or fragment ([the website widget](widget.md#privacy-on-your-site)). Not their IP address, which is used for rate limits and not stored |
 | Colleagues | Name, email, a password hash, roles, and sessions. Their messages and notes, with their name |
 | Everyone | An audit log of admin actions, which names colleagues but never visitors |
 | Help centre | Articles and images your team writes, which are public once published. Nothing about the visitors who read them: no cookies, and searches are not stored. Files given to Draft with AI are sent to Cloudflare Workers AI in your company's account, and deleted when the draft finishes or within an hour of it stopping |

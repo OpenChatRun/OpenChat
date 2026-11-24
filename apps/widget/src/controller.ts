@@ -44,6 +44,8 @@ export interface ChatState {
   view: 'chat' | 'help' | null;
   /** The article the visitor left for the chat with "Still need help?", recorded on the conversation they start. */
   fromArticle: string | null;
+  /** What this visitor said of the conversation, once it was resolved. */
+  rating: 'good' | 'bad' | null;
 }
 
 export interface ControllerDeps {
@@ -80,6 +82,7 @@ export function createController(deps: ControllerDeps) {
     helpLanguages: [],
     view: null,
     fromArticle: null,
+    rating: null,
   };
   // Which page the visitor is on, for the team, once there is a conversation to show it on. Sent when it changes,
   // if the installation wants it. A failure is not retried: the next page says where they are.
@@ -155,7 +158,7 @@ export function createController(deps: ControllerDeps) {
           if (page.length < PAGE_SIZE) break;
         }
         const fresh = (await deps.api.listConversations()).find((c) => c.id === conversation.id);
-        if (fresh) update({ conversation: { id: fresh.id, status: fresh.status }, agentReadSeq: Math.max(state.agentReadSeq, fresh.agentReadSeq) });
+        if (fresh) update({ conversation: { id: fresh.id, status: fresh.status }, rating: fresh.rating ?? state.rating, agentReadSeq: Math.max(state.agentReadSeq, fresh.agentReadSeq) });
       } while (syncAgain);
     })()
       .catch(() => {
@@ -247,7 +250,7 @@ export function createController(deps: ControllerDeps) {
 
   const adoptConversation = (conversation: VisitorConversation) => {
     reportedRead = conversation.readSeq;
-    update({ conversation: { id: conversation.id, status: conversation.status }, readSeq: conversation.readSeq, agentReadSeq: conversation.agentReadSeq });
+    update({ conversation: { id: conversation.id, status: conversation.status }, rating: conversation.rating ?? null, readSeq: conversation.readSeq, agentReadSeq: conversation.agentReadSeq });
   };
 
   /** A returning visitor. A first-time visitor gets no session, and costs no rows, until they say something. */
@@ -429,6 +432,20 @@ export function createController(deps: ControllerDeps) {
         applyMessages(await deps.api.listMessages(conversation.id, { beforeSeq: first.seq!, limit: PAGE_SIZE }));
       } finally {
         update({ loadingOlder: false });
+      }
+    },
+
+    /** Shown at once, and taken back if it did not save. A comment goes with the rating it belongs to. */
+    async rate(rating: 'good' | 'bad', comment?: string) {
+      const conversationId = state.conversation?.id;
+      if (!conversationId) return;
+      const before = state.rating;
+      update({ rating });
+      try {
+        await deps.api.rate(conversationId, rating, comment);
+      } catch (error) {
+        update({ rating: before });
+        throw error;
       }
     },
 
