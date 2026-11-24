@@ -8,9 +8,10 @@
 import type { HelpArticle, HelpArticleInput, HelpArticleSummary, HelpCentre, HelpDraftInput, HelpDraftRun } from '@openchat/api-client';
 import { renderHelpMarkdown } from '@openchat/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '../app-context';
-import { getLocale, intlLocale, t } from '../i18n';
+import { applyHelpFormat, type HelpFormat } from '../help-format';
+import { getLocale, intlLocale, t, type MessageKey } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 
 const quiet = 'text-xs text-slate-600 dark:text-slate-400';
@@ -234,11 +235,31 @@ function ImagesCard({ workspaceId, help, onInsert }: { workspaceId: string; help
   );
 }
 
+/** The toolbar's buttons, in order: what each shows, its name, and its key with Ctrl or ⌘. */
+const FORMATS: { format: HelpFormat; glyph: string; label: MessageKey; key?: string; className?: string }[] = [
+  { format: 'heading', glyph: 'H', label: 'helpFormatHeading' },
+  { format: 'bold', glyph: 'B', label: 'helpFormatBold', key: 'b', className: 'font-bold' },
+  { format: 'italic', glyph: 'I', label: 'helpFormatItalic', key: 'i', className: 'italic' },
+  { format: 'bullets', glyph: '•', label: 'helpFormatBullets' },
+  { format: 'numbers', glyph: '1.', label: 'helpFormatNumbers' },
+  { format: 'quote', glyph: '”', label: 'helpFormatQuote' },
+  { format: 'link', glyph: '🔗', label: 'helpFormatLink', key: 'k' },
+  { format: 'code', glyph: '</>', label: 'helpFormatCode', className: 'font-mono text-xs' },
+];
+
 function Editor({ workspaceId, help, articleId, canEdit, onClose }: { workspaceId: string; help: HelpCentre; articleId: string; canEdit: boolean; onClose: () => void }) {
   const client = useQueryClient();
   const article = useQuery({ queryKey: ['help-article', workspaceId, articleId], queryFn: () => api.getHelpArticle(workspaceId, articleId) });
   const [draft, setDraft] = useState<{ title: string; summary: string; bodyMarkdown: string; collectionId: string | null } | null>(null);
   const body = useRef<HTMLTextAreaElement>(null);
+  // What to select once the text a toolbar button changed is in the box.
+  const select = useRef<{ start: number; end: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!select.current || !body.current) return;
+    body.current.focus();
+    body.current.setSelectionRange(select.current.start, select.current.end);
+    select.current = null;
+  });
   useEffect(() => {
     if (article.data && !draft) setDraft({ title: article.data.title, summary: article.data.summary, bodyMarkdown: article.data.bodyMarkdown, collectionId: article.data.collectionId });
   }, [article.data, draft]);
@@ -276,6 +297,15 @@ function Editor({ workspaceId, help, articleId, canEdit, onClose }: { workspaceI
     const area = body.current;
     const at = area?.selectionStart ?? draft.bodyMarkdown.length;
     setDraft({ ...draft, bodyMarkdown: `${draft.bodyMarkdown.slice(0, at)}${text}${draft.bodyMarkdown.slice(area?.selectionEnd ?? at)}` });
+  };
+
+  const format = (kind: HelpFormat) => {
+    const area = body.current;
+    if (!area) return;
+    const edit = applyHelpFormat(draft.bodyMarkdown, area.selectionStart, area.selectionEnd, kind);
+    if (edit.text.length > help.limits.bodyChars) return;
+    select.current = { start: edit.start, end: edit.end };
+    setDraft({ ...draft, bodyMarkdown: edit.text });
   };
 
   return (
@@ -319,10 +349,42 @@ function Editor({ workspaceId, help, articleId, canEdit, onClose }: { workspaceI
             </select>
           </label>
           <div className="grid gap-4 lg:grid-cols-2">
-            <label className="block text-sm">{t('helpBody')}
-              <textarea ref={body} className="field min-h-80 font-mono text-sm" maxLength={help.limits.bodyChars} value={draft.bodyMarkdown} onChange={(event) => setDraft({ ...draft, bodyMarkdown: event.target.value })} aria-describedby="help-body-help" />
+            <div className="text-sm">
+              <label htmlFor="help-body">{t('helpBody')}</label>
+              <div role="toolbar" aria-label={t('helpFormatting')} aria-controls="help-body" className="mt-1 flex flex-wrap gap-1 rounded-t-lg border border-b-0 border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
+                {FORMATS.map((item) => (
+                  <button
+                    key={item.format}
+                    type="button"
+                    className={`h-8 min-w-8 cursor-pointer rounded px-2 text-sm text-slate-700 hover:bg-slate-200 disabled:cursor-default disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-800 ${item.className ?? ''}`}
+                    aria-label={t(item.label)}
+                    title={item.key ? `${t(item.label)} (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+'}${item.key.toUpperCase()})` : t(item.label)}
+                    // Keeps the selection in the text box, which a click would otherwise take.
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => format(item.format)}
+                  >
+                    <span aria-hidden="true">{item.glyph}</span>
+                  </button>
+                ))}
+              </div>
+              <textarea
+                id="help-body"
+                ref={body}
+                className="field mt-0 min-h-80 rounded-t-none font-mono text-sm"
+                maxLength={help.limits.bodyChars}
+                value={draft.bodyMarkdown}
+                onChange={(event) => setDraft({ ...draft, bodyMarkdown: event.target.value })}
+                onKeyDown={(event) => {
+                  if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+                  const item = FORMATS.find((f) => f.key === event.key.toLowerCase());
+                  if (!item) return;
+                  event.preventDefault();
+                  format(item.format);
+                }}
+                aria-describedby="help-body-help"
+              />
               <span id="help-body-help" className={`block ${quiet}`}>{t('helpBodyHelp')}</span>
-            </label>
+            </div>
             <div className="text-sm">
               <div className="mb-1">{t('helpPreview')}</div>
               {/* The renderer escapes everything and builds tags from an allow-list: see help-text.ts. */}
@@ -376,7 +438,11 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
     mutationFn: () => api.createHelpArticle(workspaceId, help.websiteId, { language: language as HelpArticleInput['language'], title: title.trim() }),
     onSuccess: (article) => { setTitle(''); void client.invalidateQueries({ queryKey: ['help', workspaceId, help.websiteId] }); onOpen(article.id); },
   });
-  const articles = help.articles.filter((a) => a.language === language);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | HelpArticleSummary['status']>('all');
+  const inLanguage = help.articles.filter((a) => a.language === language);
+  const words = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const articles = inLanguage.filter((a) => (status === 'all' || a.status === status) && words.every((word) => a.title.toLocaleLowerCase().includes(word)));
   const collections = new Map(help.collections.map((c) => [c.id, c.name]));
   const date = new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' });
   return (
@@ -386,7 +452,26 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
         <span className={quiet}>{t('helpArticleCount', { count: String(help.articles.length), limit: String(help.limits.articlesPerWebsite) })}</span>
       </div>
       <Failure error={create.error} />
-      {articles.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('helpEmptyLanguage')}</p>}
+      {canEdit && (
+        <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+          <label className="min-w-48 flex-1 text-sm">{t('helpTitle')}
+            <input className="field" required maxLength={help.limits.titleChars} value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <button className="button" disabled={create.isPending}>{t('helpNewArticle')}</button>
+        </form>
+      )}
+      {inLanguage.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <input type="search" className="field mt-0 min-w-48 flex-1" aria-label={t('helpSearchArticles')} placeholder={t('helpSearchArticles')} value={search} onChange={(event) => setSearch(event.target.value)} />
+          <select className="field mt-0 w-auto" aria-label={t('helpFilterStatus')} value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
+            <option value="all">{t('helpStatusAll', { count: String(inLanguage.length) })}</option>
+            <option value="published">{t('helpStatusPublished')} ({inLanguage.filter((a) => a.status === 'published').length})</option>
+            <option value="draft">{t('helpStatusDraft')} ({inLanguage.filter((a) => a.status === 'draft').length})</option>
+          </select>
+        </div>
+      )}
+      {inLanguage.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('helpEmptyLanguage')}</p>}
+      {inLanguage.length > 0 && articles.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('helpNoMatch')}</p>}
       <ul className="divide-y divide-slate-200 dark:divide-slate-800">
         {articles.map((article) => (
           <li key={article.id}>
@@ -401,14 +486,6 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
           </li>
         ))}
       </ul>
-      {canEdit && (
-        <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-          <label className="min-w-48 flex-1 text-sm">{t('helpTitle')}
-            <input className="field" required maxLength={help.limits.titleChars} value={title} onChange={(event) => setTitle(event.target.value)} />
-          </label>
-          <button className="button" disabled={create.isPending}>{t('helpNewArticle')}</button>
-        </form>
-      )}
     </section>
   );
 }
