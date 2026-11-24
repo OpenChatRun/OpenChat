@@ -231,6 +231,26 @@ describe('managing workspaces and websites', () => {
     }
   });
 
+  it('keeps opening hours, and refuses ones that make no sense', async () => {
+    const day = { open: '09:00', close: '17:30' };
+    const hours = { timeZone: 'Europe/London', days: [day, day, day, day, { open: '00:00', close: '24:00' }, null, null] };
+    const updated = await call('PATCH', `${ADMIN_WORKSPACES}/work_1/websites/site_1`, tokens.boss, { settings: { openingHours: hours } });
+    expect([updated.status, ((await updated.json()) as { settings: { openingHours?: unknown } }).settings.openingHours]).toEqual([200, hours]);
+    const bad = [
+      { ...hours, timeZone: 'Mars/Olympus' },
+      { ...hours, days: hours.days.slice(1) },
+      { ...hours, days: [{ open: '17:00', close: '09:00' }, ...hours.days.slice(1)] },
+      { ...hours, days: [{ open: '09:00', close: '09:00' }, ...hours.days.slice(1)] },
+      { ...hours, days: [{ open: '9:00', close: '17:00' }, ...hours.days.slice(1)] },
+      { ...hours, days: [{ open: '09:00', close: '24:30' }, ...hours.days.slice(1)] },
+    ];
+    for (const openingHours of bad) {
+      expect([JSON.stringify(openingHours), (await call('PATCH', `${ADMIN_WORKSPACES}/work_1/websites/site_1`, tokens.boss, { settings: { openingHours } })).status]).toEqual([JSON.stringify(openingHours), 400]);
+    }
+    const cleared = await call('PATCH', `${ADMIN_WORKSPACES}/work_1/websites/site_1`, tokens.boss, { settings: {} });
+    expect(((await cleared.json()) as { settings: { openingHours?: unknown } }).settings.openingHours).toBeUndefined();
+  });
+
   it('has no routes left inside a workspace for what moved here', async () => {
     const W = '/api/v1/workspaces/work_1';
     for (const [method, path, body] of [

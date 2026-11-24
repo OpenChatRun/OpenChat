@@ -8,3 +8,4 @@ export * from './security-txt';
 export * from './software';
 export * from './help-text';
 export * from './language';
+export * from './opening-hours';

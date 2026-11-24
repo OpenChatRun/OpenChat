@@ -2,7 +2,7 @@ import type { Website } from '@openchat/api-client';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage } from '../app-context';
-import { t, tn, tNode } from '../i18n';
+import { intlLocale, t, tn, tNode } from '../i18n';
 import { LANGUAGES } from '../i18n/locales';
 
 /** The OpenChat project's own relay, whose terms an installation accepts by using it. Another relay has its own terms. */
@@ -36,6 +36,54 @@ const WIDGET_LANGUAGES = LANGUAGES;
 /** What a colour input must show when nothing has been chosen. Saved only if someone chooses it. */
 const DEFAULT_WIDGET_COLOR = '#0a57f5';
 
+type OpeningHours = NonNullable<Website['settings']['openingHours']>;
+type OpeningDay = { on: boolean; open: string; close: string };
+
+/** The browser's list leaves out UTC, and may not know the zone this browser is in. */
+const timeZones = (extra: string): string[] => {
+  const all = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [];
+  return [...new Set(['UTC', Intl.DateTimeFormat().resolvedOptions().timeZone, extra, ...all])].sort();
+};
+/** 5 January 2026 is a Monday, and the days are kept Monday first. */
+const dayName = (index: number) => new Intl.DateTimeFormat(intlLocale(), { weekday: 'long', timeZone: 'UTC' }).format(Date.UTC(2026, 0, 5 + index));
+/** A time field cannot show 24:00, so the end of the day is 00:00 there. */
+const daysOf = (hours: OpeningHours | undefined): OpeningDay[] =>
+  Array.from({ length: 7 }, (_, index) => {
+    const day = hours?.days[index];
+    if (hours) return day ? { on: true, open: day.open, close: day.close === '24:00' ? '00:00' : day.close } : { on: false, open: '09:00', close: '17:00' };
+    return { on: index < 5, open: '09:00', close: '17:00' };
+  });
+
+function OpeningHoursFields({ zone, setZone, days, setDays }: { zone: string; setZone: (zone: string) => void; days: OpeningDay[]; setDays: (days: OpeningDay[]) => void }) {
+  const change = (index: number, patch: Partial<OpeningDay>) => setDays(days.map((day, at) => (at === index ? { ...day, ...patch } : day)));
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium">
+        {t('timeZone')}
+        <select className="field mt-1 w-auto font-normal" value={zone} onChange={(e) => setZone(e.target.value)}>
+          {timeZones(zone).map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+      </label>
+      <ul className="space-y-1">
+        {days.map((day, index) => {
+          const name = dayName(index);
+          return (
+            <li key={index} className="flex flex-wrap items-center gap-2 text-sm">
+              <label className="flex w-36 items-center gap-2">
+                <input type="checkbox" checked={day.on} onChange={(e) => change(index, { on: e.target.checked })} />
+                {name}
+              </label>
+              <input className="field w-auto py-1" type="time" required={day.on} disabled={!day.on} value={day.open} aria-label={t('dayOpens', { day: name })} onChange={(e) => change(index, { open: e.target.value })} />
+              <span aria-hidden="true">–</span>
+              <input className="field w-auto py-1" type="time" required={day.on} disabled={!day.on} value={day.close} aria-label={t('dayCloses', { day: name })} onChange={(e) => change(index, { close: e.target.value })} />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function WidgetSettingsForm({ website, workspaceId }: { website: Website; workspaceId: string }) {
   const client = useQueryClient();
   const initial = website.settings;
@@ -46,10 +94,14 @@ function WidgetSettingsForm({ website, workspaceId }: { website: Website; worksp
   const [requireTurnstile, setTurnstile] = useState(initial.requireTurnstile ?? false);
   const [askForRating, setAskForRating] = useState(initial.askForRating ?? true);
   const [language, setLanguage] = useState(initial.language ?? 'auto');
+  const [hasHours, setHasHours] = useState(initial.openingHours !== undefined);
+  const [zone, setZone] = useState(initial.openingHours?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [days, setDays] = useState(() => daysOf(initial.openingHours));
+  const openingHours = hasHours ? { timeZone: zone, days: days.map((day) => (day.on ? { open: day.open, close: day.close === '00:00' ? '24:00' : day.close } : null)) } : undefined;
   const save = useMutation({
     mutationFn: () =>
       api.updateWebsite(workspaceId, website.id, {
-        settings: { ...initial, ...(primaryColor === DEFAULT_WIDGET_COLOR && !initial.primaryColor ? {} : { primaryColor }), collectEmail, showAgentNames, requireTurnstile, askForRating, language, ...(welcomeMessage.trim() ? { welcomeMessage: welcomeMessage.trim() } : { welcomeMessage: undefined }) },
+        settings: { ...initial, ...(primaryColor === DEFAULT_WIDGET_COLOR && !initial.primaryColor ? {} : { primaryColor }), collectEmail, showAgentNames, requireTurnstile, askForRating, language, openingHours, ...(welcomeMessage.trim() ? { welcomeMessage: welcomeMessage.trim() } : { welcomeMessage: undefined }) },
       }),
     onSuccess: () => refreshWebsites(client, workspaceId),
   });
@@ -98,6 +150,15 @@ function WidgetSettingsForm({ website, workspaceId }: { website: Website; worksp
         <input type="checkbox" checked={askForRating} onChange={(e) => setAskForRating(e.target.checked)} />
         {t('askForRating')}
       </label>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">{t('openingHours')}</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={hasHours} onChange={(e) => setHasHours(e.target.checked)} />
+          {t('openingHoursSet')}
+        </label>
+        {hasHours && <OpeningHoursFields zone={zone} setZone={setZone} days={days} setDays={setDays} />}
+        <p className="text-xs text-slate-600 dark:text-slate-400">{t('openingHoursHint')}</p>
+      </fieldset>
       <Failure error={save.error} />
       {save.isSuccess && <p className="notice" role="status">{t('widgetSaved')}</p>}
       <button className="button-quiet" disabled={save.isPending}>{t('saveWidget')}</button>

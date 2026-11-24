@@ -12,6 +12,8 @@ const en = {
   unread: (count: number) => `Open chat, ${count} unread`,
   online: 'We are online',
   offline: 'We are away. Leave a message',
+  backToday: (time: string) => `We are back at ${time}. Leave a message`,
+  backLater: (day: string, time: string) => `We are back ${day} at ${time}. Leave a message`,
   reconnecting: 'Reconnecting…',
   messages: 'Messages',
   earlier: 'Show earlier messages',
@@ -79,6 +81,8 @@ const es: Strings = {
   unread: (count) => `Abrir chat, ${count} sin leer`,
   online: 'Estamos en línea',
   offline: 'Ahora no estamos disponibles. Déjanos un mensaje',
+  backToday: (time) => `Volvemos a las ${time}. Déjanos un mensaje`,
+  backLater: (day, time) => `Volvemos el ${day} a las ${time}. Déjanos un mensaje`,
   reconnecting: 'Reconectando…',
   messages: 'Mensajes',
   earlier: 'Ver mensajes anteriores',
@@ -143,6 +147,8 @@ const fr: Strings = {
   unread: (count) => `Ouvrir le chat, ${count} non ${count > 1 ? 'lus' : 'lu'}`,
   online: 'Nous sommes en ligne',
   offline: 'Nous sommes absents. Laissez un message',
+  backToday: (time) => `De retour à ${time}. Laissez un message`,
+  backLater: (day, time) => `De retour ${day} à ${time}. Laissez un message`,
   reconnecting: 'Reconnexion…',
   messages: 'Messages',
   earlier: 'Afficher les messages précédents',
@@ -207,6 +213,8 @@ const de: Strings = {
   unread: (count) => `Chat öffnen, ${count} ungelesen`,
   online: 'Wir sind online',
   offline: 'Wir sind gerade nicht da. Hinterlassen Sie eine Nachricht',
+  backToday: (time) => `Wir sind um ${time} wieder da. Hinterlassen Sie eine Nachricht`,
+  backLater: (day, time) => `Wir sind am ${day} um ${time} wieder da. Hinterlassen Sie eine Nachricht`,
   reconnecting: 'Verbindung wird wiederhergestellt…',
   messages: 'Nachrichten',
   earlier: 'Frühere Nachrichten anzeigen',
@@ -271,6 +279,8 @@ const it: Strings = {
   unread: (count) => `Apri la chat, ${count} ${count === 1 ? 'non letto' : 'non letti'}`,
   online: 'Siamo online',
   offline: 'Ora non ci siamo. Lascia un messaggio',
+  backToday: (time) => `Torniamo alle ${time}. Lascia un messaggio`,
+  backLater: (day, time) => `Torniamo ${day} alle ${time}. Lascia un messaggio`,
   reconnecting: 'Riconnessione…',
   messages: 'Messaggi',
   earlier: 'Mostra i messaggi precedenti',
@@ -335,6 +345,8 @@ const pt: Strings = {
   unread: (count) => `Abrir o chat, ${count} não ${count === 1 ? 'lida' : 'lidas'}`,
   online: 'Estamos online',
   offline: 'Estamos ausentes. Deixe uma mensagem',
+  backToday: (time) => `Voltamos às ${time}. Deixe uma mensagem`,
+  backLater: (day, time) => `Voltamos ${day} às ${time}. Deixe uma mensagem`,
   reconnecting: 'Reconectando…',
   messages: 'Mensagens',
   earlier: 'Mostrar mensagens anteriores',
@@ -399,6 +411,8 @@ const nl: Strings = {
   unread: (count) => `Chat openen, ${count} ongelezen`,
   online: 'We zijn online',
   offline: 'We zijn er nu niet. Laat een bericht achter',
+  backToday: (time) => `We zijn terug om ${time}. Laat een bericht achter`,
+  backLater: (day, time) => `We zijn ${day} om ${time} terug. Laat een bericht achter`,
   reconnecting: 'Opnieuw verbinden…',
   messages: 'Berichten',
   earlier: 'Eerdere berichten tonen',
@@ -463,6 +477,8 @@ const ja: Strings = {
   unread: (count) => `チャットを開く（未読 ${count} 件）`,
   online: 'オンラインです',
   offline: 'ただいま不在です。メッセージをお残しください',
+  backToday: (time) => `${time}に戻ります。メッセージをお残しください`,
+  backLater: (day, time) => `${day}の${time}に戻ります。メッセージをお残しください`,
   reconnecting: '再接続しています…',
   messages: 'メッセージ',
   earlier: '以前のメッセージを表示',
@@ -527,6 +543,8 @@ const ko: Strings = {
   unread: (count) => `채팅 열기, 읽지 않은 메시지 ${count}개`,
   online: '지금 상담 가능합니다',
   offline: '지금은 부재 중입니다. 메시지를 남겨 주세요',
+  backToday: (time) => `${time}에 돌아옵니다. 메시지를 남겨 주세요`,
+  backLater: (day, time) => `${day} ${time}에 돌아옵니다. 메시지를 남겨 주세요`,
   reconnecting: '다시 연결하는 중…',
   messages: '메시지',
   earlier: '이전 메시지 보기',
@@ -591,6 +609,8 @@ const zhHans: Strings = {
   unread: (count) => `打开聊天，${count} 条未读`,
   online: '我们在线',
   offline: '我们暂时不在，请留言',
+  backToday: (time) => `我们将于 ${time} 回来，请留言`,
+  backLater: (day, time) => `我们将于${day} ${time} 回来，请留言`,
   reconnecting: '正在重新连接…',
   messages: '消息',
   earlier: '显示更早的消息',
@@ -655,6 +675,8 @@ const zhHant: Strings = {
   unread: (count) => `開啟聊天，${count} 則未讀`,
   online: '我們在線上',
   offline: '我們暫時不在，請留言',
+  backToday: (time) => `我們將於 ${time} 回來，請留言`,
+  backLater: (day, time) => `我們將於${day} ${time} 回來，請留言`,
   reconnecting: '正在重新連線…',
   messages: '訊息',
   earlier: '顯示較早的訊息',
@@ -719,4 +741,13 @@ export function formatSize(bytes: number, locale: Locale, strings: Strings): str
   const [kb, mb] = strings.units;
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} ${kb}`;
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(bytes / (1024 * 1024))} ${mb}`;
+}
+
+/** What the header says while the team is away: when the website opens, on the visitor's own clock, if it has hours. */
+export function awayText(opensAt: string | null, locale: Locale, S: Strings, now = Date.now()): string {
+  const at = opensAt ? Date.parse(opensAt) : NaN;
+  if (!(at > now)) return S.offline;
+  const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(at);
+  if (new Date(at).toDateString() === new Date(now).toDateString()) return S.backToday(time);
+  return S.backLater(new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(at), time);
 }

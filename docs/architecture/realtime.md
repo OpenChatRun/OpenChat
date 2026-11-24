@@ -93,7 +93,7 @@ Presence is advisory. It is derived from `getWebSockets()` when asked.
 
 Per spec §8.2, **disconnect is never treated as abandonment**. Follow-up decisions use message timestamps.
 
-The widget's availability comes from `GET /widget/bootstrap`, cached for 30 seconds through the Cache API, so that page views on a busy site do not wake the hub. In `auto` mode it is online if any agent who is not away has a socket: the hub says who is connected (`principalIds`), and D1 says which of them are away. A hub that has not yet taken a deploy lacks that method, and then any socket counts. The `availability` frame is reserved, because reaching every room from the hub would wake them all, so an open widget learns of a change on its next bootstrap.
+The widget's availability comes from `GET /widget/bootstrap`, cached for 30 seconds through the Cache API, so that page views on a busy site do not wake the hub. A website's opening hours (`settings.openingHours`) come first: outside them it is offline without asking the hub, and the bootstrap carries `opensAt`, the next opening time, worked out on a clock in the website's time zone (`openingState` in `packages/shared`). A website set to `offline` gives no `opensAt`. In `auto` mode it is online if any agent who is not away has a socket: the hub says who is connected (`principalIds`), and D1 says which of them are away. A hub that has not yet taken a deploy lacks that method, and then any socket counts. The `availability` frame is reserved, because reaching every room from the hub would wake them all, so an open widget learns of a change on its next bootstrap.
 
 ### Publishing
 
