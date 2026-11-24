@@ -419,20 +419,33 @@ const openWorkspacesPage = async (page: Page) => {
 test('an installation admin changes the widget from the Workspaces page', async ({ page }) => {
   await signIn(page, OWNER);
   await openWorkspacesPage(page);
-  const card = page.getByRole('listitem').filter({ hasText: 'Shop' }).first();
+  // Other tests make workspaces, and the page opens on the first by name.
+  const openShop = async () => {
+    await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
+    await page.getByRole('tab', { name: 'Websites' }).click();
+    await page.getByRole('button', { name: 'Settings for Shop' }).click();
+  };
+  await openShop();
+  const card = page.getByRole('region', { name: 'Shop', exact: true });
+  // What is typed in one tab is kept while another shows, and one button saves it all.
+  await card.getByRole('tab', { name: 'Appearance' }).click();
   await card.getByLabel('Welcome message').fill('Hello from settings');
+  await card.getByRole('tab', { name: 'Chat' }).click();
   await card.getByLabel('Ask for an email').selectOption('optional');
-  await card.getByRole('button', { name: 'Save widget settings' }).click();
+  await card.getByRole('button', { name: 'Save changes' }).click();
   await expect(card.getByRole('status')).toContainText('Saved');
   // The page is in the address, so a reload keeps it open.
   await page.reload();
-  const after = page.getByRole('listitem').filter({ hasText: 'Shop' }).first();
+  await openShop();
+  const after = card;
+  await after.getByRole('tab', { name: 'Appearance' }).click();
   await expect(after.getByLabel('Welcome message')).toHaveValue('Hello from settings');
-  await expect(after.getByLabel('Ask for an email')).toHaveValue('optional');
   // Back as it was, because other tests here share this website.
   await after.getByLabel('Welcome message').fill('');
+  await after.getByRole('tab', { name: 'Chat' }).click();
+  await expect(after.getByLabel('Ask for an email')).toHaveValue('optional');
   await after.getByLabel('Ask for an email').selectOption('never');
-  await after.getByRole('button', { name: 'Save widget settings' }).click();
+  await after.getByRole('button', { name: 'Save changes' }).click();
   await expect(after.getByRole('status')).toContainText('Saved');
 });
 

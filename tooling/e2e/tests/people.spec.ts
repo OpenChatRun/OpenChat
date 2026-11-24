@@ -93,9 +93,13 @@ test.describe('People', () => {
     await expect(page.getByLabel('Workspace name', { exact: true })).toHaveValue(name);
 
     const manage = page.getByRole('region', { name: 'Manage workspaces' });
-    await manage.getByLabel('Name', { exact: true }).last().fill('Team site');
+    await manage.getByRole('tab', { name: 'Websites' }).click();
     await manage.getByRole('button', { name: 'Add website' }).click();
+    await manage.getByLabel('Name', { exact: true }).fill('Team site');
+    await manage.getByRole('button', { name: 'Add website' }).click();
+    // A new website opens on how to install it.
     await expect(manage.getByRole('heading', { name: 'Team site' })).toBeVisible();
+    await expect(manage.getByRole('button', { name: 'Copy code' })).toBeVisible();
 
     // Not in the list of workspaces this admin can open.
     await expect(page.getByLabel('Workspace', { exact: true }).getByRole('option', { name })).toHaveCount(0);
@@ -130,7 +134,9 @@ test.describe('People', () => {
     await expect(page.getByRole('combobox', { name: /Role for/ })).toHaveCount(0);
     await page.getByRole('button', { name: 'Websites', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Shop' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Copy code' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Settings for/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add website' })).toHaveCount(0);
   });
 
   test('a deactivated account cannot sign in until it is reactivated', async ({ page, browser }) => {

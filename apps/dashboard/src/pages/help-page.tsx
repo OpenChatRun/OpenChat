@@ -490,11 +490,20 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
   );
 }
 
+type HelpTab = 'articles' | 'collections' | 'images' | 'settings';
+const HELP_TABS: { tab: HelpTab; label: MessageKey }[] = [
+  { tab: 'articles', label: 'helpArticles' },
+  { tab: 'collections', label: 'helpCollections' },
+  { tab: 'images', label: 'helpImages' },
+  { tab: 'settings', label: 'sectionSettings' },
+];
+
 export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; isSupervisor: boolean }) {
   const websites = useQuery({ queryKey: ['websites', workspaceId], queryFn: () => api.listWebsites(workspaceId) });
   const [websiteId, setWebsiteId] = useState<string | null>(null);
   const [language, setLanguage] = useState<string>(getLocale());
   const [open, setOpen] = useState<string | null>(null);
+  const [tab, setTab] = useState<HelpTab>('articles');
   const current = websites.data?.data.find((w) => w.id === websiteId) ?? websites.data?.data[0];
   useEffect(() => { setWebsiteId(null); setOpen(null); }, [workspaceId]);
   useEffect(() => {
@@ -517,7 +526,7 @@ export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; i
       <Failure error={websites.error ?? help.error} />
       {websites.data?.data.length === 0 && <p className="card text-sm">{t('noWebsitesMember')}</p>}
       {!open && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           {websites.data && websites.data.data.length > 1 && current && (
             <label className="block min-w-48 text-sm">{t('assistantWebsite')}
               <select className="field" value={current.id} onChange={(event) => setWebsiteId(event.target.value)}>
@@ -534,6 +543,9 @@ export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; i
               </select>
             </label>
           )}
+          {help.data?.slug && (
+            <a className="button-quiet ml-auto self-end" href={publicUrl(help.data.slug)} target="_blank" rel="noreferrer">{t('helpOpenPublic')} ↗</a>
+          )}
         </div>
       )}
       {help.data && current && (
@@ -542,11 +554,31 @@ export function HelpPage({ workspaceId, isSupervisor }: { workspaceId: string; i
             <Editor key={open} workspaceId={workspaceId} help={help.data} articleId={open} canEdit={isSupervisor} onClose={() => setOpen(null)} />
           ) : (
             <>
-              <AddressCard workspaceId={workspaceId} help={help.data} canEdit={isSupervisor} />
-              <ArticlesCard workspaceId={workspaceId} help={help.data} language={language} canEdit={isSupervisor} onOpen={setOpen} />
-              {isSupervisor && help.data.drafting.available && <DraftCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
-              {isSupervisor && <CollectionsCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
-              {isSupervisor && <ImagesCard workspaceId={workspaceId} help={help.data} onInsert={null} />}
+              {help.data.slug === null && tab !== 'settings' && (
+                <p className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                  <span className="min-w-48 flex-1">{t('helpNotPublic')}</span>
+                  {isSupervisor && <button type="button" className="button-quiet" onClick={() => setTab('settings')}>{t('helpChooseAddress')}</button>}
+                </p>
+              )}
+              <div role="tablist" aria-label={t('sectionHelp')} className="flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
+                {HELP_TABS.filter((item) => isSupervisor || item.tab === 'articles' || item.tab === 'settings').map((item) => (
+                  <button
+                    key={item.tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === item.tab}
+                    className={`-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm font-medium ${tab === item.tab ? 'border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}`}
+                    onClick={() => setTab(item.tab)}
+                  >
+                    {t(item.label)}
+                  </button>
+                ))}
+              </div>
+              {tab === 'articles' && <ArticlesCard workspaceId={workspaceId} help={help.data} language={language} canEdit={isSupervisor} onOpen={setOpen} />}
+              {tab === 'articles' && isSupervisor && help.data.drafting.available && <DraftCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
+              {tab === 'collections' && isSupervisor && <CollectionsCard key={language} workspaceId={workspaceId} help={help.data} language={language} />}
+              {tab === 'images' && isSupervisor && <ImagesCard workspaceId={workspaceId} help={help.data} onInsert={null} />}
+              {tab === 'settings' && <AddressCard workspaceId={workspaceId} help={help.data} canEdit={isSupervisor} />}
             </>
           )}
         </div>

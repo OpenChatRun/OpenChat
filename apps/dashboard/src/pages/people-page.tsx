@@ -67,6 +67,7 @@ export function PeoplePage({ myId }: { myId: string | undefined }) {
 
   return (
     <section className="space-y-4" aria-label={t('adminPeople')}>
+      <p className="text-sm text-slate-600 dark:text-slate-400">{t('peopleIntro')}</p>
       <Failure error={people.error ?? workspaces.error} />
       <AddPerson onAdded={(id) => setOpen(id)} />
       <div className="flex flex-wrap items-center gap-3">

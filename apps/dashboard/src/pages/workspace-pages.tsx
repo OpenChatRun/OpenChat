@@ -13,7 +13,8 @@ import { SettingsPage } from './settings-page';
 import { AuditLogPage } from './audit-log-page';
 import { FailedJobsPage } from './failed-jobs-page';
 import { PeoplePage } from './people-page';
-import { CopyableSnippet, WorkspacesAdminPage } from './workspaces-admin-page';
+import { WebsitesManager } from './websites';
+import { WorkspacesAdminPage } from './workspaces-admin-page';
 import { SoftwareFooter } from '../software-footer';
 import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
@@ -31,24 +32,6 @@ async function signOut() {
 
 function Failure({ error }: { error: unknown }) {
   return error ? <p className="error" role="alert">{errorMessage(error)}</p> : null;
-}
-
-function WebsitesPanel({ membership }: { membership: Membership }) {
-  const websites = useQuery({ queryKey: ['websites', membership.workspace.id], queryFn: () => api.listWebsites(membership.workspace.id) });
-  return (
-    <section className="space-y-4" aria-label={t('sectionWebsites')}>
-      <Failure error={websites.error} />
-      {websites.data?.data.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('noWebsitesMember')}</p>}
-      <ul className="space-y-4">
-        {websites.data?.data.map((website) => (
-          <li key={website.id} className="card space-y-3">
-            <h3 className="font-medium">{website.name}</h3>
-            <CopyableSnippet website={website} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 /** The list of members changes rarely, and the inbox needs names and assignees. */
@@ -75,6 +58,7 @@ function MembersPanel({ membership }: { membership: Membership }) {
   const [wanted, setWanted] = useState<boolean | null>(null);
   return (
     <section className="space-y-4" aria-label={t('sectionMembers')}>
+      <p className="text-sm text-slate-600 dark:text-slate-400">{t('membersIntro')}</p>
       <Failure error={members.error ?? setAway.error} />
       <ul className="card divide-y divide-slate-200 dark:divide-slate-800">
         {members.data?.data.map((member) => (
@@ -224,7 +208,7 @@ export function WorkspaceApp() {
           {current && !adminPage && tab !== 'settings' && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'home' ? <HomePage membership={current} name={me.data?.name ?? ''} onOpenInbox={() => openSection('inbox')} onOpenAnalytics={() => openSection('analytics')} /> : tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'contacts' ? <ContactsPage workspaceId={current.workspace.id} /> : tab === 'analytics' ? <AnalyticsPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'home' ? <HomePage membership={current} name={me.data?.name ?? ''} onOpenInbox={() => openSection('inbox')} onOpenAnalytics={() => openSection('analytics')} /> : tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'contacts' ? <ContactsPage workspaceId={current.workspace.id} /> : tab === 'analytics' ? <AnalyticsPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'websites' ? <section aria-label={t('sectionWebsites')}><WebsitesManager key={current.workspace.id} workspaceId={current.workspace.id} canEdit={isAdmin} /></section> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>
