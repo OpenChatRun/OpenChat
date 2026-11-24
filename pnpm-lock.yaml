@@ -306,8 +306,8 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/tsconfig
       '@redocly/cli':
-        specifier: ^2.78.0
-        version: 2.78.0
+        specifier: ^2.82.0
+        version: 2.82.0
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -1485,8 +1485,8 @@ packages:
   '@poppinss/exception@1.2.3':
     resolution: {integrity: sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw==}
 
-  '@redocly/cli@2.78.0':
-    resolution: {integrity: sha512-ozrbcxLabQUxQr62nt0R8HE2T7kmlmIu1hTa/hyN1h5iht9v3Bh4fA2FXLj4wEhtN4xmdqoySHfba8+vFbONJA==}
+  '@redocly/cli@2.82.0':
+    resolution: {integrity: sha512-yyd53xbJgLRa1qyFhaxf9PxOnccjfWJmVRC7uqY7lRUhSq7Zo0id8lHLblpJKMjj4fE2t5zKDF3xml3hnBscJw==}
     engines: {node: '>=22.12.0 || >=20.19.0 <21.0.0', npm: '>=10'}
     hasBin: true
 
@@ -3247,7 +3247,7 @@ snapshots:
 
   '@poppinss/exception@1.2.3': {}
 
-  '@redocly/cli@2.78.0': {}
+  '@redocly/cli@2.82.0': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.19':
     optional: true
