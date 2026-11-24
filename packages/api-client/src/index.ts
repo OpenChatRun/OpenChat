@@ -49,6 +49,7 @@ import type {
   addAssistantSourceRoute,
   testAssistantRoute,
   listLearnedAnswersRoute,
+  listUnansweredQuestionsRoute,
   getHelpCentreRoute,
   getHelpArticleRoute,
   createHelpDraftRunRoute,
@@ -98,6 +99,7 @@ export type AssistantSource = Assistant['sources'][number];
 export type AssistantSourceInput = BodyOf<typeof addAssistantSourceRoute>;
 export type AssistantAnswer = Json200<typeof testAssistantRoute>;
 export type LearnedAnswer = Json200<typeof listLearnedAnswersRoute>['data'][number];
+export type UnansweredQuestion = Json200<typeof listUnansweredQuestionsRoute>['data'][number];
 export type HelpCentre = Json200<typeof getHelpCentreRoute>;
 export type HelpCollection = HelpCentre['collections'][number];
 export type HelpArticleSummary = HelpCentre['articles'][number];
@@ -294,6 +296,10 @@ export function createClient(options: ClientOptions) {
     decideLearnedAnswer: (workspaceId: string, learnedId: string, input: { status: 'approved' | 'rejected'; question?: string; answer?: string }) =>
       request<LearnedAnswer>('PATCH', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`, input),
     deleteLearnedAnswer: (workspaceId: string, learnedId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/learned/${encodeURIComponent(learnedId)}`),
+    listUnansweredQuestions: (workspaceId: string, websiteId: string) => get<{ data: UnansweredQuestion[] }>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/unanswered`),
+    answerUnansweredQuestion: (workspaceId: string, questionId: string, input: { question: string; answer: string }) =>
+      request<LearnedAnswer>('POST', `${workspace(workspaceId)}/assistant/unanswered/${encodeURIComponent(questionId)}/answer`, input),
+    dismissUnansweredQuestion: (workspaceId: string, questionId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/unanswered/${encodeURIComponent(questionId)}`),
     setLearnedAutoApprove: (workspaceId: string, autoApprove: boolean) => request<{ autoApprove: boolean }>('PUT', `${workspace(workspaceId)}/assistant/learning`, { autoApprove }),
     getHelpCentre: (workspaceId: string, websiteId: string) => get<HelpCentre>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/help`),
     saveHelpSettings: (workspaceId: string, websiteId: string, input: { slug: string | null; noindex?: boolean }) =>

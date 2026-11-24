@@ -9,6 +9,7 @@ import {
   assistantLearnContext,
   assistantLearnedForIndexing,
   assistantLearningRepository,
+  unansweredQuestionsRepository,
   assistantLearnTranscript,
   finishLearnedIndexing,
   learnedVectorId,
@@ -30,6 +31,8 @@ export const LEARNING_LIMITS = {
   answerChars: 1_200,
   learnTokens: 500,
   listed: 200,
+  /** Unanswered questions shown, and how far they are counted. */
+  unansweredListed: 100,
 } as const;
 
 export const NOTHING_LEARNED = 'NONE';
@@ -235,4 +238,29 @@ export async function setLearnedAutoApprove(deps: AssistantDeps, ctx: WorkspaceC
   const repository = assistantLearningRepository(deps.db, ctx);
   await repository.setAutoApprove(autoApprove);
   return { autoApprove: await repository.autoApprove() };
+}
+
+/** Questions the assistant handed to the team because it had no answer, newest first, which nobody has dealt with. */
+export async function listUnansweredQuestions(deps: AssistantDeps, ctx: WorkspaceContext, websiteId: string) {
+  requireCapability(ctx, 'assistant.manage');
+  await websiteOrNotFound(deps.db, ctx, websiteId);
+  const rows = await unansweredQuestionsRepository(deps.db, ctx).list(websiteId, LEARNING_LIMITS.unansweredListed);
+  return { data: rows.map((row) => ({ id: row.id, conversationId: row.conversationId, question: row.question, reason: row.reason, askedAt: toIso(row.askedAt) })) };
+}
+
+/** A supervisor's answer to one of them, used as an approved learned answer once it is indexed. */
+export async function answerUnansweredQuestion(deps: AssistantDeps, ctx: WorkspaceContext, questionId: string, input: { question: string; answer: string }) {
+  requireCapability(ctx, 'assistant.manage');
+  if (!deps.runtime) throw unavailable();
+  const result = await unansweredQuestionsRepository(deps.db, ctx).answer(questionId, { question: input.question.trim(), answer: input.answer.trim() });
+  if (result.outcome === 'not_found') throw notFound();
+  if (result.outcome === 'learned_exists') throw new AppError(409, 'learned_exists', 'This conversation already has a learned answer. Change that one instead');
+  const row = await assistantLearningRepository(deps.db, ctx).get(result.learnedId);
+  if (!row) throw notFound();
+  return toLearned(row);
+}
+
+export async function dismissUnansweredQuestion(deps: AssistantDeps, ctx: WorkspaceContext, questionId: string) {
+  requireCapability(ctx, 'assistant.manage');
+  if (!(await unansweredQuestionsRepository(deps.db, ctx).dismiss(questionId))) throw notFound();
 }

@@ -146,6 +146,105 @@ export function assistantLearningRepository(database: Database, ctx: WorkspaceCo
   };
 }
 
+/** A question the assistant handed to the team because it had no answer, as its handover message recorded it. */
+export interface UnansweredQuestionRow {
+  /** The handover message's ID. */
+  id: string;
+  conversationId: string;
+  question: string;
+  reason: 'no_sources' | 'unsure';
+  askedAt: number;
+}
+
+/**
+ * The assistant's handovers for want of an answer, which nobody has dealt with, joined to the visitor's message each
+ * one answered: a handover's client_message_id is 'assistant:' and that message's ID. `h` is the handover, `c` its
+ * conversation, `q` the visitor's message. ?1 is the workspace.
+ */
+const UNANSWERED_FROM = `FROM messages h
+   JOIN conversations c ON c.workspace_id = h.workspace_id AND c.id = h.conversation_id
+   JOIN messages q ON q.workspace_id = h.workspace_id AND q.id = substr(h.client_message_id, 11)
+  WHERE h.workspace_id = ?1 AND h.assistant_id IS NOT NULL
+    AND json_extract(h.metadata_json, '$.assistant') = 'handover' AND json_extract(h.metadata_json, '$.reason') IN ('no_sources', 'unsure')
+    AND trim(q.content) <> ''
+    AND NOT EXISTS (SELECT 1 FROM assistant_question_reviews r WHERE r.workspace_id = h.workspace_id AND r.message_id = h.id)`;
+
+export type AnswerUnansweredResult = { outcome: 'answered'; learnedId: string } | { outcome: 'not_found' } | { outcome: 'learned_exists' };
+
+export function unansweredQuestionsRepository(database: Database, ctx: WorkspaceContext) {
+  const d1 = rawHandle(database);
+  const w = ctx.workspaceId;
+
+  return {
+    /** Newest first. */
+    async list(websiteId: string, limit: number): Promise<UnansweredQuestionRow[]> {
+      const { results } = await d1
+        .prepare(
+          `SELECT h.id, h.conversation_id AS conversationId, q.content AS question, json_extract(h.metadata_json, '$.reason') AS reason, h.created_at AS askedAt
+             ${UNANSWERED_FROM} AND c.website_id = ?2 ORDER BY h.created_at DESC, h.id DESC LIMIT ?3`,
+        )
+        .bind(w, websiteId, limit)
+        .all<UnansweredQuestionRow>();
+      return results;
+    },
+
+    /** How many, counted no further than `cap`. */
+    async count(websiteId: string, cap: number): Promise<number> {
+      const row = await d1.prepare(`SELECT COUNT(*) AS n FROM (SELECT 1 ${UNANSWERED_FROM} AND c.website_id = ?2 LIMIT ?3)`).bind(w, websiteId, cap).first<{ n: number }>();
+      return row?.n ?? 0;
+    },
+
+    /** Puts a question aside. False if there is no such question waiting. */
+    async dismiss(messageId: string): Promise<boolean> {
+      const result = await d1
+        .prepare(`INSERT INTO assistant_question_reviews (workspace_id, message_id, outcome, member_id, created_at) SELECT h.workspace_id, h.id, 'dismissed', ?3, ${DB_NOW_MS} ${UNANSWERED_FROM} AND h.id = ?2`)
+        .bind(w, messageId, ctx.memberId)
+        .run();
+      return result.meta.changes === 1;
+    },
+
+    /**
+     * A supervisor's answer becomes the conversation's learned answer, approved, and is queued for indexing, in one
+     * batch with the question being marked answered. A conversation has one learned answer: if it already has one
+     * that was not discarded, nothing is written, so that an answer someone approved is never replaced unseen.
+     */
+    async answer(messageId: string, input: { question: string; answer: string }): Promise<AnswerUnansweredResult> {
+      const free = `NOT EXISTS (SELECT 1 FROM assistant_learned l WHERE l.workspace_id = h.workspace_id AND l.conversation_id = h.conversation_id AND l.status <> 'discarded')`;
+      const learnedId = newId('assistantLearned');
+      const [saved] = await d1.batch([
+        d1
+          .prepare(
+            `INSERT INTO assistant_learned (id, workspace_id, website_id, conversation_id, question, answer, status, learned_seq, decided_by_member_id, decided_at, created_at, updated_at)
+             SELECT ?3, h.workspace_id, c.website_id, h.conversation_id, ?4, ?5, 'approved', c.last_message_seq, ?6, ${DB_NOW_MS}, ${DB_NOW_MS}, ${DB_NOW_MS}
+               ${UNANSWERED_FROM} AND h.id = ?2 AND ${free}
+             ON CONFLICT (workspace_id, conversation_id) DO UPDATE
+                SET question = excluded.question, answer = excluded.answer, status = 'approved', discard_reason = NULL, learned_seq = excluded.learned_seq,
+                    generation = generation + 1, indexed_generation = NULL, decided_by_member_id = excluded.decided_by_member_id, decided_at = excluded.decided_at, updated_at = excluded.updated_at`,
+          )
+          .bind(w, messageId, learnedId, input.question, input.answer, ctx.memberId),
+        // Only if this request wrote the answer: its words and its member, at this generation, are the mark of that.
+        d1
+          .prepare(
+            `INSERT INTO assistant_question_reviews (workspace_id, message_id, outcome, member_id, created_at)
+             SELECT h.workspace_id, h.id, 'answered', ?3, ${DB_NOW_MS} ${UNANSWERED_FROM} AND h.id = ?2
+                AND EXISTS (SELECT 1 FROM assistant_learned l WHERE l.workspace_id = h.workspace_id AND l.conversation_id = h.conversation_id AND l.status = 'approved' AND l.indexed_generation IS NULL AND l.question = ?4 AND l.answer = ?5 AND l.decided_by_member_id = ?3)`,
+          )
+          .bind(w, messageId, ctx.memberId, input.question, input.answer),
+        queueLearnedIndexing(d1, w, `conversation_id = (SELECT conversation_id FROM messages WHERE workspace_id = ?2 AND id = ?3)`, messageId),
+      ]);
+      if (saved!.meta.changes === 1) {
+        const row = await d1
+          .prepare(`SELECT l.id FROM assistant_learned l JOIN messages h ON h.workspace_id = l.workspace_id AND h.conversation_id = l.conversation_id WHERE l.workspace_id = ?1 AND h.id = ?2`)
+          .bind(w, messageId)
+          .first<{ id: string }>();
+        if (row) return { outcome: 'answered', learnedId: row.id };
+      }
+      const waiting = await d1.prepare(`SELECT 1 AS found ${UNANSWERED_FROM} AND h.id = ?2`).bind(w, messageId).first<{ found: number }>();
+      return waiting ? { outcome: 'learned_exists' } : { outcome: 'not_found' };
+    },
+  };
+}
+
 export type AssistantLearningRepository = ReturnType<typeof assistantLearningRepository>;
 
 // ---------- For the learning job, which has a workspace ID from its envelope and no user ----------

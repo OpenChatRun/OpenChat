@@ -830,6 +830,14 @@ Then 4,000 conversations of 25 messages each, about 190 characters long, were ad
 
 Not tried there: more than 100,000 messages, long messages, or several searches at once.
 
+## Unanswered questions on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-unanstest`, deployed with `--assistant` and since deleted, with migration 0031 applied by the deploy and the default model. One text source about returns. Three visitors wrote: the one about returns was answered, and the two the source says nothing about were handed over with `no_sources`. The list showed exactly those two, newest first, with the visitors' words, and the assistant's `unanswered` count was 2. The list answered in 100 to 170 ms from a laptop.
+
+A supervisor answered one: 201, an approved learned answer, and the question left the list; answering it again gave 404. The other was dismissed with 204, and again 404. The learned answer showed as in use within about 10 seconds, but the assistant answered from it only 30 to 90 seconds later: Vectorize takes that long to return a new vector, as it does for a new source. A visitor who asked in between was handed over, and that question joined the list.
+
+Not tried there: `unsure` handovers, which need the model to decline, a conversation that already had a learned answer, or a list of more than a few questions.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

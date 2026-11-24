@@ -1,7 +1,10 @@
 /** The AI assistant's settings, sources and test panel (ADR-0022). Supervisors only, checked in @openchat/core. */
 import {
   addAssistantSourceRoute,
+  answerUnansweredQuestionRoute,
   decideLearnedAnswerRoute,
+  dismissUnansweredQuestionRoute,
+  listUnansweredQuestionsRoute,
   deleteAssistantSourceRoute,
   deleteLearnedAnswerRoute,
   getAssistantRoute,
@@ -13,7 +16,10 @@ import {
 } from '@openchat/api-contracts';
 import {
   addAssistantSource,
+  answerUnansweredQuestion,
   decideLearnedAnswer,
+  dismissUnansweredQuestion,
+  listUnansweredQuestions,
   deleteAssistantSource,
   deleteLearnedAnswer,
   getAssistant,
@@ -100,6 +106,27 @@ export function registerAssistantRoutes(app: App) {
     const { deps, ctx } = await scoped(c, workspaceId);
     await deleteLearnedAnswer(deps, ctx, learnedId);
     dispatchSoon(c, workspaceId, [learnedId]);
+    return c.body(null, 204);
+  });
+
+  app.openapi(listUnansweredQuestionsRoute, async (c) => {
+    const { workspaceId, websiteId } = c.req.valid('param');
+    const { deps, ctx } = await scoped(c, workspaceId);
+    return c.json(await listUnansweredQuestions(deps, ctx, websiteId), 200);
+  });
+
+  app.openapi(answerUnansweredQuestionRoute, async (c) => {
+    const { workspaceId, questionId } = c.req.valid('param');
+    const { deps, ctx } = await scoped(c, workspaceId);
+    const learned = await answerUnansweredQuestion(deps, ctx, questionId, c.req.valid('json'));
+    dispatchSoon(c, workspaceId, [learned.id]);
+    return c.json(learned, 201);
+  });
+
+  app.openapi(dismissUnansweredQuestionRoute, async (c) => {
+    const { workspaceId, questionId } = c.req.valid('param');
+    const { deps, ctx } = await scoped(c, workspaceId);
+    await dismissUnansweredQuestion(deps, ctx, questionId);
     return c.body(null, 204);
   });
 

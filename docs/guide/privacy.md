@@ -23,7 +23,7 @@ The project runs one relay, for the official app. Its [privacy policy](../legal/
 | Colleagues | Name, email, a password hash, roles, and sessions. Their messages and notes, with their name |
 | Everyone | An audit log of admin actions, which names colleagues but never visitors |
 | Help centre | Articles and images your team writes, which are public once published. Nothing about the visitors who read them: no cookies, and searches are not stored. Files given to Draft with AI are sent to Cloudflare Workers AI in your company's account, and deleted when the draft finishes or within an hour of it stopping |
-| Learned answers | If the AI assistant learns from conversations: one general question and answer for each resolved conversation, without personal details, linked to the conversation and deleted with it |
+| Learned answers | If the AI assistant learns from conversations: one general question and answer for each resolved conversation, without personal details, linked to the conversation and deleted with it. An answer a supervisor writes for a question the assistant could not answer is kept the same way. The list of those questions is read from the conversations themselves, so it keeps no second copy of a visitor's message |
 
 Logs hold IDs and error codes, never message content, passwords or tokens.
 

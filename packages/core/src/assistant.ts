@@ -9,6 +9,7 @@ import {
   assistantHistory,
   assistantReplyContext,
   assistantLearningRepository,
+  unansweredQuestionsRepository,
   helpAssistantCounts,
   assistantRepository,
   assistantSourceForIndexing,
@@ -38,6 +39,9 @@ export const ASSISTANT_MODELS = [
 ] as const;
 export const DEFAULT_ASSISTANT_MODEL = ASSISTANT_MODELS[0].id;
 export { ASSISTANT_EMBEDDING_DIMENSIONS, ASSISTANT_EMBEDDING_MODEL } from '@openchat/shared';
+
+/** Unanswered questions are counted this far for the page's badge, and no further. */
+const UNANSWERED_COUNT_CAP = 100;
 
 export const ASSISTANT_LIMITS = {
   sourcesPerWebsite: 20,
@@ -193,12 +197,13 @@ export async function getAssistant(deps: AssistantDeps, ctx: WorkspaceContext, w
   await websiteOrNotFound(deps.db, ctx, websiteId);
   const repository = assistantRepository(deps.db, ctx);
   const learning = assistantLearningRepository(deps.db, ctx);
-  const [settings, sources, autoApprove, counts, helpArticles] = await Promise.all([
+  const [settings, sources, autoApprove, counts, helpArticles, unanswered] = await Promise.all([
     repository.settings(websiteId),
     repository.listSources(websiteId),
     learning.autoApprove(),
     learning.counts(websiteId),
     helpAssistantCounts(deps.db, ctx, websiteId),
+    unansweredQuestionsRepository(deps.db, ctx).count(websiteId, UNANSWERED_COUNT_CAP),
   ]);
   return {
     available: deps.runtime !== null,
@@ -208,6 +213,7 @@ export async function getAssistant(deps: AssistantDeps, ctx: WorkspaceContext, w
     settings: settings ? { name: settings.name, model: settings.model, enabled: settings.enabled === 1, learn: settings.learn === 1 } : null,
     sources: sources.map(toSource),
     learning: { autoApprove, ...counts },
+    unanswered,
     helpArticles,
     limits: { sourcesPerWebsite: ASSISTANT_LIMITS.sourcesPerWebsite, pagesPerSource: deps.limits.assistantPagesPerSource, textSourceChars: ASSISTANT_LIMITS.textSourceChars, turnsPerConversation: ASSISTANT_LIMITS.turnsPerConversation },
   };
