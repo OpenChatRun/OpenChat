@@ -62,6 +62,7 @@ import {
   createAgentTicketRoute,
   createTagRoute,
   deleteTagRoute,
+  listContactsRoute,
   getContactRoute,
   listTagsRoute,
   setConversationTagsRoute,
@@ -129,6 +130,7 @@ import {
 
 /** Every route must be listed here so that it reaches the published document. */
 export const ALL_ROUTES = [
+  listContactsRoute,
   getContactRoute,
   updateContactRoute,
   exportContactRoute,

@@ -489,4 +489,9 @@ export const zhHant: Messages = {
   savedReplyText: '回覆內容',
   save: '儲存',
   cancel: '取消',
+  sectionContacts: '聯絡人',
+  noContactsYet: '還沒有人傳來訊息。訪客傳送第一則訊息後會顯示在這裡。',
+  contactConversationsOne: '{count} 個對話',
+  contactConversationsOther: '{count} 個對話',
+  contactLastActive: '最近活動：{when}',
 };

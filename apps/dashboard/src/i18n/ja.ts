@@ -489,4 +489,9 @@ export const ja: Messages = {
   savedReplyText: '返信の文面',
   save: '保存',
   cancel: 'キャンセル',
+  sectionContacts: '連絡先',
+  noContactsYet: 'まだ誰からもメッセージがありません。訪問者は最初のメッセージを送るとここに表示されます。',
+  contactConversationsOne: '会話 {count} 件',
+  contactConversationsOther: '会話 {count} 件',
+  contactLastActive: '最終アクティビティ: {when}',
 };

@@ -2,7 +2,7 @@
 
 For agents and supervisors. The inbox is the same on the web dashboard and in the iPhone app, though the app has fewer settings.
 
-In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
+In the dashboard, the navy rail on the left holds the workspace's sections, **Inbox**, **Contacts**, **Websites**, **Members** and **Email**, and **Sign out** at the bottom. Point at an icon to see its name. The inbox has three columns: the list of conversations, the open conversation, and the visitor's contact details and tags.
 
 ## Signing in
 
@@ -62,6 +62,8 @@ Whether the visitor is online now is shown on the conversation, with the page of
 The contact card shows what the visitor told you: a name, and an email address if the website asked for one. **The address is not verified.** Anyone can type any address, so do not share account details because of it. You can correct the name and address and **Save contact**.
 
 Tags help find and group conversations. Type a tag to add it to the conversation, or choose one the workspace already uses.
+
+**The Contacts page.** **Contacts**, in the rail, lists everyone who has written to the workspace, the most recently active first, with their email address if they gave one, how many conversations they have, and when the latest one last changed. Search by name or email address. Choose someone to open their latest conversation, with their contact card beside it. A visitor who opened the widget and never wrote is not listed.
 
 An installation admin who is a member of the workspace also sees **Export data** and **Erase contact** on the card. See [privacy and data](privacy.md#a-persons-request-about-their-data).
 

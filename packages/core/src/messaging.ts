@@ -236,6 +236,21 @@ export async function getContact(db: Database, ctx: WorkspaceContext, contactId:
   return toContact(row);
 }
 
+/** Contacts with a conversation, the most recently active first. `q` looks in names and email addresses. */
+export async function listContacts(db: Database, ctx: WorkspaceContext, input: { q?: string | undefined; cursor?: string | undefined; limit: number }) {
+  requireCapability(ctx, 'conversation.view');
+  const q = input.q?.toLowerCase() || undefined;
+  const filters = `contacts|${q ?? ''}`;
+  const cursor = input.cursor ? decodeCursor(input.cursor, filters) : undefined;
+  const rows = await repositories(db, ctx).contacts.list({ q, before: cursor ? { at: cursor.at, id: cursor.id } : undefined, limit: input.limit + 1 });
+  const page = rows.slice(0, input.limit);
+  const last = page.at(-1);
+  return {
+    data: page.map((row) => ({ ...toContact(row), conversationCount: row.conversationCount, lastConversationId: row.lastConversationId, lastActivityAt: toIso(row.lastActivityAt) })),
+    nextCursor: rows.length > input.limit && last ? encodeCursor({ v: 1, f: filters, at: last.lastActivityAt, id: last.lastConversationId }) : null,
+  };
+}
+
 export async function updateContact(db: Database, ctx: WorkspaceContext, contactId: string, change: { name?: string | null | undefined; email?: string | null | undefined; phone?: string | null | undefined }) {
   requireCapability(ctx, 'conversation.reply');
   const contacts = repositories(db, ctx).contacts;

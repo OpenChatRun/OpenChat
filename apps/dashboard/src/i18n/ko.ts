@@ -489,4 +489,9 @@ export const ko: Messages = {
   savedReplyText: '답변 내용',
   save: '저장',
   cancel: '취소',
+  sectionContacts: '연락처',
+  noContactsYet: '아직 아무도 메시지를 보내지 않았습니다. 방문자는 첫 메시지를 보낸 뒤 여기에 표시됩니다.',
+  contactConversationsOne: '대화 {count}개',
+  contactConversationsOther: '대화 {count}개',
+  contactLastActive: '마지막 활동: {when}',
 };

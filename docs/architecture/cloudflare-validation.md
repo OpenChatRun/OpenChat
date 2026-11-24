@@ -794,6 +794,14 @@ On a throwaway installation, `oc-savedtest`, since deleted, with migration 0028 
 
 Not tried there: the limit of 200, which the Worker tests cover, and the dashboard, which the browser test covers against local Workers.
 
+## The contact list on real Cloudflare (2026-11-24)
+
+On a throwaway installation, `oc-contactstest`, since deleted: three visitors wrote and a fourth only opened a session. `GET …/contacts` listed the three, newest first, each with its conversation and a count of 1, and not the fourth. A reply in the oldest conversation brought its contact to the top. Two pages of two and one repeated nobody. A search found a name in other capitals and part of an email address, and `%` matched only the name holding one. A cursor from another search answered 400, no token 401, and another workspace 404. `/contacts` served the dashboard.
+
+D1's query planner needed a hint. Written as a row value, or as plain comparisons, the check that a conversation is its contact's newest used the index on `updated_at`, and so walked every newer conversation in the workspace for each row. With `+o.updated_at`, `EXPLAIN QUERY PLAN` on the remote database shows `conversations_contact_idx` for it and `conversations_updated_idx` for the walk. The plan was read on an empty database, not timed on a large one.
+
+Not tried there: a contact with several conversations, which the Worker tests cover, and the page itself, which the browser test covers against local Workers.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

@@ -466,3 +466,23 @@ test('a supervisor saves a reply, and an agent puts it in the box with a slash',
   await saved.getByRole('button', { name: `Delete ${title}` }).click();
   await expect(saved.getByText(title)).toHaveCount(0);
 });
+
+test('the Contacts page finds someone who wrote, and opens their conversation', async ({ page }) => {
+  const visitor = await startVisitor('Is my parcel on its way?');
+  const name = `Parcel ${Date.now()}`;
+  const named = await fetch(`${BASE_URL}/api/v1/widget/me`, { method: 'PATCH', headers: visitorHeaders(visitor.token), body: JSON.stringify({ name, email: 'parcel@shop.example' }) });
+  expect(named.status).toBe(204);
+
+  await signIn(page, OWNER);
+  await page.getByRole('navigation').getByRole('button', { name: 'Contacts' }).click();
+  await expect(page).toHaveURL(/\/contacts$/);
+  const contacts = page.getByRole('region', { name: 'Contacts' });
+  await contacts.getByLabel('Search by name or email').fill(name.toUpperCase());
+  const row = contacts.getByRole('button', { name: new RegExp(name) });
+  await expect(row).toContainText('parcel@shop.example');
+  await expect(row).toContainText('1 conversation');
+  await expect(contacts.getByRole('listitem')).toHaveCount(1);
+  await row.click();
+  await expect(page).toHaveURL(new RegExp(`/inbox/${visitor.conversationId}$`));
+  await expect(page.getByText('Is my parcel on its way?').first()).toBeVisible();
+});

@@ -489,4 +489,9 @@ export const de: Messages = {
   savedReplyText: 'Antworttext',
   save: 'Speichern',
   cancel: 'Abbrechen',
+  sectionContacts: 'Kontakte',
+  noContactsYet: 'Noch hat niemand geschrieben. Ein Besucher erscheint hier nach seiner ersten Nachricht.',
+  contactConversationsOne: '{count} Unterhaltung',
+  contactConversationsOther: '{count} Unterhaltungen',
+  contactLastActive: 'Zuletzt aktiv: {when}',
 };

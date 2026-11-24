@@ -81,6 +81,52 @@ describe('contacts', () => {
   });
 });
 
+describe('the contact list', () => {
+  type Listed = { id: string; name: string | null; conversationCount: number; lastConversationId: string; lastActivityAt: string };
+  const list = async (query = '', token = agent) => json<{ data: Listed[]; nextCursor: string | null }>(await call('GET', `${W}/contacts${query}`, token));
+  const add = (id: string, name: string | null, email: string | null, conversations: [string, number][], workspace = 'work_1') => [
+    env.DB.prepare(`INSERT INTO contacts (id, workspace_id, name, email, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 1, 1, 1, 1)`).bind(id, workspace, name, email),
+    ...conversations.map(([conv, at]) => env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES (?1, ?2, 'site_1', ?3, ?4, 1, ?4)`).bind(conv, workspace, id, at)),
+  ];
+
+  it('lists who has a conversation, the most recently active first, with their latest conversation', async () => {
+    await env.DB.batch([...add('cont_2', 'Bob', 'bob@example.com', [['conv_2a', 5000], ['conv_2b', 9000], ['conv_2c', 7000]]), ...add('cont_3', null, null, [['conv_3', 8000]]), ...add('cont_ghost', 'Ghost', null, [])]);
+    const { data, nextCursor } = await list();
+    expect(nextCursor).toBeNull();
+    expect(data.map((c) => [c.id, c.conversationCount, c.lastConversationId])).toEqual([['cont_2', 3, 'conv_2b'], ['cont_3', 1, 'conv_3'], ['cont_1', 1, 'conv_1']]);
+    expect(data[0]!.lastActivityAt).toBe(new Date(9000).toISOString());
+  });
+
+  it('pages without repeating or missing anyone', async () => {
+    await env.DB.batch(Array.from({ length: 5 }, (_, n) => add(`cont_p${n}`, `P${n}`, null, [[`conv_p${n}`, 5000], [`conv_q${n}`, 4000]])).flat());
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: { data: Listed[]; nextCursor: string | null } = await list(`?limit=2${cursor ? `&cursor=${cursor}` : ''}`);
+      seen.push(...page.data.map((c) => c.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(seen).toEqual(['cont_p4', 'cont_p3', 'cont_p2', 'cont_p1', 'cont_p0', 'cont_1']);
+  });
+
+  it('searches names and addresses, whatever the capitals, and treats % as a character', async () => {
+    await env.DB.batch([...add('cont_2', 'Bob Stone', 'bob@example.com', [['conv_2', 5000]]), ...add('cont_3', '100% Carl', 'carl@shop.example', [['conv_3', 6000]])]);
+    expect((await list('?q=BOB')).data.map((c) => c.id)).toEqual(['cont_2']);
+    expect((await list('?q=shop.example')).data.map((c) => c.id)).toEqual(['cont_3']);
+    expect((await list('?q=%25')).data.map((c) => c.id)).toEqual(['cont_3']);
+    expect((await list('?q=nobody')).data).toEqual([]);
+    // A cursor belongs to its search.
+    const { nextCursor } = await list('?limit=1');
+    expect((await call('GET', `${W}/contacts?q=bob&cursor=${nextCursor}`, agent)).status).toBe(400);
+  });
+
+  it('keeps to its workspace', async () => {
+    await env.DB.batch([env.DB.prepare(`INSERT INTO websites (id, workspace_id, name, website_key, created_at, updated_at) VALUES ('site_2', 'work_2', 'Other', 'key_2', 1, 1)`), env.DB.prepare(`INSERT INTO contacts (id, workspace_id, name, first_seen_at, last_seen_at, created_at, updated_at) VALUES ('cont_far', 'work_2', 'Far', 1, 1, 1, 1)`), env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES ('conv_far', 'work_2', 'site_2', 'cont_far', 9, 1, 9)`)]);
+    expect((await list()).data.map((c) => c.id)).toEqual(['cont_1']);
+    expect((await call('GET', '/api/v1/workspaces/work_2/contacts', agent)).status).toBe(404);
+  });
+});
+
 describe('tags', () => {
   it('creates once, whatever the capitals, and lists by name', async () => {
     const first = await call('POST', `${W}/tags`, agent, { name: 'Refund' });
