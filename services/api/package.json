@@ -23,7 +23,7 @@
     "@openchat/email": "workspace:*",
     "@openchat/auth": "workspace:*",
     "@openchat/notification-protocol": "workspace:*",
-    "hono": "^4.13.18",
+    "hono": "^4.13.19",
     "@hono/zod-openapi": "^1.6.3"
   },
   "devDependencies": {
