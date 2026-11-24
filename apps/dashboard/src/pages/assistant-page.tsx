@@ -1,5 +1,5 @@
 /**
- * The AI assistant, for supervisors (ADR-0022): its name and model, whether it answers visitors and learns, what it
+ * The AI assistant, for supervisors (ADR-0022): its name, whether it answers visitors and learns, what it
  * answers from, what it has learned, and a place to try it.
  */
 import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer } from '@openchat/api-client';
@@ -31,14 +31,12 @@ function Failure({ error }: { error: unknown }) {
 function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: string; websiteId: string; assistant: Assistant }) {
   const client = useQueryClient();
   const [name, setName] = useState(assistant.settings?.name ?? t('sectionAssistant'));
-  const [model, setModel] = useState(assistant.settings?.model ?? '');
   const [enabled, setEnabled] = useState(assistant.settings?.enabled ?? false);
   const [learn, setLearn] = useState(assistant.settings?.learn ?? false);
   const save = useMutation({
-    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: model || null, enabled, learn }),
+    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), /* Chosen by whoever runs the installation: what is stored goes back as it is. */ model: assistant.settings?.model ?? null, enabled, learn }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
   });
-  const defaultLabel = assistant.models.find((m) => m.id === assistant.defaultModel)?.label ?? assistant.defaultModel;
   return (
     <section className="card space-y-3" aria-label={t('assistantSettings')}>
       <h2 className="font-medium">{t('assistantSettings')}</h2>
@@ -46,12 +44,6 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
       <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
         <label className="min-w-40 flex-1 text-sm">{t('assistantNameLabel')}
           <input className="field" required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label className="min-w-40 flex-1 text-sm">{t('assistantModel')}
-          <select className="field" value={model} onChange={(event) => setModel(event.target.value)}>
-            <option value="">{t('assistantDefaultModel', { model: defaultLabel })}</option>
-            {assistant.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-          </select>
         </label>
         <label className="flex w-full items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5" checked={enabled} disabled={!assistant.canReply && !enabled} onChange={(event) => setEnabled(event.target.checked)} aria-describedby="assistant-enabled-help" />
@@ -261,13 +253,6 @@ function TranslationCard({ workspaceId }: { workspaceId: string }) {
               <span id="translation-privacy" className={`block ${quiet}`}>{t('translationPrivacy')}</span>
             </span>
           </label>
-          <label className="block max-w-sm text-sm">
-            {t('translationModel')}
-            <select className="field" value={value.model} disabled={save.isPending} onChange={(event) => save.mutate({ ...value, model: event.target.value })} aria-describedby="translation-model-help">
-              {data.models.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-            </select>
-          </label>
-          <p id="translation-model-help" className={quiet}>{t('translationModelHelp')}</p>
           <p className={quiet}>{t('translationUsage', { count: data.usage.characters.toLocaleString(intlLocale()), limit: data.usage.limit.toLocaleString(intlLocale()) })}</p>
         </>
       )}
