@@ -1,12 +1,21 @@
 /**
- * The AI assistant, for supervisors (ADR-0022): its name, whether it answers visitors and learns, what it
- * answers from, what it has learned, and a place to try it.
+ * The AI assistant, for supervisors (ADR-0022), in tabs: an overview with its switch, what it answers from and has
+ * learned, a place to try it, its settings, and the workspace's automatic translation.
  */
 import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer } from '@openchat/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { intlLocale, t, type MessageKey } from '../i18n';
+
+type Tab = 'overview' | 'knowledge' | 'test' | 'settings' | 'translation';
+const PAGE_TABS: { tab: Tab; label: MessageKey }[] = [
+  { tab: 'overview', label: 'assistantTabOverview' },
+  { tab: 'knowledge', label: 'assistantTabKnowledge' },
+  { tab: 'test', label: 'assistantTest' },
+  { tab: 'settings', label: 'assistantSettings' },
+  { tab: 'translation', label: 'assistantTabTranslation' },
+];
 
 const READ_ERRORS: Record<string, MessageKey> = {
   unreachable: 'readUnreachable',
@@ -28,31 +37,89 @@ function Failure({ error }: { error: unknown }) {
   return error ? <p className="error" role="alert">{errorMessage(error)}</p> : null;
 }
 
+function Tile({ label, value, detail }: { label: string; value: string; detail?: string | undefined }) {
+  return (
+    <div className="card">
+      <div className={`${quiet} font-medium`}>{label}</div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+      {detail && <div className={`mt-0.5 ${quiet}`}>{detail}</div>}
+    </div>
+  );
+}
+
+/** Whether it answers visitors, with the switch, and what it has to answer from. */
+function OverviewCard({ workspaceId, websiteId, assistant, onOpen }: { workspaceId: string; websiteId: string; assistant: Assistant; onOpen: (tab: Tab) => void }) {
+  const client = useQueryClient();
+  const settings = assistant.settings;
+  const enabled = settings?.enabled ?? false;
+  const toggle = useMutation({
+    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: settings?.name ?? t('sectionAssistant'), model: settings?.model ?? null, enabled: !enabled, learn: settings?.learn ?? false }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
+  });
+  // For the whole workspace: Analytics does not count by website.
+  const month = useQuery({ queryKey: ['analytics', workspaceId, 30], queryFn: () => api.getAnalytics(workspaceId, { days: 30, utcOffsetMinutes: -new Date().getTimezoneOffset() }) });
+  const number = new Intl.NumberFormat(intlLocale());
+  const ready = assistant.sources.filter((source) => source.status === 'ready').length;
+  const empty = assistant.sources.length === 0 && assistant.helpArticles.published === 0 && assistant.learning.approved === 0;
+  return (
+    <div className="space-y-6">
+      <section className="card space-y-3" aria-label={t('assistantTabOverview')}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-48 flex-1">
+            <h2 className="font-medium">{settings?.name ?? t('sectionAssistant')}</h2>
+            <p className="flex items-center gap-2 text-sm" role="status">
+              <span className={`size-2 rounded-full ${enabled ? 'bg-green-500' : 'bg-slate-400'}`} aria-hidden="true" />
+              {t(enabled ? 'assistantOn' : 'assistantOff')}
+            </p>
+          </div>
+          <button type="button" className={enabled ? 'button-quiet' : 'button'} disabled={toggle.isPending || (!assistant.canReply && !enabled)} onClick={() => toggle.mutate()}>{t(enabled ? 'assistantTurnOff' : 'assistantTurnOn')}</button>
+        </div>
+        <Failure error={toggle.error} />
+        <p className={quiet}>{assistant.canReply || enabled ? t('assistantEnabledHelp', { count: String(assistant.limits.turnsPerConversation) }) : t('assistantCannotReply')}</p>
+        {empty && (
+          <p className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="min-w-48 flex-1">{t('assistantNeedsKnowledge')}</span>
+            <button type="button" className="button-quiet" onClick={() => onOpen('knowledge')}>{t('assistantTabKnowledge')}</button>
+          </p>
+        )}
+      </section>
+      <section className="space-y-3" aria-label={t('assistantTabKnowledge')}>
+        <h2 className="text-sm font-semibold">{t('assistantTabKnowledge')}</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Tile label={t('assistantSources')} value={`${number.format(ready)} / ${number.format(assistant.sources.length)}`} />
+          <Tile label={t('helpArticlesTile')} value={`${number.format(assistant.helpArticles.inUse)} / ${number.format(assistant.helpArticles.published)}`} />
+          <Tile label={t('learnedAnswers')} value={number.format(assistant.learning.approved)} detail={assistant.learning.pending > 0 ? t('assistantPendingReview', { count: number.format(assistant.learning.pending) }) : undefined} />
+        </div>
+      </section>
+      {month.data && month.data.assistantAnswered > 0 && (
+        <section className="space-y-3" aria-label={t('assistantLast30')}>
+          <h2 className="text-sm font-semibold">{t('assistantLast30')}</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Tile label={t('analyticsAssistant')} value={number.format(month.data.assistantAnswered)} />
+            <Tile label={t('assistantNoPerson')} value={number.format(month.data.assistantOnly)} />
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: string; websiteId: string; assistant: Assistant }) {
   const client = useQueryClient();
   const [name, setName] = useState(assistant.settings?.name ?? t('sectionAssistant'));
-  const [enabled, setEnabled] = useState(assistant.settings?.enabled ?? false);
   const [learn, setLearn] = useState(assistant.settings?.learn ?? false);
   const save = useMutation({
-    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), /* Chosen by whoever runs the installation: what is stored goes back as it is. */ model: assistant.settings?.model ?? null, enabled, learn }),
+    // The model is whoever runs the installation's choice, and answering visitors is the overview's switch: both go back as they are.
+    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: assistant.settings?.model ?? null, enabled: assistant.settings?.enabled ?? false, learn }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
   });
   return (
     <section className="card space-y-3" aria-label={t('assistantSettings')}>
       <h2 className="font-medium">{t('assistantSettings')}</h2>
       <Failure error={save.error} />
-      <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
-        <label className="min-w-40 flex-1 text-sm">{t('assistantNameLabel')}
+      <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+        <label className="block max-w-sm text-sm">{t('assistantNameLabel')}
           <input className="field" required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label className="flex w-full items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-0.5" checked={enabled} disabled={!assistant.canReply && !enabled} onChange={(event) => setEnabled(event.target.checked)} aria-describedby="assistant-enabled-help" />
-          <span>
-            <span className="font-medium">{t('assistantEnabled')}</span>
-            <span id="assistant-enabled-help" className={`block ${quiet}`}>
-              {assistant.canReply ? t('assistantEnabledHelp', { count: String(assistant.limits.turnsPerConversation) }) : t('assistantCannotReply')}
-            </span>
-          </span>
         </label>
         <label className="flex w-full items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5" checked={learn} onChange={(event) => setLearn(event.target.checked)} aria-describedby="assistant-learn-help" />
@@ -90,11 +157,12 @@ function SourcesCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const addPage = useMutation({ mutationFn: () => api.addAssistantSource(workspaceId, websiteId, { kind: 'page', url: url.trim() }), onSuccess: () => { setUrl(''); void refresh(); } });
-  const addText = useMutation({ mutationFn: () => api.addAssistantSource(workspaceId, websiteId, { kind: 'text', title: title.trim(), content }), onSuccess: () => { setTitle(''); setContent(''); void refresh(); } });
+  const addPage = useMutation({ mutationFn: () => api.addAssistantSource(workspaceId, websiteId, { kind: 'page', url: url.trim() }), onSuccess: () => { setUrl(''); setAdding(null); void refresh(); } });
+  const addText = useMutation({ mutationFn: () => api.addAssistantSource(workspaceId, websiteId, { kind: 'text', title: title.trim(), content }), onSuccess: () => { setTitle(''); setContent(''); setAdding(null); void refresh(); } });
   const reread = useMutation({ mutationFn: (source: AssistantSource) => api.updateAssistantSource(workspaceId, source.id), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (source: AssistantSource) => api.deleteAssistantSource(workspaceId, source.id), onSuccess: refresh });
   const full = assistant.sources.length >= assistant.limits.sourcesPerWebsite;
+  const [adding, setAdding] = useState<'page' | 'text' | null>(null);
   return (
     <section className="card space-y-3" aria-label={t('assistantSources')}>
       <h2 className="font-medium">{t('assistantSources')}</h2>
@@ -119,24 +187,34 @@ function SourcesCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
           {t(assistant.settings ? 'helpArticlesInUse' : 'helpArticlesNeedSettings', { inUse: String(assistant.helpArticles.inUse), published: String(assistant.helpArticles.published) })}
         </p>
       )}
-      {!full && (
-        <>
-          <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); addPage.mutate(); }}>
-            <label className="min-w-48 flex-1 text-sm">{t('pageAddress')}
-              <input className="field" type="url" required maxLength={2000} placeholder="https://" value={url} onChange={(event) => setUrl(event.target.value)} />
-            </label>
-            <button className="button" disabled={addPage.isPending}>{t('addPage')}</button>
-          </form>
-          <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); addText.mutate(); }}>
-            <label className="block text-sm">{t('sourceTitle')}
-              <input className="field" required maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} />
-            </label>
-            <label className="block text-sm">{t('sourceText')}
-              <textarea className="field min-h-28" required maxLength={assistant.limits.textSourceChars} value={content} onChange={(event) => setContent(event.target.value)} />
-            </label>
+      {!full && adding === null && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="button" onClick={() => setAdding('page')}>{t('addPage')}</button>
+          <button type="button" className="button-quiet" onClick={() => setAdding('text')}>{t('addText')}</button>
+        </div>
+      )}
+      {!full && adding === 'page' && (
+        <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); addPage.mutate(); }}>
+          <label className="min-w-48 flex-1 text-sm">{t('pageAddress')}
+            <input className="field" type="url" required autoFocus maxLength={2000} placeholder="https://" value={url} onChange={(event) => setUrl(event.target.value)} />
+          </label>
+          <button className="button" disabled={addPage.isPending}>{t('addPage')}</button>
+          <button type="button" className="button-quiet" onClick={() => setAdding(null)}>{t('cancel')}</button>
+        </form>
+      )}
+      {!full && adding === 'text' && (
+        <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); addText.mutate(); }}>
+          <label className="block text-sm">{t('sourceTitle')}
+            <input className="field" required autoFocus maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="block text-sm">{t('sourceText')}
+            <textarea className="field min-h-28" required maxLength={assistant.limits.textSourceChars} value={content} onChange={(event) => setContent(event.target.value)} />
+          </label>
+          <div className="flex flex-wrap gap-2">
             <button className="button" disabled={addText.isPending}>{t('addText')}</button>
-          </form>
-        </>
+            <button type="button" className="button-quiet" onClick={() => setAdding(null)}>{t('cancel')}</button>
+          </div>
+        </form>
       )}
     </section>
   );
@@ -308,6 +386,7 @@ function TestCard({ workspaceId, websiteId }: { workspaceId: string; websiteId: 
 export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: string; isSupervisor: boolean }) {
   const websites = useQuery({ queryKey: ['websites', workspaceId], queryFn: () => api.listWebsites(workspaceId), enabled: isSupervisor });
   const [websiteId, setWebsiteId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('overview');
   const current = websites.data?.data.find((w) => w.id === websiteId) ?? websites.data?.data[0];
   useEffect(() => setWebsiteId(null), [workspaceId]);
   const assistant = useQuery({
@@ -322,29 +401,59 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
     },
   });
   if (!isSupervisor) return <p className="card text-sm">{t('supervisorAssistant')}</p>;
+  const data = assistant.data;
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600 dark:text-slate-400">{t('assistantIntro')}</p>
-      <TranslationCard workspaceId={workspaceId} />
-      <Failure error={websites.error ?? assistant.error} />
-      {websites.data?.data.length === 0 && <p className="card text-sm">{t('noWebsitesMember')}</p>}
-      {websites.data && websites.data.data.length > 1 && current && (
-        <label className="block max-w-sm text-sm">{t('assistantWebsite')}
-          <select className="field" value={current.id} onChange={(event) => setWebsiteId(event.target.value)}>
-            {websites.data.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        </label>
-      )}
-      {assistant.data && current && !assistant.data.available && <p className="card text-sm">{t('assistantUnavailable')}</p>}
-      {assistant.data && current && assistant.data.available && (
-        // Keyed, so that the forms start fresh for each website.
-        <div key={current.id} className="space-y-6">
-          <SettingsCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
-          <SourcesCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
-          <LearnedCard workspaceId={workspaceId} websiteId={current.id} assistant={assistant.data} />
-          <TestCard workspaceId={workspaceId} websiteId={current.id} />
-        </div>
-      )}
+      <div role="tablist" aria-label={t('sectionAssistant')} className="flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
+        {PAGE_TABS.map((item) => (
+          <button
+            key={item.tab}
+            type="button"
+            role="tab"
+            id={`assistant-tab-${item.tab}`}
+            aria-selected={tab === item.tab}
+            aria-controls="assistant-panel"
+            className={`-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm font-medium ${tab === item.tab ? 'border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300' : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'}`}
+            onClick={() => setTab(item.tab)}
+          >
+            {t(item.label)}
+            {item.tab === 'knowledge' && data && data.learning.pending > 0 && <span className="ml-2 rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">{data.learning.pending}</span>}
+          </button>
+        ))}
+      </div>
+      <div id="assistant-panel" role="tabpanel" aria-labelledby={`assistant-tab-${tab}`} className="space-y-6">
+        {tab === 'translation' ? (
+          <TranslationCard workspaceId={workspaceId} />
+        ) : (
+          <>
+            <Failure error={websites.error ?? assistant.error} />
+            {websites.data?.data.length === 0 && <p className="card text-sm">{t('noWebsitesMember')}</p>}
+            {websites.data && websites.data.data.length > 1 && current && (
+              <label className="block max-w-sm text-sm">{t('assistantWebsite')}
+                <select className="field" value={current.id} onChange={(event) => setWebsiteId(event.target.value)}>
+                  {websites.data.data.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              </label>
+            )}
+            {data && current && !data.available && <p className="card text-sm">{t('assistantUnavailable')}</p>}
+            {data && current && data.available && (
+              // Keyed, so that the forms start fresh for each website.
+              <div key={current.id} className="space-y-6">
+                {tab === 'overview' && <OverviewCard workspaceId={workspaceId} websiteId={current.id} assistant={data} onOpen={setTab} />}
+                {tab === 'knowledge' && (
+                  <>
+                    <SourcesCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />
+                    <LearnedCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />
+                  </>
+                )}
+                {tab === 'test' && <TestCard workspaceId={workspaceId} websiteId={current.id} />}
+                {tab === 'settings' && <SettingsCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -517,3 +517,37 @@ test('the Analytics page counts a conversation and its reply, for supervisors on
   await expect(agent.getByText('Analytics are for supervisors.')).toBeVisible();
   await context.close();
 });
+
+test('the mark opens the dashboard, and the member’s initials their settings', async ({ page }) => {
+  const visitor = await startVisitor('Is anyone there?');
+  await signIn(page, OWNER);
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: `Hello, ${OWNER.name}` })).toBeVisible();
+  const now = page.getByRole('region', { name: 'In the inbox now' });
+  // At least the conversation just started is open.
+  await expect(now.getByRole('button', { name: /^Open [1-9]/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Last 7 days' }).getByRole('button', { name: /^Conversations [1-9]/ })).toBeVisible();
+  await now.getByRole('button', { name: /^Open [1-9]/ }).click();
+  await expect(page).toHaveURL(/\/inbox$/);
+  await expect(row(page, visitor)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  const profile = page.getByRole('region', { name: 'Profile' });
+  await expect(profile).toContainText(OWNER.email);
+  await expect(profile).toContainText('Supervisor');
+  // Away here is the same switch as on the Members page.
+  const away = page.getByRole('region', { name: 'Your availability' }).getByLabel('Away');
+  await away.check();
+  await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Members', exact: true }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: OWNER.email }).getByLabel('Away')).toBeChecked();
+  await page.getByRole('listitem').filter({ hasText: OWNER.email }).getByLabel('Away').uncheck();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(away).not.toBeChecked();
+  await page.getByRole('region', { name: 'Password' }).getByRole('button', { name: 'Email me a link' }).click();
+  await expect(page.getByRole('region', { name: 'Password' }).getByRole('status')).toContainText(OWNER.email);
+  // A reload keeps the page.
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Profile' })).toBeVisible();
+});

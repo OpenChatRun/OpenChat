@@ -70,10 +70,12 @@ Email has to be set up when OpenChat is deployed; see the [self-hosting guide](.
 
 ## The AI assistant
 
-If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard.
+If your installation was deployed with it, a supervisor finds **Assistant** in the dashboard. The page has five tabs: **Overview**, **Knowledge**, **Try it**, **Settings** and **Translation**.
 
-- **Settings**: the name visitors will see, **Answer visitors**, and **Learn from resolved conversations**. The model is chosen by whoever runs the installation, not in the dashboard.
-- **Sources**: what it answers from, with your help centre's articles and approved learned answers, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
+- **Overview**: whether it answers visitors, with **Turn on** and **Turn off**, how many sources, help articles and learned answers it has, and, for the last 30 days across the workspace, how many conversations it answered and how many of those no person answered.
+
+- **Settings**: the name visitors will see, and **Learn from resolved conversations**. The model is chosen by whoever runs the installation, not in the dashboard.
+- **Knowledge**, under **Sources**: what it answers from, with your help centre's articles and approved learned answers, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
 - **Help centre**: published articles of your help centre are a source too, as soon as you save the settings, with a link to the article. Drafts never are. Unpublishing or deleting an article takes it out at once; a change is read again within a minute or two.
 - **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
 
@@ -107,7 +109,7 @@ Visitors search titles, summaries and text. Search ignores capitals and accents,
 
 ## Automatic translation
 
-If your installation has Workers AI, a supervisor can turn on **Automatic translation**, at the top of the **Assistant** page. Each visitor's message is then translated into the language each team member uses the dashboard in, and shown with **Translated from …** and **Show original**. A member whose language was not covered can choose **Translate**. Replies written in the dashboard are translated into the visitor's language with the assistant's text model, Llama 3.3 unless your installation chose another, and labelled for the visitor. Internal notes are never translated.
+If your installation has Workers AI, a supervisor can turn on **Automatic translation**, on the **Translation** tab of the **Assistant** page. Each visitor's message is then translated into the language each team member uses the dashboard in, and shown with **Translated from …** and **Show original**. A member whose language was not covered can choose **Translate**. Replies written in the dashboard are translated into the visitor's language with the assistant's text model, Llama 3.3 unless your installation chose another, and labelled for the visitor. Internal notes are never translated.
 
 Every visitor message in the workspace is then sent to Workers AI, so check that your privacy notice covers it. The model is chosen by whoever runs the installation, not in the dashboard. **M2M100**, the default, only translates, so a visitor cannot steer it. Turning translation on or off is recorded in the audit log. A workspace can translate 200,000 characters a day by default; after that, members see the originals until the next day (UTC).
 

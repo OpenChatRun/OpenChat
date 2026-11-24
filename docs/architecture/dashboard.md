@@ -6,7 +6,7 @@ The team inbox and its settings pages, in `apps/dashboard`: a React single-page 
 
 The dashboard speaks the same languages as the [widget](widget.md#languages) and the iPhone app: English, Spanish, French, German, Italian, Portuguese, Dutch, Japanese, Korean, Simplified Chinese, and Traditional Chinese. It chooses:
 
-1. The language picked in the dashboard, under the sign-in card or in the header. It is kept in this browser (`openchat.language` in local storage) and, when signed in, in the account (`users.language`), because it is the language translation is into ([ADR-0024](decisions/0024-automatic-translation.md)). A browser that has never been given one takes the account's at sign-in. Otherwise, at sign-in the account is told the language this browser shows, so the device used last wins.
+1. The language picked in the dashboard, under the sign-in card or, signed in, in Settings. It is kept in this browser (`openchat.language` in local storage) and, when signed in, in the account (`users.language`), because it is the language translation is into ([ADR-0024](decisions/0024-automatic-translation.md)). A browser that has never been given one takes the account's at sign-in. Otherwise, at sign-in the account is told the language this browser shows, so the device used last wins.
 2. The browser's languages, in order. Tags match as they do for the widget, so `zh-HK` is Traditional Chinese.
 3. English.
 

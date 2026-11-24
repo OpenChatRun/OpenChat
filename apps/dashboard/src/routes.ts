@@ -8,6 +8,7 @@ import { useSyncExternalStore } from 'react';
  * The workspace is not in the address: it stays the one this browser remembers.
  */
 export const SECTION_PATHS = {
+  home: '/dashboard',
   inbox: '/inbox',
   contacts: '/contacts',
   analytics: '/analytics',
@@ -16,6 +17,7 @@ export const SECTION_PATHS = {
   email: '/email',
   assistant: '/assistant',
   help: '/help-centre',
+  settings: '/settings',
 } as const;
 export const ADMIN_PATHS = {
   people: '/admin/people',
