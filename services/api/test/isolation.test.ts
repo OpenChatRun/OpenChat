@@ -92,6 +92,7 @@ const CASES: Record<string, Case> = {
   sendVisitorMessage: { kind: 'visitor', body: { clientMessageId: 'isolation-3', content: 'Taken over' }, ownerStatus: 201 },
   markVisitorConversationRead: { kind: 'visitor', body: { deliveredSeq: 0, readSeq: 0 }, ownerStatus: 204 },
   setVisitorPage: { kind: 'visitor', body: { url: 'https://site-a.example/pricing' }, ownerStatus: 204 },
+  listContacts: { kind: 'workspace', ownerStatus: 200 },
   getContact: { kind: 'workspace', ownerStatus: 200 },
   updateContact: { kind: 'workspace', body: { name: 'Taken over' }, ownerStatus: 200 },
   // The owner here is a supervisor, not an installation admin. contact-privacy.test.ts covers an admin.

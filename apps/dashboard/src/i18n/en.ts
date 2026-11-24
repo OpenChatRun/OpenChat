@@ -501,6 +501,11 @@ export const en = {
   savedReplyText: 'Reply text',
   save: 'Save',
   cancel: 'Cancel',
+  sectionContacts: 'Contacts',
+  noContactsYet: 'Nobody has written yet. A visitor appears here after their first message.',
+  contactConversationsOne: '{count} conversation',
+  contactConversationsOther: '{count} conversations',
+  contactLastActive: 'Last active {when}',
 };
 
 export type Messages = Record<keyof typeof en, string>;

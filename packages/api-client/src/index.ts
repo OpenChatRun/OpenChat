@@ -17,6 +17,7 @@ import type {
   getInboxSummaryRoute,
   getMeRoute,
   listConversationsRoute,
+  listContactsRoute,
   listMembersRoute,
   listMessagesRoute,
   listWebsitesRoute,
@@ -116,6 +117,8 @@ export type Attachment = z.infer<typeof AttachmentSchema>;
 export type RealtimeTicket = Json201<typeof createAgentTicketRoute>;
 export type Tag = Json201<typeof createTagRoute>;
 export type Contact = Json200<typeof getContactRoute>;
+export type ContactPage = Json200<typeof listContactsRoute>;
+export type ContactListItem = ContactPage['data'][number];
 export type ContactUpdate = BodyOf<typeof updateContactRoute>;
 export type ContactExport = Json200<typeof exportContactRoute>;
 
@@ -230,6 +233,8 @@ export function createClient(options: ClientOptions) {
 
     listConversations: (workspaceId: string, input: { status: Conversation['status']; assignee?: string | undefined; q?: string | undefined; cursor?: string | undefined }) =>
       get<ConversationPage>(`${workspace(workspaceId)}/conversations${query({ ...input, limit: 50 })}`),
+    listContacts: (workspaceId: string, input: { q?: string | undefined; cursor?: string | undefined; limit?: number | undefined } = {}) =>
+      get<ContactPage>(`${workspace(workspaceId)}/contacts${query({ limit: 50, ...input })}`),
     getConversation: (workspaceId: string, id: string) => get<Conversation>(conversation(workspaceId, id)),
     updateConversation: (workspaceId: string, id: string, input: ConversationUpdate) => request<Conversation>('PATCH', conversation(workspaceId, id), input),
     listMessages: (workspaceId: string, id: string, input: { afterSeq?: number | undefined; beforeSeq?: number | undefined } = {}) =>

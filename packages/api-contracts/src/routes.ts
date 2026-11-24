@@ -1130,6 +1130,36 @@ export const ContactSchema = z
   })
   .openapi('Contact');
 
+export const listContactsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/contacts',
+  tags: ['conversations'],
+  operationId: 'listContacts',
+  summary: 'Contacts who have a conversation, the most recently active first',
+  security: bearer,
+  request: {
+    params: workspaceParams,
+    query: PaginationQuery.extend({
+      q: z.string().trim().min(1).max(254).optional().openapi({ description: 'Only contacts whose name or email contains this, ignoring case for the letters A to Z.' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Contacts',
+      ...json(
+        page(
+          ContactSchema.extend({
+            conversationCount: z.number().int(),
+            lastConversationId: z.string().openapi({ description: 'The conversation of theirs that changed last.' }),
+            lastActivityAt: z.string().openapi({ description: 'When that conversation last changed, by a message or otherwise.' }),
+          }).openapi('ContactListItem'),
+        ),
+      ),
+    },
+    default: problemResponse,
+  },
+});
+
 export const getContactRoute = createRoute({
   method: 'get',
   path: '/api/v1/workspaces/{workspaceId}/contacts/{contactId}',

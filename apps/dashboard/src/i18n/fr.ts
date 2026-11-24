@@ -489,4 +489,9 @@ export const fr: Messages = {
   savedReplyText: 'Texte de la réponse',
   save: 'Enregistrer',
   cancel: 'Annuler',
+  sectionContacts: 'Contacts',
+  noContactsYet: 'Personne n’a encore écrit. Un visiteur apparaît ici après son premier message.',
+  contactConversationsOne: '{count} conversation',
+  contactConversationsOther: '{count} conversations',
+  contactLastActive: 'Dernière activité : {when}',
 };

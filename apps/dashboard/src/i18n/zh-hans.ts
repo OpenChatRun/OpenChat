@@ -489,4 +489,9 @@ export const zhHans: Messages = {
   savedReplyText: '回复内容',
   save: '保存',
   cancel: '取消',
+  sectionContacts: '联系人',
+  noContactsYet: '还没有人发来消息。访客发送第一条消息后会显示在这里。',
+  contactConversationsOne: '{count} 个对话',
+  contactConversationsOther: '{count} 个对话',
+  contactLastActive: '最近活动：{when}',
 };

@@ -1558,6 +1558,34 @@
           }
         ]
       },
+      "ContactListItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Contact"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "conversationCount": {
+                "type": "integer"
+              },
+              "lastConversationId": {
+                "type": "string",
+                "description": "The conversation of theirs that changed last."
+              },
+              "lastActivityAt": {
+                "type": "string",
+                "description": "When that conversation last changed, by a message or otherwise."
+              }
+            },
+            "required": [
+              "conversationCount",
+              "lastConversationId",
+              "lastActivityAt"
+            ]
+          }
+        ]
+      },
       "Contact": {
         "type": "object",
         "properties": {
@@ -4611,6 +4639,101 @@
     "parameters": {}
   },
   "paths": {
+    "/api/v1/workspaces/{workspaceId}/contacts": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "operationId": "listContacts",
+        "summary": "Contacts who have a conversation, the most recently active first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 254,
+              "description": "Only contacts whose name or email contains this, ignoring case for the letters A to Z."
+            },
+            "required": false,
+            "description": "Only contacts whose name or email contains this, ignoring case for the letters A to Z.",
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ContactListItem"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "nextCursor"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/contacts/{contactId}": {
       "get": {
         "tags": [

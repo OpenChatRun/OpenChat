@@ -140,6 +140,13 @@ export interface ContactRow {
   lastSeenAt: number;
 }
 
+/** A contact as the Contacts page lists it: with the conversation that changed last, and how many there are. */
+export interface ContactListRow extends ContactRow {
+  conversationCount: number;
+  lastConversationId: string;
+  lastActivityAt: number;
+}
+
 export interface ContactExportRows {
   contact: ContactRow & { attributesJson: string | null; followUpConsentAt: number | null; followUpConsentSource: string | null; createdAt: number };
   tags: string[];
@@ -278,6 +285,33 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
     contacts: {
       get(contactId: string): Promise<ContactRow | null> {
         return d1.prepare(`${CONTACT_SELECT} WHERE workspace_id = ?1 AND id = ?2`).bind(w, contactId).first<ContactRow>();
+      },
+      /**
+       * Contacts who have a conversation, the one whose conversation changed last first. It walks the conversations by
+       * their last change and keeps each contact's newest, so a page costs about a page of rows however many there are.
+       * A browser that never wrote is a contact too, with no conversation, and is not listed.
+       */
+      async list(filter: { q?: string | undefined; before?: { at: number; id: string } | undefined; limit: number }): Promise<ContactListRow[]> {
+        // The + keeps SQLite from using an index on updated_at for a contact's other conversations, so that it looks
+        // them up by contact. Without it, it walked every newer conversation in the workspace for each row.
+        const before = filter.before ? 'AND (c.updated_at, c.id) < (?3, ?4)' : '';
+        // instr, unlike LIKE, gives no meaning to % or _ in what a member types.
+        const q = filter.q ? `AND (instr(lower(COALESCE(k.name, '')), ?5) > 0 OR instr(lower(COALESCE(k.email, '')), ?5) > 0)` : '';
+        const { results } = await d1
+          .prepare(
+            `SELECT k.id, k.name, k.email, k.phone, k.first_seen_at AS firstSeenAt, k.last_seen_at AS lastSeenAt,
+                    c.id AS lastConversationId, c.updated_at AS lastActivityAt,
+                    (SELECT COUNT(*) FROM conversations n WHERE n.workspace_id = c.workspace_id AND n.contact_id = c.contact_id) AS conversationCount
+               FROM conversations c
+               JOIN contacts k ON k.workspace_id = c.workspace_id AND k.id = c.contact_id
+              WHERE c.workspace_id = ?1 ${before} ${q}
+                AND NOT EXISTS (SELECT 1 FROM conversations o WHERE o.workspace_id = c.workspace_id AND o.contact_id = c.contact_id
+                                 AND (+o.updated_at > c.updated_at OR (+o.updated_at = c.updated_at AND o.id > c.id)))
+              ORDER BY c.updated_at DESC, c.id DESC LIMIT ?2`,
+          )
+          .bind(w, filter.limit, ...(filter.before ? [filter.before.at, filter.before.id] : filter.q ? [null, null] : []), ...(filter.q ? [filter.q] : []))
+          .all<ContactListRow>();
+        return results;
       },
       /** Undefined leaves a field alone, and null clears it. Consent was given for one address, so a different one loses it. */
       async update(contactId: string, change: { name?: string | null | undefined; email?: string | null | undefined; phone?: string | null | undefined }): Promise<boolean> {

@@ -489,4 +489,9 @@ export const nl: Messages = {
   savedReplyText: 'Antwoordtekst',
   save: 'Opslaan',
   cancel: 'Annuleren',
+  sectionContacts: 'Contacten',
+  noContactsYet: 'Er heeft nog niemand geschreven. Een bezoeker verschijnt hier na het eerste bericht.',
+  contactConversationsOne: '{count} gesprek',
+  contactConversationsOther: '{count} gesprekken',
+  contactLastActive: 'Laatst actief: {when}',
 };

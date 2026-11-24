@@ -5,6 +5,7 @@ import { api, errorMessage, preference, queryClient, session } from '../app-cont
 import { InboxPanel } from '../inbox/inbox-panel';
 import { FollowUpRulesPanel, SuppressionsPanel } from './email-panels';
 import { AssistantPage } from './assistant-page';
+import { ContactsPage } from './contacts-page';
 import { HelpPage } from './help-page';
 import { AuditLogPage } from './audit-log-page';
 import { FailedJobsPage } from './failed-jobs-page';
@@ -113,6 +114,7 @@ const WORKSPACE_PREFERENCE = 'openchat.workspace';
 
 const SECTIONS = [
   ['inbox', 'sectionInbox', 'inbox'],
+  ['contacts', 'sectionContacts', 'contacts'],
   ['websites', 'sectionWebsites', 'websites'],
   ['members', 'sectionMembers', 'members'],
   ['email', 'sectionEmail', 'email'],
@@ -212,7 +214,7 @@ export function WorkspaceApp() {
           {current && !adminPage && (
             // The key gives each workspace fresh component state, so nothing typed in one appears in another.
             <div key={current.workspace.id}>
-              {tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
+              {tab === 'inbox' ? <InboxWithMembers membership={current} conversationId={route.conversationId} /> : tab === 'contacts' ? <ContactsPage workspaceId={current.workspace.id} /> : tab === 'websites' ? <WebsitesPanel membership={current} /> : tab === 'email' ? <EmailPanels workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'assistant' ? <AssistantPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : tab === 'help' ? <HelpPage workspaceId={current.workspace.id} isSupervisor={current.role === 'supervisor'} /> : <MembersPanel membership={current} />}
             </div>
           )}
         </main>
