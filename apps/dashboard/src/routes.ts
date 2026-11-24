@@ -10,6 +10,7 @@ import { useSyncExternalStore } from 'react';
 export const SECTION_PATHS = {
   inbox: '/inbox',
   contacts: '/contacts',
+  analytics: '/analytics',
   websites: '/websites',
   members: '/members',
   email: '/email',

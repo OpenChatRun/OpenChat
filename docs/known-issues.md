@@ -85,6 +85,7 @@ To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenCh
 - **The dashboard does not show a visitor's read position.** The API gives it, as `visitorReadSeq`, which the apps use.
 - **Away is a switch, with no schedule.** A member who forgets to turn it off stays away, and the widget takes up to 30 seconds to follow a change.
 - **The visitor's page follows them with a delay**, of up to 3 seconds in the widget and 20 in the dashboard, because no event announces it. Only the current page is kept, and nothing before the visitor's first message. The phone apps do not show it.
+- **Analytics are a first set of numbers.** There are no ratings from visitors, no time to resolve, no filter by website, member or tag, no comparison with the period before, and no export. Days use one clock offset for the whole period, so a clock change inside it moves that day's boundary by an hour. A period with more than 10,000 conversations counts the first 10,000, and says so. The phone apps do not have it.
 - **Saved replies are plain text.** They hold no placeholders such as the visitor's name, no files, and no folders, and each belongs to one workspace. The phone apps show them from their next release.
 
 ## Email

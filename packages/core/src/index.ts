@@ -33,6 +33,7 @@ export * from './email-templates';
 export * from './email-consent';
 export * from './follow-ups';
 export * from './saved-replies';
+export * from './analytics';
 export * from './admin';
 export * from './messaging';
 export * from './widget';

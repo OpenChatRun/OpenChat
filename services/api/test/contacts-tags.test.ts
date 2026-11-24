@@ -41,7 +41,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await env.DB.batch(['outbox', 'conversation_events', 'conversation_tags', 'tags', 'conversations', 'contacts', 'websites', 'workspace_members', 'auth_sessions', 'workspaces', 'users', 'installation'].map((t) => env.DB.prepare(`DELETE FROM ${t}`)));
+  await env.DB.batch(['outbox', 'conversation_events', 'conversation_tags', 'tags', 'messages', 'conversations', 'contacts', 'websites', 'workspace_members', 'auth_sessions', 'workspaces', 'users', 'installation'].map((t) => env.DB.prepare(`DELETE FROM ${t}`)));
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO installation (id, name, public_base_url, created_at, updated_at) VALUES ('inst_test', 'Test', '${ORIGIN}', 1, 1)`),
     env.DB.prepare(`INSERT INTO workspaces (id, name, slug, created_at, updated_at) VALUES ('work_1', 'One', 'one', 1, 1), ('work_2', 'Two', 'two', 1, 1)`),
@@ -124,6 +124,68 @@ describe('the contact list', () => {
     await env.DB.batch([env.DB.prepare(`INSERT INTO websites (id, workspace_id, name, website_key, created_at, updated_at) VALUES ('site_2', 'work_2', 'Other', 'key_2', 1, 1)`), env.DB.prepare(`INSERT INTO contacts (id, workspace_id, name, first_seen_at, last_seen_at, created_at, updated_at) VALUES ('cont_far', 'work_2', 'Far', 1, 1, 1, 1)`), env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, last_message_at, created_at, updated_at) VALUES ('conv_far', 'work_2', 'site_2', 'cont_far', 9, 1, 9)`)]);
     expect((await list()).data.map((c) => c.id)).toEqual(['cont_1']);
     expect((await call('GET', '/api/v1/workspaces/work_2/contacts', agent)).status).toBe(404);
+  });
+});
+
+describe('analytics', () => {
+  const HOUR = 3_600_000;
+  const DAY = 24 * HOUR;
+  type Analytics = { truncated: boolean; started: number; replied: number; resolved: number; medianFirstReplySeconds: number | null; assistantAnswered: number; assistantOnly: number; days: { date: string; started: number }[]; members: { memberId: string; replies: number; conversations: number }[] };
+  const get = async (query = '', token = owner) => json<Analytics>(await call('GET', `${W}/analytics${query}`, token));
+  let seq = 0;
+  const conversation = (id: string, at: number, status = 'open') =>
+    env.DB.prepare(`INSERT INTO conversations (id, workspace_id, website_id, contact_id, status, last_message_at, created_at, updated_at) VALUES (?1, 'work_1', 'site_1', 'cont_1', ?2, ?3, ?3, ?3)`).bind(id, status, at);
+  const message = (conv: string, at: number, sender: 'visitor' | 'member' | 'assistant' | 'note', member = 'mem_a') => {
+    seq += 1;
+    const note = sender === 'note';
+    return env.DB.prepare(
+      `INSERT INTO messages (id, workspace_id, conversation_id, seq, public_seq, sender_type, sender_id, message_type, visibility, content, assistant_id, created_at)
+       VALUES (?1, 'work_1', ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'x', ?9, ?10)`,
+    ).bind(`msg_an${seq}`, conv, seq, note ? null : seq, sender === 'visitor' ? 'visitor' : sender === 'assistant' ? 'system' : 'member', sender === 'member' || note ? member : null, note ? 'internal_note' : 'text', note ? 'internal' : 'public', sender === 'assistant' ? 'asst_1' : null, at);
+  };
+
+  it('counts the conversations started in the period, and what became of them', async () => {
+    const now = Date.now();
+    await env.DB.prepare(`DELETE FROM messages`).run();
+    await env.DB.batch([
+      // Answered by a person after 60 s and again later, and resolved.
+      conversation('conv_a1', now - 2 * HOUR, 'resolved'), message('conv_a1', now - 2 * HOUR, 'visitor'), message('conv_a1', now - 2 * HOUR + 60_000, 'member'), message('conv_a1', now - HOUR, 'member'),
+      // A note is not an answer. Then the owner answers after 180 s.
+      conversation('conv_a2', now - 3 * HOUR), message('conv_a2', now - 3 * HOUR + 1000, 'note'), message('conv_a2', now - 3 * HOUR + 180_000, 'member', 'mem_o'),
+      // Only the assistant answered.
+      conversation('conv_a3', now - 4 * HOUR, 'archived'), message('conv_a3', now - 4 * HOUR + 2000, 'assistant'),
+      // The assistant, then a person after 300 s.
+      conversation('conv_a4', now - 5 * HOUR), message('conv_a4', now - 5 * HOUR + 2000, 'assistant'), message('conv_a4', now - 5 * HOUR + 300_000, 'member'),
+      // Before the period.
+      conversation('conv_old', now - 40 * DAY, 'resolved'), message('conv_old', now - 40 * DAY + 5000, 'member'),
+    ]);
+    // 30 days, so that the hours above cannot fall before the first day. conv_1, from the setup, is from 1970.
+    const result = await get('?days=30');
+    expect(result).toMatchObject({ truncated: false, started: 4, replied: 3, resolved: 2, medianFirstReplySeconds: 180, assistantAnswered: 2, assistantOnly: 1 });
+    expect(result.members).toEqual([{ memberId: 'mem_a', replies: 3, conversations: 2 }, { memberId: 'mem_o', replies: 1, conversations: 1 }]);
+    expect(result.days).toHaveLength(30);
+    expect(result.days.reduce((sum, day) => sum + day.started, 0)).toBe(4);
+    expect((await get('?days=90')).started).toBe(5);
+  });
+
+  it("puts a conversation on the viewer's day, not UTC's", async () => {
+    // 23:30 UTC yesterday is today for someone two hours ahead.
+    const midnight = Math.floor(Date.now() / DAY) * DAY;
+    await conversation('conv_late', midnight - HOUR / 2).run();
+    const utc = await get('?days=2');
+    expect(utc.days.map((day) => day.started)).toEqual([1, 0]);
+    expect(utc.days[1]!.date).toBe(new Date(midnight).toISOString().slice(0, 10));
+    const ahead = await get('?days=1&utcOffsetMinutes=120');
+    // Unless it is before 02:00 UTC, when their today began after it.
+    if (Date.now() - midnight >= 2 * HOUR) expect(ahead.days.map((day) => day.started)).toEqual([1]);
+    expect((await get('?days=1')).started).toBe(0);
+  });
+
+  it('answers with nothing for an empty period, and is for supervisors', async () => {
+    expect(await get('?days=7')).toMatchObject({ started: 0, replied: 0, medianFirstReplySeconds: null, members: [] });
+    expect((await call('GET', `${W}/analytics`, agent)).status).toBe(403);
+    expect((await call('GET', `${W}/analytics?days=91`, owner)).status).toBe(400);
+    expect((await call('GET', `${W}/analytics?utcOffsetMinutes=900`, owner)).status).toBe(400);
   });
 });
 

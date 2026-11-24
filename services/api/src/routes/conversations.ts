@@ -1,5 +1,5 @@
-import { downloadAttachmentRoute, uploadAttachmentRoute, createAgentTicketRoute, createTagRoute, deleteTagRoute, listContactsRoute, getContactRoute, exportContactRoute, eraseContactRoute, listTagsRoute, setConversationTagsRoute, updateContactRoute, getConversationRoute, listConversationsRoute, listMessagesRoute, markConversationReadRoute, sendMessageRoute, updateConversationRoute, getTranslationSettingsRoute, updateTranslationSettingsRoute, translateMessageRoute } from '@openchat/api-contracts';
-import { agentAttachment, beginAgentUpload, createAgentTicket, createTag, deleteTag, listContacts, getContact, exportContact, eraseContact, listTags, setConversationTags, updateContact, getConversation, listConversations, listMessages, markConversationRead, sendMessage, updateConversation, workspaceContext, getTranslationSettings, saveTranslationSettings, translateMessageOnRequest } from '@openchat/core';
+import { downloadAttachmentRoute, uploadAttachmentRoute, createAgentTicketRoute, createTagRoute, deleteTagRoute, getAnalyticsRoute, listContactsRoute, getContactRoute, exportContactRoute, eraseContactRoute, listTagsRoute, setConversationTagsRoute, updateContactRoute, getConversationRoute, listConversationsRoute, listMessagesRoute, markConversationReadRoute, sendMessageRoute, updateConversationRoute, getTranslationSettingsRoute, updateTranslationSettingsRoute, translateMessageRoute } from '@openchat/api-contracts';
+import { agentAttachment, beginAgentUpload, createAgentTicket, createTag, deleteTag, getAnalytics, listContacts, getContact, exportContact, eraseContact, listTags, setConversationTags, updateContact, getConversation, listConversations, listMessages, markConversationRead, sendMessage, updateConversation, workspaceContext, getTranslationSettings, saveTranslationSettings, translateMessageOnRequest } from '@openchat/core';
 import type { Context } from 'hono';
 import { authDeps, type App, type AppEnv } from '../context';
 import { receiveUpload, sendFile } from '../attachments';
@@ -32,6 +32,11 @@ export function registerConversationRoutes(app: App) {
   app.openapi(listConversationsRoute, async (c) => {
     const { db, ctx } = await scoped(c, c.req.valid('param').workspaceId);
     return c.json(await listConversations(db, ctx, c.req.valid('query')), 200);
+  });
+
+  app.openapi(getAnalyticsRoute, async (c) => {
+    const { db, ctx } = await scoped(c, c.req.valid('param').workspaceId);
+    return c.json(await getAnalytics(db, ctx, c.req.valid('query')), 200);
   });
 
   app.openapi(listContactsRoute, async (c) => {

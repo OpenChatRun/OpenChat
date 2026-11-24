@@ -1130,6 +1130,39 @@ export const ContactSchema = z
   })
   .openapi('Contact');
 
+export const AnalyticsSchema = z
+  .object({
+    from: z.string().openapi({ description: 'The start of the first day, in the viewer\'s time.' }),
+    to: z.string(),
+    truncated: z.boolean().openapi({ description: 'True when the period started more than 10,000 conversations. Only the first 10,000 are counted.' }),
+    started: z.number().int().openapi({ description: 'Conversations started in the period. Every other number is about these.' }),
+    replied: z.number().int().openapi({ description: 'Those a person has answered. The AI assistant and internal notes do not count.' }),
+    resolved: z.number().int().openapi({ description: 'Those resolved or archived now.' }),
+    medianFirstReplySeconds: z.number().int().nullable().openapi({ description: 'From the start of a conversation to a person\'s first answer, over those answered. Null when none was.' }),
+    assistantAnswered: z.number().int().openapi({ description: 'Those the AI assistant wrote in.' }),
+    assistantOnly: z.number().int().openapi({ description: 'Those the AI assistant wrote in and no person has answered.' }),
+    days: z.array(z.object({ date: z.string().openapi({ example: '2026-11-24' }), started: z.number().int() })),
+    members: z.array(z.object({ memberId: z.string(), replies: z.number().int(), conversations: z.number().int() })).openapi({ description: 'Public replies by each member in these conversations, most first. A member who has left keeps their ID.' }),
+  })
+  .openapi('Analytics');
+
+export const getAnalyticsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/analytics',
+  tags: ['conversations'],
+  operationId: 'getAnalytics',
+  summary: 'What happened to the conversations started in the last days. Supervisors only',
+  security: bearer,
+  request: {
+    params: workspaceParams,
+    query: z.object({
+      days: z.coerce.number().int().min(1).max(90).default(7),
+      utcOffsetMinutes: z.coerce.number().int().min(-840).max(840).default(0).openapi({ description: "How far the viewer's clock is ahead of UTC, so that days are theirs." }),
+    }),
+  },
+  responses: { 200: { description: 'Analytics', ...json(AnalyticsSchema) }, default: problemResponse },
+});
+
 export const listContactsRoute = createRoute({
   method: 'get',
   path: '/api/v1/workspaces/{workspaceId}/contacts',
