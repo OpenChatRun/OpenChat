@@ -1867,6 +1867,7 @@ export const AssistantSchema = z
         rejected: z.number().int(),
       })
       .openapi({ description: "Answers learned from this website's resolved conversations, by status." }),
+    unanswered: z.number().int().openapi({ description: 'Questions it handed to the team for want of an answer, which no supervisor has dealt with. Counted up to 100.' }),
     limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int(), turnsPerConversation: z.number().int() }),
   })
   .openapi('Assistant');
@@ -2026,6 +2027,53 @@ export const deleteLearnedAnswerRoute = createRoute({
   security: bearer,
   request: { params: learnedParams },
   responses: { 204: { description: 'Deleted' }, default: problemResponse },
+});
+
+const unansweredParams = workspaceParams.extend({ questionId: z.string() });
+
+export const UnansweredQuestionSchema = z
+  .object({
+    id: z.string().openapi({ description: "The ID of the assistant's handover message." }),
+    conversationId: z.string(),
+    question: z.string().openapi({ description: "The visitor's message, as they wrote it." }),
+    reason: z.enum(['no_sources', 'unsure']).openapi({ description: '`no_sources`: nothing it has was relevant. `unsure`: it had something, and no answer it trusted.' }),
+    askedAt: z.string(),
+  })
+  .openapi('UnansweredQuestion');
+
+export const listUnansweredQuestionsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/unanswered',
+  tags: ['assistant'],
+  operationId: 'listUnansweredQuestions',
+  summary: 'Questions the assistant handed to the team because it had no answer, newest first, up to 100. For supervisors.',
+  description: 'Only those no supervisor has answered or dismissed. One goes when its conversation does, by erasure or retention.',
+  security: bearer,
+  request: { params: assistantParams },
+  responses: { 200: { description: 'Unanswered questions', ...json(z.object({ data: z.array(UnansweredQuestionSchema) })) }, default: problemResponse },
+});
+
+export const answerUnansweredQuestionRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/unanswered/{questionId}/answer',
+  tags: ['assistant'],
+  operationId: 'answerUnansweredQuestion',
+  summary: 'Answer a question the assistant could not, for it to use from now on. For supervisors.',
+  description: "Saved as the conversation's learned answer, already approved, and used once it is indexed, within a minute or two. 409 `learned_exists` if the conversation already has a learned answer: change that one instead.",
+  security: bearer,
+  request: { params: unansweredParams, body: { required: true, ...json(z.strictObject({ question: LearnedText(300), answer: LearnedText(1200) })) } },
+  responses: { 201: { description: 'The learned answer', ...json(AssistantLearnedSchema) }, default: problemResponse },
+});
+
+export const dismissUnansweredQuestionRoute = createRoute({
+  method: 'delete',
+  path: '/api/v1/workspaces/{workspaceId}/assistant/unanswered/{questionId}',
+  tags: ['assistant'],
+  operationId: 'dismissUnansweredQuestion',
+  summary: 'Take a question off the list without answering it. For supervisors.',
+  security: bearer,
+  request: { params: unansweredParams },
+  responses: { 204: { description: 'Dismissed' }, default: problemResponse },
 });
 
 export const setLearnedAutoApproveRoute = createRoute({

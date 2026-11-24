@@ -4093,6 +4093,10 @@
             ],
             "description": "Answers learned from this website's resolved conversations, by status."
           },
+          "unanswered": {
+            "type": "integer",
+            "description": "Questions it handed to the team for want of an answer, which no supervisor has dealt with. Counted up to 100."
+          },
           "limits": {
             "type": "object",
             "properties": {
@@ -4126,6 +4130,7 @@
           "sources",
           "helpArticles",
           "learning",
+          "unanswered",
           "limits"
         ]
       },
@@ -4308,6 +4313,40 @@
           "decidedAt",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "UnansweredQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ID of the assistant's handover message."
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "description": "The visitor's message, as they wrote it."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_sources",
+              "unsure"
+            ],
+            "description": "`no_sources`: nothing it has was relevant. `unsure`: it had something, and no answer it trusted."
+          },
+          "askedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "question",
+          "reason",
+          "askedAt"
         ]
       },
       "HelpCentre": {
@@ -11922,6 +11961,201 @@
         "responses": {
           "204": {
             "description": "Deleted"
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/unanswered": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "listUnansweredQuestions",
+        "summary": "Questions the assistant handed to the team because it had no answer, newest first, up to 100. For supervisors.",
+        "description": "Only those no supervisor has answered or dismissed. One goes when its conversation does, by erasure or retention.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "websiteId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unanswered questions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UnansweredQuestion"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/assistant/unanswered/{questionId}/answer": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "answerUnansweredQuestion",
+        "summary": "Answer a question the assistant could not, for it to use from now on. For supervisors.",
+        "description": "Saved as the conversation's learned answer, already approved, and used once it is indexed, within a minute or two. 409 `learned_exists` if the conversation already has a learned answer: change that one instead.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "questionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "answer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1200
+                  }
+                },
+                "required": [
+                  "question",
+                  "answer"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The learned answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantLearned"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/assistant/unanswered/{questionId}": {
+      "delete": {
+        "tags": [
+          "assistant"
+        ],
+        "operationId": "dismissUnansweredQuestion",
+        "summary": "Take a question off the list without answering it. For supervisors.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workspaceId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "questionId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dismissed"
           },
           "default": {
             "description": "RFC 9457 problem details",

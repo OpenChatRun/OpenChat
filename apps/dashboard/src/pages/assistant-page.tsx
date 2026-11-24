@@ -2,11 +2,12 @@
  * The AI assistant, for supervisors (ADR-0022), in tabs: an overview with its switch, what it answers from and has
  * learned, a place to try it, its settings, and the workspace's automatic translation.
  */
-import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer } from '@openchat/api-client';
+import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer, UnansweredQuestion } from '@openchat/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { intlLocale, t, type MessageKey } from '../i18n';
+import { navigate } from '../routes';
 
 type Tab = 'overview' | 'knowledge' | 'test' | 'settings' | 'translation';
 const PAGE_TABS: { tab: Tab; label: MessageKey }[] = [
@@ -305,6 +306,65 @@ function LearnedCard({ workspaceId, websiteId, assistant }: { workspaceId: strin
   );
 }
 
+function UnansweredItem({ workspaceId, item, onChanged }: { workspaceId: string; item: UnansweredQuestion; onChanged: () => void }) {
+  const [answering, setAnswering] = useState(false);
+  const [question, setQuestion] = useState(item.question.slice(0, 300));
+  const [answer, setAnswer] = useState('');
+  const save = useMutation({ mutationFn: () => api.answerUnansweredQuestion(workspaceId, item.id, { question: question.trim(), answer: answer.trim() }), onSuccess: onChanged });
+  const dismiss = useMutation({ mutationFn: () => api.dismissUnansweredQuestion(workspaceId, item.id), onSuccess: onChanged });
+  const busy = save.isPending || dismiss.isPending;
+  return (
+    <li className="space-y-2 py-3 text-sm">
+      <Failure error={save.error ?? dismiss.error} />
+      {!answering && <p className="whitespace-pre-wrap break-words">{item.question.length > 300 ? `${item.question.slice(0, 300)}…` : item.question}</p>}
+      {answering && (
+        <form className="space-y-2" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}>
+          <label className="block">{t('learnedQuestion')}
+            <input className="field" required maxLength={300} value={question} onChange={(event) => setQuestion(event.target.value)} />
+          </label>
+          <label className="block">{t('learnedAnswer')}
+            <textarea className="field min-h-20" required maxLength={1200} autoFocus value={answer} onChange={(event) => setAnswer(event.target.value)} />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button className="button" disabled={busy || !question.trim() || !answer.trim()}>{t('unansweredSave')}</button>
+            <button type="button" className="button-quiet" disabled={busy} onClick={() => setAnswering(false)}>{t('cancel')}</button>
+          </div>
+        </form>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`${quiet} flex-1`}>
+          {t('unansweredWhen', { date: new Date(item.askedAt).toLocaleDateString(intlLocale()) })} · {t(item.reason === 'no_sources' ? 'unansweredNoSources' : 'unansweredUnsure')}
+        </span>
+        {!answering && <button className="button" disabled={busy} onClick={() => setAnswering(true)}>{t('unansweredAdd')}</button>}
+        <button className="button-quiet" disabled={busy} onClick={() => navigate({ section: 'inbox', adminPage: null, conversationId: item.conversationId })}>{t('unansweredOpen')}</button>
+        <button className="button-quiet" disabled={busy} onClick={() => dismiss.mutate()}>{t('unansweredDismiss')}</button>
+      </div>
+    </li>
+  );
+}
+
+/** What the assistant handed to the team for want of an answer, each with a place to write one. */
+function UnansweredCard({ workspaceId, websiteId }: { workspaceId: string; websiteId: string }) {
+  const client = useQueryClient();
+  const questions = useQuery({ queryKey: ['assistant-unanswered', workspaceId, websiteId], queryFn: () => api.listUnansweredQuestions(workspaceId, websiteId) });
+  const changed = () => {
+    void client.invalidateQueries({ queryKey: ['assistant-unanswered', workspaceId, websiteId] });
+    void client.invalidateQueries({ queryKey: ['assistant-learned', workspaceId, websiteId] });
+    void client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] });
+  };
+  return (
+    <section className="card space-y-3" aria-label={t('unansweredTitle')}>
+      <h2 className="font-medium">{t('unansweredTitle')}</h2>
+      <p className={quiet}>{t('unansweredHelp')}</p>
+      <Failure error={questions.error} />
+      {questions.data?.data.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('unansweredNone')}</p>}
+      <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+        {questions.data?.data.map((item) => <UnansweredItem key={item.id} workspaceId={workspaceId} item={item} onChanged={changed} />)}
+      </ul>
+    </section>
+  );
+}
+
 /** Automatic translation of visitors' messages, for the whole workspace (ADR-0024). */
 function TranslationCard({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient();
@@ -418,7 +478,7 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
             onClick={() => setTab(item.tab)}
           >
             {t(item.label)}
-            {item.tab === 'knowledge' && data && data.learning.pending > 0 && <span className="ml-2 rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">{data.learning.pending}</span>}
+            {item.tab === 'knowledge' && data && data.learning.pending + data.unanswered > 0 && <span className="ml-2 rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white">{data.learning.pending + data.unanswered}</span>}
           </button>
         ))}
       </div>
@@ -444,6 +504,7 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
                 {tab === 'knowledge' && (
                   <>
                     <SourcesCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />
+                    <UnansweredCard workspaceId={workspaceId} websiteId={current.id} />
                     <LearnedCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />
                   </>
                 )}

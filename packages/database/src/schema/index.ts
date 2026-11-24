@@ -416,6 +416,8 @@ export const messages = sqliteTable(
     unique('messages_seq_uq').on(t.workspaceId, t.conversationId, t.seq),
     unique('messages_public_seq_uq').on(t.workspaceId, t.conversationId, t.publicSeq),
     unique('messages_client_uq').on(t.workspaceId, t.conversationId, t.clientMessageId),
+    /** The assistant's answers and handovers, newest first, for the list of questions it could not answer. */
+    index('messages_assistant_idx').on(t.workspaceId, t.createdAt).where(sql`${t.assistantId} IS NOT NULL`),
     foreignKey({
       name: 'messages_conversation_fk',
       columns: [t.workspaceId, t.conversationId],
@@ -453,6 +455,30 @@ export const messageTranslations = sqliteTable(
       columns: [t.workspaceId, t.messageId],
       foreignColumns: [messages.workspaceId, messages.id],
     }).onDelete('cascade'),
+  ],
+);
+
+/**
+ * A supervisor has dealt with a question the assistant could not answer: answered it, or dismissed it. Keyed by the
+ * assistant's handover message, and gone with it, so erasure and retention need nothing more.
+ */
+export const assistantQuestionReviews = sqliteTable(
+  'assistant_question_reviews',
+  {
+    workspaceId: text('workspace_id').notNull(),
+    messageId: text('message_id').notNull(),
+    outcome: text('outcome').notNull(),
+    memberId: text('member_id'),
+    createdAt: ts('created_at'),
+  },
+  (t) => [
+    primaryKey({ name: 'assistant_question_reviews_pk', columns: [t.workspaceId, t.messageId] }),
+    foreignKey({
+      name: 'assistant_question_reviews_message_fk',
+      columns: [t.workspaceId, t.messageId],
+      foreignColumns: [messages.workspaceId, messages.id],
+    }).onDelete('cascade'),
+    check('assistant_question_reviews_outcome_ck', sql`${t.outcome} IN ('answered','dismissed')`),
   ],
 );
 
