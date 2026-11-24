@@ -11,6 +11,8 @@ export interface ChatMessage {
   system: boolean;
   /** Written by the AI assistant: labelled, and a handover is shown in the visitor's language. */
   assistant: 'answer' | 'handover' | null;
+  /** A handover in the team's own words, shown as they are. */
+  ownWords: boolean;
   senderName: string | null;
   content: string;
   createdAt: string | null;
@@ -31,6 +33,7 @@ export const fromServer = (message: VisitorMessage): ChatMessage => ({
   mine: message.sender.type === 'visitor',
   system: message.sender.type === 'system' && !message.assistant,
   assistant: message.assistant?.kind ?? null,
+  ownWords: message.assistant?.custom === true,
   senderName: message.sender.displayName,
   content: message.content,
   createdAt: message.createdAt,
@@ -48,6 +51,7 @@ export const pendingMessage = (clientMessageId: string, content: string, pending
   mine: true,
   system: false,
   assistant: null,
+  ownWords: false,
   senderName: null,
   content,
   createdAt: null,

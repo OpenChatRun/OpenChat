@@ -100,7 +100,7 @@ function Message({ message, first, state, onRetry, controller }: { message: Chat
           </p>
         </>
       )}
-      {message.content && <div class="oc-bubble" dir="auto" lang={shownOriginal && message.original ? message.original.language : undefined}>{message.assistant === 'handover' ? S.handover : shownOriginal && message.original ? message.original.content : message.content}</div>}
+      {message.content && <div class="oc-bubble" dir="auto" lang={shownOriginal && message.original ? message.original.language : undefined}>{message.assistant === 'handover' && !message.ownWords ? S.handover : shownOriginal && message.original ? message.original.content : message.content}</div>}
       {message.original && (
         <span class="oc-state">
           {S.translated} · <button type="button" class="oc-link" onClick={() => setShownOriginal(!shownOriginal)}>{shownOriginal ? S.showTranslation : S.showOriginal}</button>

@@ -411,6 +411,9 @@
                               "limit",
                               "error"
                             ]
+                          },
+                          "custom": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -1288,6 +1291,9 @@
                               "answer",
                               "handover"
                             ]
+                          },
+                          "custom": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -2564,6 +2570,9 @@
                           "answer",
                           "handover"
                         ]
+                      },
+                      "custom": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -2999,6 +3008,9 @@
                   "limit",
                   "error"
                 ]
+              },
+              "custom": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -4036,13 +4048,29 @@
               },
               "learn": {
                 "type": "boolean"
+              },
+              "instructions": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "How the team wants it to write, such as \"Be formal\". It changes its tone, never what it may answer from. Null when nothing was asked."
+              },
+              "handoverMessage": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "What a visitor reads when it hands over to the team. Null means the widget's own words, in the visitor's language."
               }
             },
             "required": [
               "name",
               "model",
               "enabled",
-              "learn"
+              "learn",
+              "instructions",
+              "handoverMessage"
             ]
           },
           "sources": {
@@ -4111,13 +4139,21 @@
               },
               "turnsPerConversation": {
                 "type": "integer"
+              },
+              "instructionsChars": {
+                "type": "integer"
+              },
+              "handoverMessageChars": {
+                "type": "integer"
               }
             },
             "required": [
               "sourcesPerWebsite",
               "pagesPerSource",
               "textSourceChars",
-              "turnsPerConversation"
+              "turnsPerConversation",
+              "instructionsChars",
+              "handoverMessageChars"
             ]
           }
         },
@@ -4214,8 +4250,11 @@
               "answered",
               "no_sources",
               "unsure",
-              "limit_reached"
-            ]
+              "limit_reached",
+              "asked",
+              "turns"
+            ],
+            "description": "Anything but `answered` is a handover to the team: nothing answers it, it was not sure, the daily limit is reached, the visitor asked for a person, or it has answered as often as it may in one conversation."
           },
           "answer": {
             "type": [
@@ -7585,6 +7624,9 @@
                                   "answer",
                                   "handover"
                                 ]
+                              },
+                              "custom": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -7793,6 +7835,9 @@
                             "answer",
                             "handover"
                           ]
+                        },
+                        "custom": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -7917,6 +7962,9 @@
                             "answer",
                             "handover"
                           ]
+                        },
+                        "custom": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -11335,7 +11383,7 @@
           "assistant"
         ],
         "operationId": "saveAssistantSettings",
-        "summary": "Name the assistant, choose its model, and turn answering visitors and learning on or off. For supervisors.",
+        "summary": "Name the assistant, choose its model, say how it writes and what it says when it hands over, and turn answering visitors and learning on or off. For supervisors.",
         "security": [
           {
             "bearerAuth": []
@@ -11386,6 +11434,24 @@
                   "learn": {
                     "type": "boolean",
                     "description": "Learn a question and answer from each resolved conversation. Left out, it stays as it was; a new assistant starts off."
+                  },
+                  "instructions": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500,
+                    "pattern": "^[^\\p{Cc}]*(?:[\\n\\r\\t][^\\p{Cc}]*)*$/u",
+                    "description": "How it should write. Left out, it stays as it was; null or empty clears it."
+                  },
+                  "handoverMessage": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 300,
+                    "pattern": "^[^\\p{Cc}]*(?:[\\n\\r\\t][^\\p{Cc}]*)*$/u",
+                    "description": "What a visitor reads when it hands over. Left out, it stays as it was; null or empty goes back to the widget's own words, in the visitor's language."
                   }
                 },
                 "required": [
@@ -11419,13 +11485,29 @@
                     },
                     "learn": {
                       "type": "boolean"
+                    },
+                    "instructions": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "How the team wants it to write, such as \"Be formal\". It changes its tone, never what it may answer from. Null when nothing was asked."
+                    },
+                    "handoverMessage": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "What a visitor reads when it hands over to the team. Null means the widget's own words, in the visitor's language."
                     }
                   },
                   "required": [
                     "name",
                     "model",
                     "enabled",
-                    "learn"
+                    "learn",
+                    "instructions",
+                    "handoverMessage"
                   ]
                 }
               }
@@ -11693,7 +11775,7 @@
         ],
         "operationId": "testAssistant",
         "summary": "Ask the assistant a question, as a visitor would. For supervisors.",
-        "description": "No visitor sees this. It counts against the daily limit on answers.",
+        "description": "No visitor sees this, and nothing of it is stored. It counts against the daily limit on answers. Send the test conversation so far as `history` to ask a follow-up question.",
         "security": [
           {
             "bearerAuth": []
@@ -11728,6 +11810,33 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 1000
+                  },
+                  "history": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "visitor",
+                            "assistant"
+                          ]
+                        },
+                        "content": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "role",
+                        "content"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 20,
+                    "description": "What was said before this question, oldest first. The assistant reads the last few."
                   }
                 },
                 "required": [

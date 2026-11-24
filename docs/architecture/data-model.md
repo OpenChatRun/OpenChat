@@ -134,7 +134,7 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 | Table | Holds |
 |---|---|
-| `assistant_settings` | One row per website: the name visitors will see, a model, or NULL for the installation's default, `enabled`, whether it answers visitors, and `learn`, whether it learns from resolved conversations |
+| `assistant_settings` | One row per website: the name visitors will see, a model, or NULL for the installation's default, `enabled`, whether it answers visitors, `learn`, whether it learns from resolved conversations, and the team's own words, both nullable (migration 0032): `instructions`, its tone, and `handover_message` |
 | `assistant_sources` | What the assistant answers from: a web page (`kind='page'`, with `url`) or pasted text (`kind='text'`, with `content`). `status` is `pending`, `indexing`, `ready` or `failed`, with `error_code`. `generation` goes up each time the source changes or is read again; `indexed_generation` is the one the chunks are from |
 | `assistant_chunks` | Passages of a source, about 1,200 characters each. The ID is `<sourceId>.<generation>.<n>`, and is also the vector's ID in Vectorize |
 | `assistant_usage` | Per workspace and UTC day: answers, pages read, and passages written. Answers are counted with `INSERT … ON CONFLICT DO UPDATE … WHERE answers < limit RETURNING`, so the daily limit holds without a read first |
@@ -145,7 +145,7 @@ For a person's request to see, or delete, what a workspace holds about them. Bot
 
 **Answering visitors (step 2).** Two columns, added by migration 0017 with hand-written CHECKs:
 
-- `messages.assistant_id` names the `assistant_settings` row that wrote a message. Such a message has `sender_type = 'system'` (`messages_assistant_ck`), visibility `public`, `metadata_json.assistant` of `answer` or `handover`, and for a handover `metadata_json.reason`: `asked`, `no_sources`, `unsure`, `turns`, `limit` or `error`. Its sender name is the assistant's current name.
+- `messages.assistant_id` names the `assistant_settings` row that wrote a message. Such a message has `sender_type = 'system'` (`messages_assistant_ck`), visibility `public`, `metadata_json.assistant` of `answer` or `handover`, and for a handover `metadata_json.reason`: `asked`, `no_sources`, `unsure`, `turns`, `limit` or `error`. A handover whose content is the team's own `handover_message` also has `metadata_json.custom` true, which reaches the visitor as `assistant.custom`: the widget then shows the content, where it otherwise shows its own words in the visitor's language. Its sender name is the assistant's current name.
 - `conversations.assistant_state`: NULL (never answered), `answering`, `handed_over` or `stopped` (`conversations_assistant_state_ck`).
 
 | From | To | When |

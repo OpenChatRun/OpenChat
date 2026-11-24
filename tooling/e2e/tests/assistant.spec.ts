@@ -28,7 +28,7 @@ async function withAssistant(page: Page) {
         helpArticles: { published: 4, inUse: 3 },
         learning: { autoApprove: false, pending: 2, approved: 5, rejected: 1 },
         unanswered: unanswered.length,
-        limits: { sourcesPerWebsite: 20, pagesPerSource: 50, textSourceChars: 20000, turnsPerConversation: 5 },
+        limits: { sourcesPerWebsite: 20, pagesPerSource: 50, textSourceChars: 20000, turnsPerConversation: 5, instructionsChars: 500, handoverMessageChars: 300 },
       },
     }),
   );
@@ -85,7 +85,12 @@ test('the assistant page is in tabs, with its switch on the overview', async ({ 
   await expect(panel.getByRole('region', { name: 'Settings' }).getByRole('combobox')).toHaveCount(0);
   await panel.getByLabel('Name visitors will see').fill('Robin the helper');
   await panel.getByRole('button', { name: 'Save settings' }).click();
-  await expect.poll(() => saved.at(-1)).toEqual({ name: 'Robin the helper', model: null, enabled: true, learn: true });
+  await expect.poll(() => saved.at(-1)).toEqual({ name: 'Robin the helper', model: null, enabled: true, learn: true, instructions: null, handoverMessage: null });
+  // Its tone and its handover message are the team's to write.
+  await panel.getByLabel('How it should write').fill('Be formal.');
+  await panel.getByLabel('Handover message').fill('One of us will be with you shortly.');
+  await panel.getByRole('button', { name: 'Save settings' }).click();
+  await expect.poll(() => saved.at(-1)).toMatchObject({ instructions: 'Be formal.', handoverMessage: 'One of us will be with you shortly.' });
 
   await tabs.getByRole('tab', { name: 'Try it' }).click();
   await expect(panel.getByLabel('Question')).toBeVisible();
@@ -118,4 +123,57 @@ test('a supervisor answers or dismisses what the assistant could not answer', as
   await list.getByRole('button', { name: 'Dismiss' }).click();
   await expect(list.getByText('No unanswered questions.')).toBeVisible();
   await expect(tabs.getByRole('tab', { name: /Knowledge/ })).toHaveText('Knowledge2');
+});
+
+test('a supervisor tries the assistant in a conversation, which ends where it would hand over', async ({ page }) => {
+  await withAssistant(page);
+  const asked: { question: string; history?: { role: string; content: string }[] }[] = [];
+  await page.route('**/api/v1/workspaces/*/websites/*/assistant/test', (route) => {
+    const body = route.request().postDataJSON() as (typeof asked)[number];
+    asked.push(body);
+    const answered = !body.question.includes('pianos');
+    return route.fulfill({
+      json: {
+        outcome: answered ? 'answered' : 'no_sources',
+        answer: answered ? `Answer ${asked.length}` : null,
+        model: 'm',
+        sources: answered ? [{ title: 'Returns', url: null, excerpt: 'Within 30 days.', score: 0.71 }] : [],
+      },
+    });
+  });
+  await signIn(page, OWNER);
+  await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Assistant', exact: true }).click();
+  await page.getByRole('tablist', { name: 'Assistant' }).getByRole('tab', { name: 'Try it' }).click();
+  const chat = page.getByRole('region', { name: 'Try it' });
+  const log = chat.getByRole('log');
+  await expect(log).toContainText('Nothing here reaches a visitor');
+
+  const box = chat.getByLabel('Question');
+  await box.fill('Can I return an item?');
+  await box.press('Enter');
+  await expect(log).toContainText('Can I return an item?');
+  await expect(log).toContainText('Answer 1');
+  await expect(box).toHaveValue('');
+  await log.getByText('From these sources').click();
+  await expect(log.getByText('Returns (0.71)')).toBeVisible();
+
+  // A follow-up carries the conversation so far.
+  await box.fill('Within how many days?');
+  await chat.getByRole('button', { name: 'Ask' }).click();
+  await expect(log).toContainText('Answer 2');
+  expect(asked[1]).toEqual({ question: 'Within how many days?', history: [{ role: 'visitor', content: 'Can I return an item?' }, { role: 'assistant', content: 'Answer 1' }] });
+
+  // Where it would hand over, the visitor reads the handover message, and the conversation is the team's.
+  await box.fill('Do you ship pianos?');
+  await box.press('Enter');
+  await expect(log).toContainText('I’m passing you to the team.');
+  await expect(log).toContainText('Passed to your team: nothing in its sources matched.');
+  await expect(box).toBeDisabled();
+  await chat.getByRole('button', { name: 'Start again' }).click();
+  await expect(log).not.toContainText('Can I return an item?');
+  await expect(box).toBeFocused();
+  await box.fill('Can I return an item?');
+  await box.press('Enter');
+  await expect(log).toContainText('Answer 4');
+  expect(asked[3]).toEqual({ question: 'Can I return an item?' });
 });

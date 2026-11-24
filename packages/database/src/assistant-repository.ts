@@ -22,6 +22,8 @@ export interface AssistantSettingsRow {
   model: string | null;
   enabled: number;
   learn: number;
+  instructions: string | null;
+  handoverMessage: string | null;
   updatedAt: number;
 }
 
@@ -77,7 +79,7 @@ export const HELP_ASSISTANT_SYNC_TOPIC = 'help.assistant_sync';
 
 export const assistantChunkId = (sourceId: string, generation: number, n: number) => `${sourceId}.${generation}.${n}`;
 
-const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, enabled, learn, updated_at AS updatedAt`;
+const SETTINGS_COLUMNS = `id, website_id AS websiteId, name, model, enabled, learn, instructions, handover_message AS handoverMessage, updated_at AS updatedAt`;
 const SOURCE_COLUMNS = `id, website_id AS websiteId, kind, title, url, status, error_code AS errorCode, generation,
   indexed_generation AS indexedGeneration, chunk_count AS chunkCount, page_count AS pageCount, indexed_at AS indexedAt,
   created_at AS createdAt, updated_at AS updatedAt`;
@@ -120,19 +122,26 @@ export function assistantRepository(database: Database, ctx: WorkspaceContext) {
       return d1.prepare(`SELECT ${SETTINGS_COLUMNS} FROM assistant_settings WHERE workspace_id = ?1 AND website_id = ?2`).bind(w, websiteId).first<AssistantSettingsRow>();
     },
 
-    /** Null if the website does not exist here. */
-    async saveSettings(websiteId: string, input: { name: string; model: string | null; enabled?: boolean | undefined; learn?: boolean | undefined }): Promise<AssistantSettingsRow | null> {
+    /** Null if the website does not exist here. A field left out stays as it was; a text given as null is cleared. */
+    async saveSettings(
+      websiteId: string,
+      input: { name: string; model: string | null; enabled?: boolean | undefined; learn?: boolean | undefined; instructions?: string | null | undefined; handoverMessage?: string | null | undefined },
+    ): Promise<AssistantSettingsRow | null> {
       const flag = (value: boolean | undefined) => (value === undefined ? null : value ? 1 : 0);
+      const given = (value: string | null | undefined) => (value === undefined ? 0 : 1);
       const [saved] = await d1.batch([
         d1
           .prepare(
-            `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, learn, created_at, updated_at)
-             SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), COALESCE(?7, 0), ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
+            `INSERT INTO assistant_settings (id, workspace_id, website_id, name, model, enabled, learn, instructions, handover_message, created_at, updated_at)
+             SELECT ?3, ?1, ?2, ?4, ?5, COALESCE(?6, 0), COALESCE(?7, 0), ?9, ?11, ${DB_NOW_MS}, ${DB_NOW_MS} WHERE ${website}
              ON CONFLICT (workspace_id, website_id) DO UPDATE
-                SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), learn = COALESCE(?7, learn), updated_at = excluded.updated_at
+                SET name = excluded.name, model = excluded.model, enabled = COALESCE(?6, enabled), learn = COALESCE(?7, learn),
+                    instructions = CASE WHEN ?8 = 1 THEN excluded.instructions ELSE instructions END,
+                    handover_message = CASE WHEN ?10 = 1 THEN excluded.handover_message ELSE handover_message END,
+                    updated_at = excluded.updated_at
              RETURNING ${SETTINGS_COLUMNS}`,
           )
-          .bind(w, websiteId, newId('assistant'), input.name, input.model, flag(input.enabled), flag(input.learn)),
+          .bind(w, websiteId, newId('assistant'), input.name, input.model, flag(input.enabled), flag(input.learn), given(input.instructions), input.instructions ?? null, given(input.handoverMessage), input.handoverMessage ?? null),
         // Published help articles are a source, so the first save brings them in; a later one catches up any missed.
         d1
           .prepare(
@@ -413,6 +422,9 @@ export interface AssistantReplyContext {
   lastMessageSeq: number;
   assignedMemberId: string | null;
   assistantState: AssistantState | null;
+  /** The team's tone for it, and its own handover words, if it wrote any. */
+  instructions: string | null;
+  handoverMessage: string | null;
   assistantId: string | null;
   assistantName: string | null;
   model: string | null;
@@ -426,7 +438,7 @@ export async function assistantReplyContext(database: Database, workspaceId: str
     .prepare(
       `SELECT m.conversation_id AS conversationId, c.website_id AS websiteId, w.name AS websiteName, m.seq AS messageSeq,
               m.sender_type AS senderType, m.content, c.last_message_seq AS lastMessageSeq, c.assigned_member_id AS assignedMemberId,
-              c.assistant_state AS assistantState, s.id AS assistantId, s.name AS assistantName, s.model, s.enabled,
+              c.assistant_state AS assistantState, s.id AS assistantId, s.name AS assistantName, s.model, s.enabled, s.instructions, s.handover_message AS handoverMessage,
               (SELECT COUNT(*) FROM messages a WHERE a.workspace_id = c.workspace_id AND a.conversation_id = c.id
                   AND a.assistant_id IS NOT NULL AND COALESCE(json_extract(a.metadata_json, '$.assistant'), 'answer') = 'answer') AS answers
          FROM messages m
@@ -490,12 +502,13 @@ export type AssistantHandoverReason = 'asked' | 'no_sources' | 'unsure' | 'turns
 export async function postAssistantMessage(
   database: Database,
   workspaceId: string,
-  input: { conversationId: string; assistantId: string; answersMessageId: string; answersSeq: number; content: string } & ({ kind: 'answer' } | { kind: 'handover'; reason: AssistantHandoverReason }),
+  input: { conversationId: string; assistantId: string; answersMessageId: string; answersSeq: number; content: string } & ({ kind: 'answer' } | { kind: 'handover'; reason: AssistantHandoverReason; custom?: boolean | undefined }),
 ): Promise<string | null> {
   const d1 = rawHandle(database);
   const id = newId('message');
   const clientMessageId = `assistant:${input.answersMessageId}`;
-  const metadata = input.kind === 'answer' ? { assistant: 'answer' } : { assistant: 'handover', reason: input.reason };
+  // `custom` marks a handover in the team's own words: the widget then shows them, not its own.
+  const metadata = input.kind === 'answer' ? { assistant: 'answer' } : { assistant: 'handover', reason: input.reason, ...(input.custom ? { custom: true } : {}) };
   await d1.batch([
     ...messageStatements(d1, {
       id,

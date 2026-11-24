@@ -148,7 +148,7 @@ describe('learning', () => {
     expect(learningPrompts()).toEqual([]);
     expect(await rows()).toEqual([]);
     expect((await settings({ learn: true }, 'agent')).status).toBe(403);
-    expect(await (await settings({ learn: true })).json()).toEqual({ name: 'Sam', model: null, enabled: false, learn: true });
+    expect(await (await settings({ learn: true })).json()).toEqual({ name: 'Sam', model: null, enabled: false, learn: true, instructions: null, handoverMessage: null });
   });
 
   it('reads only what the visitor and the team wrote in public, and waits for approval', async () => {

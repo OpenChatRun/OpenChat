@@ -93,6 +93,8 @@ export interface StoredMessage {
   assistantKind: AssistantMessageKind | null;
   /** Why it handed over. */
   assistantReason: string | null;
+  /** 1 when a handover carries the team's own words. */
+  assistantCustom: number | null;
   /** JSON from TRANSLATIONS_JSON, in lists for members only (ADR-0024). */
   translationsJson?: string;
   /** A member wrote it in this language, and `originalContent` is what they wrote (ADR-0024). */
@@ -243,6 +245,7 @@ export const MESSAGE_SELECT = `SELECT m.id, m.workspace_id AS workspaceId, ${ATT
     (sm.removed_at IS NOT NULL OR u.disabled_at IS NOT NULL) AS senderRemoved,
     CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind,
     CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.reason') END AS assistantReason,
+    CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.custom') END AS assistantCustom,
     m.original_language AS originalLanguage,
     CASE WHEN m.original_language IS NOT NULL THEN (SELECT o.content FROM message_translations o
       WHERE o.workspace_id = m.workspace_id AND o.message_id = m.id AND o.language = m.original_language) END AS originalContent

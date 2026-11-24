@@ -55,6 +55,8 @@ export interface VisitorMessageRow {
   attachmentsJson: string;
   /** Written by the AI assistant: an answer, or handing over to the team. */
   assistantKind: 'answer' | 'handover' | null;
+  /** 1 when a handover carries the team's own words, to be shown as they are. */
+  assistantCustom: number | null;
   /** A member's reply sent translated (ADR-0024): the language they wrote in, and what they wrote. */
   originalLanguage: string | null;
   originalContent: string | null;
@@ -73,6 +75,7 @@ const MESSAGE_SELECT = `SELECT m.id, ${ATTACHMENTS_JSON} AS attachmentsJson, m.c
     CASE WHEN m.sender_type = 'visitor' THEN m.client_message_id END AS clientMessageId,
     m.sender_type AS senderType, m.message_type AS type, m.content, m.created_at AS createdAt, COALESCE(u.name, ct.name, asst.name) AS senderName,
     CASE WHEN m.assistant_id IS NOT NULL THEN COALESCE(json_extract(m.metadata_json, '$.assistant'), 'answer') END AS assistantKind,
+    CASE WHEN m.assistant_id IS NOT NULL THEN json_extract(m.metadata_json, '$.custom') END AS assistantCustom,
     CASE WHEN m.sender_type = 'member' THEN m.original_language END AS originalLanguage,
     CASE WHEN m.sender_type = 'member' AND m.original_language IS NOT NULL THEN (SELECT o.content FROM message_translations o
       WHERE o.workspace_id = m.workspace_id AND o.message_id = m.id AND o.language = m.original_language) END AS originalContent

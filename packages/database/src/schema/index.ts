@@ -832,6 +832,10 @@ export const assistantSettings = sqliteTable(
     enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
     /** Learns a question and answer from each resolved conversation (step 3). Off until a supervisor turns it on. */
     learn: integer('learn', { mode: 'boolean' }).notNull().default(false),
+    /** How the team wants it to write: its tone, never its rules. NULL means nothing was asked. */
+    instructions: text('instructions'),
+    /** What a visitor reads when it hands over, as the team wrote it. NULL means the widget's own words, in the visitor's language. */
+    handoverMessage: text('handover_message'),
     createdAt: ts('created_at'),
     updatedAt: ts('updated_at'),
   },

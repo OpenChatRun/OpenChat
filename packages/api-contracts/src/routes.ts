@@ -1831,6 +1831,16 @@ const assistantSourceParams = workspaceParams.extend({ sourceId: z.string() });
 const AssistantName = SafeName.max(60);
 const SourceTitle = z.string().trim().min(1).max(200).regex(/^\P{Cc}*$/u, 'Must not contain control characters');
 const SourceText = z.string().max(20_000);
+/** The team's own words for the assistant. Line breaks are kept; other control characters are refused. */
+const OwnWords = (max: number) => z.string().max(max).regex(/^[^\p{Cc}]*(?:[\n\r\t][^\p{Cc}]*)*$/u, 'Must not contain control characters');
+const AssistantSettingsSchema = z.object({
+  name: z.string(),
+  model: z.string().nullable(),
+  enabled: z.boolean(),
+  learn: z.boolean(),
+  instructions: z.string().nullable().openapi({ description: 'How the team wants it to write, such as "Be formal". It changes its tone, never what it may answer from. Null when nothing was asked.' }),
+  handoverMessage: z.string().nullable().openapi({ description: "What a visitor reads when it hands over to the team. Null means the widget's own words, in the visitor's language." }),
+});
 
 export const AssistantSourceSchema = z
   .object({
@@ -1854,7 +1864,7 @@ export const AssistantSchema = z
     canReply: z.boolean().openapi({ description: "True when it can also answer visitors: the assistant's queue is bound as well. It can be turned on only then." }),
     models: z.array(z.object({ id: z.string(), label: z.string() })),
     defaultModel: z.string(),
-    settings: z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean(), learn: z.boolean() }).nullable(),
+    settings: AssistantSettingsSchema.nullable(),
     sources: z.array(AssistantSourceSchema),
     helpArticles: z
       .object({ published: z.number().int(), inUse: z.number().int().openapi({ description: 'Published articles the assistant answers from, at their current version. The rest are being read.' }) })
@@ -1868,13 +1878,22 @@ export const AssistantSchema = z
       })
       .openapi({ description: "Answers learned from this website's resolved conversations, by status." }),
     unanswered: z.number().int().openapi({ description: 'Questions it handed to the team for want of an answer, which no supervisor has dealt with. Counted up to 100.' }),
-    limits: z.object({ sourcesPerWebsite: z.number().int(), pagesPerSource: z.number().int(), textSourceChars: z.number().int(), turnsPerConversation: z.number().int() }),
+    limits: z.object({
+      sourcesPerWebsite: z.number().int(),
+      pagesPerSource: z.number().int(),
+      textSourceChars: z.number().int(),
+      turnsPerConversation: z.number().int(),
+      instructionsChars: z.number().int(),
+      handoverMessageChars: z.number().int(),
+    }),
   })
   .openapi('Assistant');
 
 export const AssistantAnswerSchema = z
   .object({
-    outcome: z.enum(['answered', 'no_sources', 'unsure', 'limit_reached']),
+    outcome: z.enum(['answered', 'no_sources', 'unsure', 'limit_reached', 'asked', 'turns']).openapi({
+      description: 'Anything but `answered` is a handover to the team: nothing answers it, it was not sure, the daily limit is reached, the visitor asked for a person, or it has answered as often as it may in one conversation.',
+    }),
     answer: z.string().nullable(),
     model: z.string(),
     sources: z.array(z.object({ title: z.string(), url: z.string().nullable(), excerpt: z.string(), score: z.number() })),
@@ -1897,7 +1916,7 @@ export const saveAssistantSettingsRoute = createRoute({
   path: '/api/v1/workspaces/{workspaceId}/websites/{websiteId}/assistant/settings',
   tags: ['assistant'],
   operationId: 'saveAssistantSettings',
-  summary: 'Name the assistant, choose its model, and turn answering visitors and learning on or off. For supervisors.',
+  summary: 'Name the assistant, choose its model, say how it writes and what it says when it hands over, and turn answering visitors and learning on or off. For supervisors.',
   security: bearer,
   request: {
     params: assistantParams,
@@ -1909,11 +1928,13 @@ export const saveAssistantSettingsRoute = createRoute({
           model: z.string().max(100).nullable(),
           enabled: z.boolean().optional().openapi({ description: 'Answer visitors in conversations nobody has. Left out, it stays as it was; a new assistant starts off.' }),
           learn: z.boolean().optional().openapi({ description: 'Learn a question and answer from each resolved conversation. Left out, it stays as it was; a new assistant starts off.' }),
+          instructions: OwnWords(500).nullable().optional().openapi({ description: 'How it should write. Left out, it stays as it was; null or empty clears it.' }),
+          handoverMessage: OwnWords(300).nullable().optional().openapi({ description: "What a visitor reads when it hands over. Left out, it stays as it was; null or empty goes back to the widget's own words, in the visitor's language." }),
         }),
       ),
     },
   },
-  responses: { 200: { description: 'Settings', ...json(z.object({ name: z.string(), model: z.string().nullable(), enabled: z.boolean(), learn: z.boolean() })) }, default: problemResponse },
+  responses: { 200: { description: 'Settings', ...json(AssistantSettingsSchema) }, default: problemResponse },
 });
 
 export const addAssistantSourceRoute = createRoute({
@@ -1968,9 +1989,24 @@ export const testAssistantRoute = createRoute({
   tags: ['assistant'],
   operationId: 'testAssistant',
   summary: 'Ask the assistant a question, as a visitor would. For supervisors.',
-  description: 'No visitor sees this. It counts against the daily limit on answers.',
+  description: 'No visitor sees this, and nothing of it is stored. It counts against the daily limit on answers. Send the test conversation so far as `history` to ask a follow-up question.',
   security: bearer,
-  request: { params: assistantParams, body: { required: true, ...json(z.strictObject({ question: z.string().trim().min(1).max(1000) })) } },
+  request: {
+    params: assistantParams,
+    body: {
+      required: true,
+      ...json(
+        z.strictObject({
+          question: z.string().trim().min(1).max(1000),
+          history: z
+            .array(z.strictObject({ role: z.enum(['visitor', 'assistant']), content: z.string().min(1).max(2000) }))
+            .max(20)
+            .optional()
+            .openapi({ description: 'What was said before this question, oldest first. The assistant reads the last few.' }),
+        }),
+      ),
+    },
+  },
   responses: { 200: { description: 'Answer', ...json(AssistantAnswerSchema) }, default: problemResponse },
 });
 

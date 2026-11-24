@@ -399,9 +399,6 @@ export const en = {
   assistantTestHelp: 'Ask as a visitor would. Each question counts towards the daily limit on answers.',
   question: 'Question',
   ask: 'Ask',
-  outcomeNoSources: 'Nothing in the sources matches. The assistant would pass this to your team.',
-  outcomeUnsure: 'The assistant was not sure. It would pass this to your team.',
-  outcomeLimit: 'The assistant has answered as many questions as it can today. It would pass this to your team.',
   usedSources: 'From these sources',
   aiLabel: 'AI',
   assistantEnabled: 'Answer visitors',
@@ -606,6 +603,18 @@ export const en = {
   ratedBad: 'Rated bad',
   analyticsRatings: 'Rated good by visitors',
   analyticsRatingsDetail: '{good} good, {bad} bad',
+  assistantInstructions: 'How it should write',
+  assistantInstructionsHelp: 'For example: “Be warm and brief. Say ‘we’, and never promise a delivery date.” This changes its tone only: it still answers from your knowledge and nothing else.',
+  assistantHandoverLabel: 'Handover message',
+  assistantHandoverHelp: 'What a visitor reads when the assistant passes them to your team. Leave it empty for the standard message, which each visitor reads in their own language. A message of your own is shown as you write it.',
+  testEmpty: 'Nothing here reaches a visitor, and nothing is saved.',
+  testPlaceholder: 'Ask a question…',
+  testStartAgain: 'Start again',
+  testWriting: '{name} is writing…',
+  testHandedOver: 'Passed to your team: {reason}.',
+  testEnded: 'Your team would answer from here. Start again to try another question.',
+  charactersLeft: '{count} characters left',
+  assistantHandoverDefault: 'I’m passing you to the team. Someone will reply here as soon as they can.',
 };
 
 export type Messages = Record<keyof typeof en, string>;

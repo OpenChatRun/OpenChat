@@ -201,7 +201,7 @@ describe('access', () => {
 describe('settings', () => {
   it('names the assistant and chooses a model from the list', async () => {
     const saved = await call('PUT', `${base()}/settings`, { token: tokens.boss!, body: { name: 'Sam', model: '@cf/mistralai/mistral-small-3.1-24b-instruct' } });
-    expect(await saved.json()).toEqual({ name: 'Sam', model: '@cf/mistralai/mistral-small-3.1-24b-instruct', enabled: false, learn: false });
+    expect(await saved.json()).toEqual({ name: 'Sam', model: '@cf/mistralai/mistral-small-3.1-24b-instruct', enabled: false, learn: false, instructions: null, handoverMessage: null });
     expect((await call('PUT', `${base()}/settings`, { token: tokens.boss!, body: { name: 'Sam', model: '@cf/someone/else' } })).status).toBe(400);
     await addText();
     await runJobs();
