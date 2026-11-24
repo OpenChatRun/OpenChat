@@ -717,9 +717,11 @@ test('a visitor rates a resolved conversation, and the agent sees it', async ({ 
 });
 
 test('an admin sets opening hours, and the widget says when the team is back', async ({ browser, page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(90_000);
   await signIn(page, OWNER);
   await page.getByRole('button', { name: 'Workspaces', exact: true }).click();
+  // Other tests make workspaces, and the page opens on the first by name.
+  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
   const card = () => page.getByRole('listitem').filter({ hasText: 'Styled' }).first();
   await card().getByLabel('Set opening hours').check();
   // Closed today on a UTC clock, whatever the time is, and open tomorrow.
@@ -731,6 +733,7 @@ test('an admin sets opening hours, and the widget says when the team is back', a
   await card().getByRole('button', { name: 'Save widget settings' }).click();
   await expect(card().getByRole('status')).toContainText('Saved');
   await page.reload();
+  await page.getByLabel('Workspace to manage').selectOption({ label: 'E2E' });
   await expect(card().getByLabel('Set opening hours')).toBeChecked();
   await expect(card().getByLabel('Time zone')).toHaveValue('UTC');
   await expect(card().getByLabel(today, { exact: true })).not.toBeChecked();
