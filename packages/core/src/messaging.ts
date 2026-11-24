@@ -57,7 +57,7 @@ export const toMessage = (row: StoredMessage) => ({
   attachments: (JSON.parse(row.attachmentsJson) as AttachmentJson[]).map((file) => toAttachment(file, `/api/v1/workspaces/${row.workspaceId}/attachments/${file.id}`)),
   createdAt: toIso(row.createdAt),
   metadata: {},
-  ...(row.assistantKind ? { assistant: { kind: row.assistantKind, ...(row.assistantReason ? { reason: row.assistantReason as AssistantHandoverReason } : {}) } } : {}),
+  ...(row.assistantKind ? { assistant: { kind: row.assistantKind, ...(row.assistantReason ? { reason: row.assistantReason as AssistantHandoverReason } : {}), ...(row.assistantCustom ? { custom: true } : {}) } } : {}),
   ...(row.translationsJson && row.translationsJson !== '[]' ? { translations: JSON.parse(row.translationsJson) as { language: string; content: string }[] } : {}),
   ...(row.originalLanguage && row.originalContent !== null ? { original: { language: row.originalLanguage, content: row.originalContent } } : {}),
 });

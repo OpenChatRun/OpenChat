@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VisitorMessage } from './api';
-import { hasOlder, lastSeq, mergeMessages, newClientMessageId, pendingMessage, unreadCount } from './state';
+import { fromServer, hasOlder, lastSeq, mergeMessages, newClientMessageId, pendingMessage, unreadCount } from './state';
 
 const server = (seq: number, overrides: Partial<VisitorMessage> = {}): VisitorMessage => ({
   id: `msg_${seq}`,
@@ -66,7 +66,8 @@ describe('the AI assistant', () => {
       server(3, { sender: { type: 'system', displayName: null } }),
     ]);
     expect(answer).toMatchObject({ system: false, mine: false, assistant: 'answer', senderName: 'Sam' });
-    expect(handover).toMatchObject({ system: false, assistant: 'handover' });
+    expect(handover).toMatchObject({ system: false, assistant: 'handover', ownWords: false });
+    expect(fromServer(server(4, { sender: { type: 'system', displayName: 'Sam' }, assistant: { kind: 'handover', custom: true } }))).toMatchObject({ assistant: 'handover', ownWords: true });
     expect(system).toMatchObject({ system: true, assistant: null });
   });
 });

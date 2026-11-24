@@ -76,10 +76,12 @@ If your installation was deployed with it, a supervisor finds **Assistant** in t
 
 - **Overview**: whether it answers visitors, with **Turn on** and **Turn off**, how many sources, help articles and learned answers it has, and, for the last 30 days across the workspace, how many conversations it answered and how many of those no person answered.
 
-- **Settings**: the name visitors will see, and **Learn from resolved conversations**. The model is chosen by whoever runs the installation, not in the dashboard.
+- **Settings**: the name visitors will see, **How it should write**, the **Handover message**, and **Learn from resolved conversations**. The model is chosen by whoever runs the installation, not in the dashboard.
+  - **How it should write** is a few lines about its tone, up to 500 characters, such as "Be formal. Say 'we'." It changes how the assistant writes, never what it answers from: it still answers only from your knowledge, and still passes a visitor to your team when it cannot.
+  - **Handover message** is what a visitor reads when the assistant passes them to your team, up to 300 characters. Left empty, visitors read the standard message in their own language. A message of your own is shown as you wrote it, to every visitor, and is not translated.
 - **Knowledge**, under **Sources**: what it answers from, with your help centre's articles and approved learned answers, and nothing else. Add a page of your website, and it reads that page and the pages it links to under the same address, up to 50, and reads them again every week. Or paste a text, such as opening hours or a returns policy. The page's address must be on one of the website's allowed addresses. A page that cannot be read says why: for example, the site's `robots.txt` does not allow it.
 - **Help centre**: published articles of your help centre are a source too, as soon as you save the settings, with a link to the article. Drafts never are. Unpublishing or deleting an article takes it out at once; a change is read again within a minute or two.
-- **Try it**: ask a question as a visitor would. You see the answer, marked AI, and the passages it came from. If the sources do not answer the question, it says it does not know. Each question counts towards the daily limit.
+- **Try it**: a conversation with the assistant, as a visitor would have it. Write a question, and then follow-up questions. Under each answer, **From these sources** shows the passages it came from. Where it would pass a visitor to your team, you see the handover message and the reason, and the conversation ends there, as the assistant's part does for a visitor: choose **Start again**. No visitor sees any of it, nothing is saved, and each question counts towards the daily limit.
 
 With **Answer visitors** on, it answers new messages in conversations nobody on your team has:
 

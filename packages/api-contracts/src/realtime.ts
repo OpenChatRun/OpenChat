@@ -34,6 +34,8 @@ export const AssistantMessageSchema = z.object({
   kind: z.enum(['answer', 'handover']),
   /** Why it handed over. Agents only. */
   reason: z.enum(['asked', 'no_sources', 'unsure', 'turns', 'limit', 'error']).optional(),
+  /** A handover in the team's own words, which the widget shows as they are. */
+  custom: z.boolean().optional(),
 });
 
 /** What a member wrote, when a reply was sent translated (ADR-0024). */
@@ -70,8 +72,8 @@ export const VisitorWireMessageSchema = z.object({
   content: z.string(),
   attachments: z.array(AttachmentRefSchema),
   createdAt: Iso,
-  /** Written by the AI assistant: shown with an AI label, and a handover in the visitor's own language. */
-  assistant: z.object({ kind: z.enum(['answer', 'handover']) }).optional(),
+  /** Written by the AI assistant: shown with an AI label. A handover is shown in the visitor's own language, unless it is `custom`: the team's own words. */
+  assistant: z.object({ kind: z.enum(['answer', 'handover']), custom: z.boolean().optional() }).optional(),
   /** A team member's reply, translated automatically for the visitor (ADR-0024): what the member wrote, for Show original. */
   original: OriginalSchema.optional(),
 });

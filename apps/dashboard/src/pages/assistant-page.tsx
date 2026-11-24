@@ -4,7 +4,7 @@
  */
 import type { Assistant, AssistantAnswer, AssistantSource, LearnedAnswer, UnansweredQuestion } from '@openchat/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { intlLocale, t, type MessageKey } from '../i18n';
 import { navigate } from '../routes';
@@ -26,10 +26,13 @@ const READ_ERRORS: Record<string, MessageKey> = {
   too_large: 'readTooLarge',
 };
 
+/** Why the test conversation went to the team, in the words the inbox uses for a real one. */
 const OUTCOMES: Record<Exclude<AssistantAnswer['outcome'], 'answered'>, MessageKey> = {
-  no_sources: 'outcomeNoSources',
-  unsure: 'outcomeUnsure',
-  limit_reached: 'outcomeLimit',
+  no_sources: 'handoverNoSources',
+  unsure: 'handoverUnsure',
+  limit_reached: 'handoverLimit',
+  asked: 'handoverAsked',
+  turns: 'handoverTurns',
 };
 
 const quiet = 'text-xs text-slate-600 dark:text-slate-400';
@@ -105,13 +108,38 @@ function OverviewCard({ workspaceId, websiteId, assistant, onOpen }: { workspace
   );
 }
 
+/** A few lines in the team's own words, with what is left to write once most of it is used. */
+function OwnWords({ id, label, help, max, rows, placeholder, value, onChange }: { id: string; label: string; help: string; max: number; rows: number; placeholder?: string; value: string; onChange: (value: string) => void }) {
+  const left = max - value.length;
+  return (
+    <div className="max-w-xl text-sm">
+      <label htmlFor={id}>{label}</label>
+      <textarea id={id} className="field" rows={rows} maxLength={max} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} aria-describedby={`${id}-help`} />
+      <p id={`${id}-help`} className={quiet}>
+        {help}
+        {left <= max / 5 && <span className="ml-1 font-medium">{t('charactersLeft', { count: String(left) })}</span>}
+      </p>
+    </div>
+  );
+}
+
 function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: string; websiteId: string; assistant: Assistant }) {
   const client = useQueryClient();
   const [name, setName] = useState(assistant.settings?.name ?? t('sectionAssistant'));
   const [learn, setLearn] = useState(assistant.settings?.learn ?? false);
+  const [instructions, setInstructions] = useState(assistant.settings?.instructions ?? '');
+  const [handoverMessage, setHandoverMessage] = useState(assistant.settings?.handoverMessage ?? '');
   const save = useMutation({
     // The model is whoever runs the installation's choice, and answering visitors is the overview's switch: both go back as they are.
-    mutationFn: () => api.saveAssistantSettings(workspaceId, websiteId, { name: name.trim(), model: assistant.settings?.model ?? null, enabled: assistant.settings?.enabled ?? false, learn }),
+    mutationFn: () =>
+      api.saveAssistantSettings(workspaceId, websiteId, {
+        name: name.trim(),
+        model: assistant.settings?.model ?? null,
+        enabled: assistant.settings?.enabled ?? false,
+        learn,
+        instructions: instructions.trim() || null,
+        handoverMessage: handoverMessage.trim() || null,
+      }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['assistant', workspaceId, websiteId] }),
   });
   return (
@@ -122,6 +150,8 @@ function SettingsCard({ workspaceId, websiteId, assistant }: { workspaceId: stri
         <label className="block max-w-sm text-sm">{t('assistantNameLabel')}
           <input className="field" required maxLength={60} value={name} onChange={(event) => setName(event.target.value)} />
         </label>
+        <OwnWords id="assistant-instructions" label={t('assistantInstructions')} help={t('assistantInstructionsHelp')} max={assistant.limits.instructionsChars} rows={4} value={instructions} onChange={setInstructions} />
+        <OwnWords id="assistant-handover" label={t('assistantHandoverLabel')} help={t('assistantHandoverHelp')} max={assistant.limits.handoverMessageChars} rows={3} placeholder={t('assistantHandoverDefault')} value={handoverMessage} onChange={setHandoverMessage} />
         <label className="flex w-full items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5" checked={learn} onChange={(event) => setLearn(event.target.checked)} aria-describedby="assistant-learn-help" />
           <span>
@@ -399,46 +429,119 @@ function TranslationCard({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function TestCard({ workspaceId, websiteId }: { workspaceId: string; websiteId: string }) {
+type TestTurn =
+  | { from: 'visitor'; content: string }
+  | { from: 'assistant'; content: string; sources: AssistantAnswer['sources'] }
+  | { from: 'handover'; reason: Exclude<AssistantAnswer['outcome'], 'answered'> };
+
+/**
+ * A conversation with the assistant, as a visitor would have it: follow-up questions, the answers with what they
+ * came from, and the handover where a real conversation would go to the team. Nothing is stored: the conversation
+ * lives here, and goes back with each question.
+ */
+function TestCard({ workspaceId, websiteId, assistant }: { workspaceId: string; websiteId: string; assistant: Assistant }) {
+  const [turns, setTurns] = useState<TestTurn[]>([]);
   const [question, setQuestion] = useState('');
-  const ask = useMutation({ mutationFn: () => api.testAssistant(workspaceId, websiteId, question.trim()) });
-  const answer = ask.data;
+  const input = useRef<HTMLInputElement>(null);
+  const end = useRef<HTMLLIElement>(null);
+  const name = assistant.settings?.name ?? t('sectionAssistant');
+  const ask = useMutation({
+    // `before` is the conversation up to this question: what the visitor and the assistant said.
+    mutationFn: ({ asked, before }: { asked: string; before: TestTurn[] }) =>
+      api.testAssistant(workspaceId, websiteId, asked, before.flatMap((turn) => (turn.from === 'handover' ? [] : [{ role: turn.from, content: turn.content }]))),
+    onSuccess: (answer) =>
+      setTurns((now) => [...now, answer.outcome === 'answered' && answer.answer ? { from: 'assistant', content: answer.answer, sources: answer.sources } : { from: 'handover', reason: answer.outcome === 'answered' ? 'unsure' : answer.outcome }]),
+    // The question goes back to the box, to be sent again.
+    onError: (_error, { asked }) => {
+      setTurns((now) => now.slice(0, -1));
+      setQuestion(asked);
+    },
+  });
+  // As for a visitor: once it has handed over, the team answers, and the assistant says no more.
+  const ended = turns.at(-1)?.from === 'handover';
+  useEffect(() => {
+    end.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [turns.length, ask.isPending]);
+  const send = () => {
+    const asked = question.trim();
+    if (!asked || ask.isPending || ended) return;
+    setTurns((now) => [...now, { from: 'visitor', content: asked }]);
+    setQuestion('');
+    ask.mutate({ asked, before: turns });
+  };
+  // The box is disabled after a handover, so it takes the focus once the new conversation has been drawn.
+  const [restarted, setRestarted] = useState(0);
+  useEffect(() => {
+    if (restarted > 0) input.current?.focus();
+  }, [restarted]);
+  const restart = () => {
+    setTurns([]);
+    ask.reset();
+    setRestarted((n) => n + 1);
+  };
+  const bubble = 'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap shadow-sm';
+  const fromAssistant = `${bubble} rounded-bl-md border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100`;
+  const label = (
+    <div className="mb-1 text-xs opacity-85">
+      <span className="mr-1.5 rounded border border-current px-1 font-semibold">{t('aiLabel')}</span>
+      {name}
+    </div>
+  );
   return (
     <section className="card space-y-3" aria-label={t('assistantTest')}>
-      <h2 className="font-medium">{t('assistantTest')}</h2>
-      <p className={quiet}>{t('assistantTestHelp')}</p>
-      <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); ask.mutate(); }}>
-        <label className="min-w-48 flex-1 text-sm">{t('question')}
-          <input className="field" required maxLength={1000} value={question} onChange={(event) => setQuestion(event.target.value)} />
-        </label>
-        <button className="button" disabled={ask.isPending}>{t('ask')}</button>
-      </form>
-      <Failure error={ask.error} />
-      {ask.isPending && <p className={quiet} role="status">{t('loading')}</p>}
-      {answer && (
-        <div className="space-y-2" role="status">
-          {answer.outcome === 'answered' ? (
-            <p className="text-sm whitespace-pre-wrap">
-              <span className="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium dark:bg-slate-800">{t('aiLabel')}</span>
-              {answer.answer}
-            </p>
-          ) : (
-            <p className="text-sm">{t(OUTCOMES[answer.outcome])}</p>
-          )}
-          {answer.sources.length > 0 && (
-            <div>
-              <h3 className={`${quiet} font-medium`}>{t('usedSources')}</h3>
-              <ul className={`${quiet} list-disc pl-5`}>
-                {answer.sources.map((source, i) => (
-                  <li key={i}>
-                    {source.url ? <a className="underline" href={source.url} target="_blank" rel="noreferrer noopener">{source.title}</a> : source.title} ({source.score.toFixed(2)})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-48 flex-1">
+          <h2 className="font-medium">{t('assistantTest')}</h2>
+          <p className={quiet}>{t('assistantTestHelp')}</p>
         </div>
-      )}
+        {turns.length > 0 && !ended && <button type="button" className="button-quiet" onClick={restart}>{t('testStartAgain')}</button>}
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+        <ol role="log" aria-label={t('assistantTest')} className="flex h-[min(26rem,60dvh)] flex-col gap-3 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-950">
+          {turns.length === 0 && <li className={`m-auto max-w-xs text-center ${quiet}`}>{t('testEmpty')}</li>}
+          {turns.map((turn, i) =>
+            turn.from === 'visitor' ? (
+              <li key={i} className="flex justify-end">
+                <div className={`${bubble} rounded-br-md bg-brand-600 text-white`}>{turn.content}</div>
+              </li>
+            ) : turn.from === 'assistant' ? (
+              <li key={i} className="flex flex-col items-start gap-1">
+                <div className={fromAssistant}>
+                  {label}
+                  {turn.content}
+                </div>
+                {turn.sources.length > 0 && (
+                  <details className={`max-w-[85%] ${quiet}`}>
+                    <summary className="cursor-pointer">{t('usedSources')}</summary>
+                    <ul className="list-disc pl-5">
+                      {turn.sources.map((source, n) => (
+                        <li key={n}>
+                          {source.url ? <a className="underline" href={source.url} target="_blank" rel="noreferrer noopener">{source.title}</a> : source.title} ({source.score.toFixed(2)})
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            ) : (
+              <li key={i} className="flex flex-col items-start gap-1">
+                <div className={fromAssistant}>
+                  {label}
+                  {assistant.settings?.handoverMessage ?? t('assistantHandoverDefault')}
+                </div>
+                <p className={`max-w-[85%] ${quiet}`}>{t('testHandedOver', { reason: t(OUTCOMES[turn.reason]) })} {t('testEnded')}</p>
+              </li>
+            ),
+          )}
+          {ask.isPending && <li className={quiet} role="status">{t('testWriting', { name })}</li>}
+          <li ref={end} aria-hidden="true" />
+        </ol>
+        <form className="flex items-center gap-2 border-t border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900" onSubmit={(event) => { event.preventDefault(); send(); }}>
+          <input ref={input} className="field mt-0 flex-1 disabled:opacity-60" aria-label={t('question')} placeholder={t('testPlaceholder')} maxLength={1000} disabled={ended} value={question} onChange={(event) => setQuestion(event.target.value)} />
+          {ended ? <button type="button" className="button" onClick={restart}>{t('testStartAgain')}</button> : <button className="button" disabled={ask.isPending || question.trim() === ''}>{t('ask')}</button>}
+        </form>
+      </div>
+      <Failure error={ask.error} />
     </section>
   );
 }
@@ -508,7 +611,7 @@ export function AssistantPage({ workspaceId, isSupervisor }: { workspaceId: stri
                     <LearnedCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />
                   </>
                 )}
-                {tab === 'test' && <TestCard workspaceId={workspaceId} websiteId={current.id} />}
+                {tab === 'test' && <TestCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />}
                 {tab === 'settings' && <SettingsCard workspaceId={workspaceId} websiteId={current.id} assistant={data} />}
               </div>
             )}

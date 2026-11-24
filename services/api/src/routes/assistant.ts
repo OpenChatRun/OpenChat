@@ -139,6 +139,7 @@ export function registerAssistantRoutes(app: App) {
   app.openapi(testAssistantRoute, async (c) => {
     const { workspaceId, websiteId } = c.req.valid('param');
     const { deps, ctx } = await scoped(c, workspaceId);
-    return c.json(await testAssistant(deps, ctx, websiteId, c.req.valid('json').question), 200);
+    const body = c.req.valid('json');
+    return c.json(await testAssistant(deps, ctx, websiteId, body.question, body.history), 200);
   });
 }

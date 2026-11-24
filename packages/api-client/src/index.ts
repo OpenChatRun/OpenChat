@@ -284,13 +284,14 @@ export function createClient(options: ClientOptions) {
     translateMessage: (workspaceId: string, conversationId: string, messageId: string, language?: string) =>
       request<MessageTranslation>('POST', `${conversation(workspaceId, conversationId)}/messages/${encodeURIComponent(messageId)}/translation`, language ? { language } : {}),
     getAssistant: (workspaceId: string, websiteId: string) => get<Assistant>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant`),
-    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean; learn?: boolean }) =>
-      request<{ name: string; model: string | null; enabled: boolean; learn: boolean }>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
+    saveAssistantSettings: (workspaceId: string, websiteId: string, input: { name: string; model: string | null; enabled?: boolean; learn?: boolean; instructions?: string | null; handoverMessage?: string | null }) =>
+      request<NonNullable<Assistant['settings']>>('PUT', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/settings`, input),
     addAssistantSource: (workspaceId: string, websiteId: string, input: AssistantSourceInput) => request<AssistantSource>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/sources`, input),
     updateAssistantSource: (workspaceId: string, sourceId: string, change: { title?: string; content?: string } = {}) =>
       request<AssistantSource>('PATCH', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`, change),
     deleteAssistantSource: (workspaceId: string, sourceId: string) => request<void>('DELETE', `${workspace(workspaceId)}/assistant/sources/${encodeURIComponent(sourceId)}`),
-    testAssistant: (workspaceId: string, websiteId: string, question: string) => request<AssistantAnswer>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/test`, { question }),
+    testAssistant: (workspaceId: string, websiteId: string, question: string, history: { role: 'visitor' | 'assistant'; content: string }[] = []) =>
+      request<AssistantAnswer>('POST', `${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/test`, history.length > 0 ? { question, history } : { question }),
     listLearnedAnswers: (workspaceId: string, websiteId: string, status: LearnedAnswer['status']) =>
       get<{ data: LearnedAnswer[] }>(`${workspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}/assistant/learned?status=${status}`),
     decideLearnedAnswer: (workspaceId: string, learnedId: string, input: { status: 'approved' | 'rejected'; question?: string; answer?: string }) =>
