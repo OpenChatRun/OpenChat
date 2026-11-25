@@ -57,6 +57,7 @@ Files named `*.draft.*` are design artifacts. Phase 0 moves them into `packages/
 | Document | Purpose |
 |---|---|
 | [development/local-dev.md](development/local-dev.md) | Local development workflow, including what cannot run locally |
+| [operations/agent-setup.md](operations/agent-setup.md) | Instructions a coding agent follows to install OpenChat, and the prompt to give it |
 | [operations/one-click-deploy.md](operations/one-click-deploy.md) | The Deploy to Cloudflare button, and first-time setup in the browser |
 | [operations/self-hosting.md](operations/self-hosting.md) | **Step by step:** your own backend, with the official app |
 | [operations/deployment.md](operations/deployment.md) | Production deployment and upgrades, and push through the managed relay |

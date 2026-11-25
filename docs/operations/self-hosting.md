@@ -14,7 +14,7 @@ The iPhone app and the relay are not open source ([ADR-0019](../architecture/dec
 
 Follow the steps in order. Each one says what you should see. If you see something else, stop and look in [When something goes wrong](#when-something-goes-wrong).
 
-The background for each step is in [deployment](deployment.md).
+The background for each step is in [deployment](deployment.md). To have a coding agent run these steps for you, see [set up with an AI agent](agent-setup.md).
 
 ## What you need
 
