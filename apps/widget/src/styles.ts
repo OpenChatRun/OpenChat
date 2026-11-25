@@ -93,6 +93,8 @@ export const CHAT_CSS = `
 .oc-article blockquote{padding-left:10px;border-left:3px solid var(--oc-line);color:var(--oc-muted)}
 .oc-still{margin-top:auto;padding:12px;border-radius:12px;background:var(--oc-soft);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .oc-still p{margin:0;font-weight:600}
+.oc-helpful{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0;padding:10px 0;border-top:1px solid var(--oc-line);font-size:14px}
+.oc-helpful p{margin:0}
 @media (max-width:640px),(max-height:500px){
 .oc-panel{inset:0;width:auto;height:100%;border-radius:0;box-shadow:none;z-index:2147483001;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .oc-head{padding-top:calc(16px + env(safe-area-inset-top))}

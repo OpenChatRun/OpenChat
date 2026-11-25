@@ -472,6 +472,7 @@ export function createController(deps: ControllerDeps) {
 
     help: (language: string, q: string) => deps.api.help(language, q),
     helpArticle: (id: string) => deps.api.helpArticle(id),
+    helpFeedback: (id: string, helpful: boolean) => deps.api.helpFeedback(id, helpful),
 
     dismissProfile() {
       deps.storage.set({ profileDismissed: true });

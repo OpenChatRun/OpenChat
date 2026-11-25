@@ -3,7 +3,8 @@
  * published articles of the website the slug names, and nothing else.
  */
 import { publicHelpRepository, type Database, type PublicHelpArticle, type PublicHelpSite } from '@openchat/database';
-import { HELP_LANGUAGES, helpSearchTerms, type HelpLanguage } from '@openchat/shared';
+import { HELP_LANGUAGES, helpSearchTerms, type AbuseLimits, type HelpLanguage } from '@openchat/shared';
+import { enforce, limitKeyForIp, type RateLimiter } from './auth-flows';
 
 export const HELP_SEARCH_LIMITS = { queryChars: 200, results: 20 } as const;
 
@@ -118,4 +119,38 @@ export async function widgetHelpArticle(db: Database, websiteId: string, article
     bodyHtml: absoluteHelpHtml(article.bodyHtml, origin),
     url: slug ? `${origin}/help/${slug}/${helpLanguagePath(article.language)}/${encodeURIComponent(article.slug)}` : null,
   };
+}
+
+// ---------- Views, and "Was this helpful?" (counts only) ----------
+
+/** Programs that fetch pages without a person reading them. A view by one of these is not counted. */
+const NOT_A_READER = /bot|crawl|spider|slurp|preview|monitor|headless|lighthouse|curl|wget|python|okhttp|http-?client|libwww|scrapy|facebookexternalhit|feedfetcher/i;
+
+export const helpReaderIsPerson = (userAgent: string | null | undefined) => !!userAgent && !NOT_A_READER.test(userAgent);
+
+/** One answer per address and article in this time: a second click, or a reload of the form, is not counted twice. */
+export const HELP_FEEDBACK_ONCE = { limit: 1, windowSeconds: 24 * 60 * 60 };
+/** Answers per address in an hour, over all articles. */
+export const HELP_FEEDBACK_LIMIT = { limit: 30, windowSeconds: 60 * 60 };
+
+export type HelpArticleRef = { id: string } | { language: string; slug: string };
+
+/** Counts a view of a published article. Never fails the request it is part of. */
+export const countHelpView = (db: Database, websiteId: string, article: HelpArticleRef) =>
+  publicHelpRepository(db).count(websiteId, article, 'view').catch(() => false);
+
+/** Counts an answer to "Was this helpful?". False if there is no such published article. */
+export const countHelpFeedback = (db: Database, websiteId: string, article: HelpArticleRef, helpful: boolean) =>
+  publicHelpRepository(db).count(websiteId, article, helpful ? 'helpful' : 'notHelpful');
+
+/**
+ * Whether an answer from this address should be counted. Too many answers in an hour are refused (429). A second
+ * answer to the same article within a day is accepted and not counted, so the reader is thanked either way.
+ * The limiter keeps a hash of the address, as every other limit does; the database keeps nothing.
+ */
+export async function acceptHelpFeedback(deps: { limiter: RateLimiter; limits: AbuseLimits }, ip: string, websiteId: string, article: HelpArticleRef): Promise<boolean> {
+  await enforce(deps.limiter, await limitKeyForIp(deps, 'help-feedback-ip', ip), HELP_FEEDBACK_LIMIT);
+  const which = 'id' in article ? article.id : `${article.language}/${article.slug}`;
+  const once = await deps.limiter.consume(await limitKeyForIp(deps, `help-feedback-once:${websiteId}:${which}`, ip), HELP_FEEDBACK_ONCE.limit, HELP_FEEDBACK_ONCE.windowSeconds);
+  return once.allowed;
 }

@@ -5,8 +5,14 @@
  * Pages are cached with the Cache API under the website's help_version, which every visible change bumps, so a
  * change shows at once. Browsers revalidate with an ETag of that version. Requests that reach the database are
  * rate-limited per IP.
+ *
+ * An article counts its views, and has a form, "Was this article helpful?", that posts here. Both store a number
+ * and nothing about the reader. The form needs no script: the answer redirects to a page of thanks.
  */
 import {
+  acceptHelpFeedback,
+  countHelpFeedback,
+  countHelpView,
   enforce,
   findHelpSite,
   helpArticlePage,
@@ -15,6 +21,7 @@ import {
   helpHome,
   helpLanguageFromPath,
   helpLanguages,
+  helpReaderIsPerson,
   helpSitemap,
   limitKeyForIp,
   pickHelpLanguage,
@@ -25,7 +32,7 @@ import { HELP_LANGUAGES, readAbuseLimits } from '@openchat/shared';
 import type { Context } from 'hono';
 import { HSTS } from '../app-headers';
 import { limiterFor, publicDatabase, type App, type AppEnv } from '../context';
-import { articlePage, helpHomePath, HELP_PAGE_CSP, homePage, notFoundPage, searchPage, sitemapXml } from '../help/pages';
+import { articlePage, helpArticlePath, helpHomePath, HELP_PAGE_CSP, homePage, notFoundPage, searchPage, sitemapXml, thanksPage } from '../help/pages';
 
 /** Requests per IP per minute that reach the database. Cached pages do not count. */
 export const HELP_PAGE_LIMIT = { limit: 300, windowSeconds: 60 };
@@ -143,10 +150,55 @@ export function registerHelpPublicRoutes(app: App) {
     const site = await siteOr404(c);
     const language = helpLanguageFromPath(c.req.param('lang'));
     if (!site || !language) return notFoundText(c);
-    return cachedPage(c, site, async () => {
-      const [languages, article] = await Promise.all([helpLanguages(db(c), site), helpArticlePage(db(c), site, language, c.req.param('article'))]);
+    const slug = c.req.param('article');
+    const response = await cachedPage(c, site, async () => {
+      const [languages, article] = await Promise.all([helpLanguages(db(c), site), helpArticlePage(db(c), site, language, slug)]);
       if (!article) return { status: 404, html: notFoundPage({ site, language, languages }) };
       return { status: 200, html: articlePage({ site, language, languages, origin: new URL(c.req.url).origin, article }) };
+    });
+    // After the answer, and whether or not the page came from the cache. A browser that still had the page (304) is
+    // a reader too. Programs that fetch pages are left out by their name.
+    if ((response.status === 200 || response.status === 304) && helpReaderIsPerson(c.req.header('user-agent'))) {
+      waitUntil(c, countHelpView(db(c), site.websiteId, { language, slug }));
+    }
+    return response;
+  });
+
+  /**
+   * "Was this article helpful?": a plain form on the article, so it works with no script. Answers from other sites
+   * are refused. The answer is the same whether it was counted or not.
+   */
+  app.post('/help/:slug/:lang/:article/feedback', async (c) => {
+    const site = await siteOr404(c);
+    const language = helpLanguageFromPath(c.req.param('lang'));
+    if (!site || !language) return notFoundText(c);
+    const url = new URL(c.req.url);
+    const origin = c.req.header('origin');
+    if (origin !== undefined && origin !== url.origin) return c.text('Forbidden', 403, { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+    if (Number(c.req.header('content-length') ?? '0') > 1024) return c.text('Bad request', 400, { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+    await limit(c);
+    const answer = (await c.req.parseBody().catch(() => ({}) as Record<string, unknown>))['helpful'];
+    if (answer !== 'yes' && answer !== 'no') return c.text('Bad request', 400, { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+    const slug = c.req.param('article');
+    const article = { language, slug };
+    const exists = await helpArticlePage(db(c), site, language, slug);
+    if (!exists) return notFoundText(c);
+    const limits = readAbuseLimits(c.env);
+    if (await acceptHelpFeedback({ limiter: limiterFor(c.env), limits }, c.req.header('cf-connecting-ip') ?? 'unknown', site.websiteId, article)) {
+      await countHelpFeedback(db(c), site.websiteId, article, answer === 'yes');
+    }
+    return c.redirect(`${helpArticlePath(site, language, slug)}/thanks`, 303);
+  });
+
+  app.get('/help/:slug/:lang/:article/thanks', async (c) => {
+    const site = await siteOr404(c);
+    const language = helpLanguageFromPath(c.req.param('lang'));
+    if (!site || !language) return notFoundText(c);
+    await limit(c);
+    const languages = await helpLanguages(db(c), site);
+    return new Response(thanksPage({ site, language, languages, articleSlug: c.req.param('article') }), {
+      status: 200,
+      headers: pageHeaders(site, { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' }),
     });
   });
 
@@ -172,4 +224,4 @@ export function registerHelpPublicRoutes(app: App) {
 }
 
 /** The pages above, for the test that keeps the app and the contract in step. */
-export const HELP_PUBLIC_ROUTES = ['GET /help/:slug', 'GET /help/:slug/sitemap.xml', 'GET /help/:slug/:lang', 'GET /help/:slug/:lang/search', 'GET /help/:slug/:lang/:article', 'GET /help-assets/:id'];
+export const HELP_PUBLIC_ROUTES = ['GET /help/:slug', 'GET /help/:slug/sitemap.xml', 'GET /help/:slug/:lang', 'GET /help/:slug/:lang/search', 'GET /help/:slug/:lang/:article', 'POST /help/:slug/:lang/:article/feedback', 'GET /help/:slug/:lang/:article/thanks', 'GET /help-assets/:id'];

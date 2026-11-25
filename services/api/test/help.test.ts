@@ -329,6 +329,85 @@ describe('the public help centre', () => {
   });
 });
 
+describe('views and "Was this article helpful?"', () => {
+  const BROWSER = { 'user-agent': 'Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15 Safari/605.1.15' };
+  const stats = async (id: string) => {
+    const article = (await (await call('GET', api(`/help/articles/${id}`), { token: tokens.boss })).json()) as { views: number; helpful: number; notHelpful: number };
+    return { views: article.views, helpful: article.helpful, notHelpful: article.notHelpful };
+  };
+  const answer = (path: string, helpful: string, headers: Record<string, string> = {}) =>
+    call('POST', `${path}/feedback`, { raw: new TextEncoder().encode(`helpful=${helpful}`), headers: { 'content-type': 'application/x-www-form-urlencoded', 'cf-connecting-ip': '198.51.100.7', ...headers } });
+
+  it('counts a reader each time the article is opened, cached or not, and not a crawler or a draft', async () => {
+    await turnOn();
+    const article = await publish(await write({ title: 'Returns' }));
+    const path = `/help/shop/en/${article.slug}`;
+    expect(await stats(article.id)).toEqual({ views: 0, helpful: 0, notHelpful: 0 });
+    const first = await page(path, BROWSER);
+    await page(path, BROWSER);
+    expect((await page(path, { ...BROWSER, 'if-none-match': first.headers.get('etag')! })).status).toBe(304);
+    await page(path, { 'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' });
+    await page(path);
+    expect((await page('/help/shop/en/nothing-here', BROWSER)).status).toBe(404);
+    expect(await stats(article.id)).toEqual({ views: 3, helpful: 0, notHelpful: 0 });
+    // The list carries the same numbers.
+    const list = (await (await call('GET', api('/websites/site_a/help'), { token: tokens.boss })).json()) as { articles: { id: string; views: number }[] };
+    expect(list.articles.find((a) => a.id === article.id)?.views).toBe(3);
+    await publish(article, 'draft');
+    await page(path, BROWSER);
+    expect((await stats(article.id)).views).toBe(3);
+  });
+
+  it('has a form that needs no script, counts one answer per reader and article, and thanks them either way', async () => {
+    await turnOn();
+    const article = await publish(await write({ title: 'Returns' }));
+    const path = `/help/shop/en/${article.slug}`;
+    const shown = await page(path);
+    expect(shown.html).toContain(`<form class="helpful" method="post" action="${path}/feedback">`);
+    expect(shown.html).toContain('Was this article helpful?');
+    expect(shown.html).not.toContain('<script');
+
+    const yes = await answer(path, 'yes');
+    expect(yes.status).toBe(303);
+    expect(yes.headers.get('location')).toBe(`${path}/thanks`);
+    // The same reader again: thanked, not counted.
+    expect((await answer(path, 'no')).status).toBe(303);
+    expect((await answer(path, 'no', { 'cf-connecting-ip': '198.51.100.8' })).status).toBe(303);
+    expect(await stats(article.id)).toEqual({ views: 0, helpful: 1, notHelpful: 1 });
+
+    const thanks = await page(`${path}/thanks`);
+    expect(thanks.status).toBe(200);
+    expect(thanks.html).toContain('Thanks for your feedback.');
+    expect(thanks.html).toContain(`href="${path}"`);
+    expect(thanks.headers.get('x-robots-tag')).toBe('noindex');
+    expect(thanks.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('refuses an answer from another site, a wrong answer, and one for a page that is not published', async () => {
+    await turnOn();
+    const article = await publish(await write({ title: 'Returns' }));
+    const draft = await write({ title: 'Unfinished' });
+    const path = `/help/shop/en/${article.slug}`;
+    expect((await answer(path, 'yes', { origin: 'https://evil.example' })).status).toBe(403);
+    expect((await answer(path, 'maybe')).status).toBe(400);
+    expect((await answer(`/help/shop/en/${draft.slug}`, 'yes')).status).toBe(404);
+    expect((await answer('/help/nowhere/en/returns', 'yes')).status).toBe(404);
+    // An address of its own: the limiter remembers the readers of the tests above.
+    expect((await answer(path, 'yes', { origin: ORIGIN, 'cf-connecting-ip': '198.51.100.99' })).status).toBe(303);
+    expect(await stats(article.id)).toEqual({ views: 0, helpful: 1, notHelpful: 0 });
+    expect(await env.DB.prepare(`SELECT COUNT(*) AS n FROM help_article_stats`).first<{ n: number }>()).toEqual({ n: 1 });
+  });
+
+  it('forgets the counts with the article', async () => {
+    await turnOn();
+    const article = await publish(await write({ title: 'Returns' }));
+    await page(`/help/shop/en/${article.slug}`, BROWSER);
+    expect(await env.DB.prepare(`SELECT COUNT(*) AS n FROM help_article_stats`).first<{ n: number }>()).toEqual({ n: 1 });
+    expect((await call('DELETE', api(`/help/articles/${article.id}`), { token: tokens.boss })).status).toBe(204);
+    expect(await env.DB.prepare(`SELECT COUNT(*) AS n FROM help_article_stats`).first<{ n: number }>()).toEqual({ n: 0 });
+  });
+});
+
 describe('choosing a language', () => {
   it('follows Accept-Language, with Chinese scripts told apart', async () => {
     const { pickHelpLanguage } = await import('@openchat/core');

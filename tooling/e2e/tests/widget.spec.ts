@@ -680,6 +680,33 @@ test.describe('the Help tab', () => {
     await expect(agent.getByText(`Came from the help article “${HELP_ARTICLE.title}”`)).toBeVisible();
     await context.close();
   });
+
+  test('a visitor says an article was helpful, and the team sees the counts', async ({ browser, page: dashboard }) => {
+    const context = await visitorContext(browser);
+    const page = await shop(context, HELP_WEBSITE_KEY);
+    await launcher(page).click();
+    await page.getByRole('button', { name: new RegExp(HELP_ARTICLE.title) }).click();
+    const asked = page.getByRole('group', { name: 'Was this helpful?' });
+    const answered = page.waitForResponse((r) => r.url().endsWith(`/help/articles/${HELP_ARTICLE.id}/feedback`));
+    await asked.getByRole('button', { name: 'Yes' }).click();
+    expect((await answered).status()).toBe(204);
+    await expect(page.getByText('Thanks for your feedback.')).toBeVisible();
+    await expect(asked).toBeHidden();
+    // Not asked again about the same article.
+    await page.getByRole('button', { name: /All articles/ }).click();
+    await page.getByRole('button', { name: new RegExp(HELP_ARTICLE.title) }).click();
+    await expect(page.getByText('Thanks for your feedback.')).toBeVisible();
+    await context.close();
+
+    await signIn(dashboard, OWNER);
+    await dashboard.goto('/help-centre');
+    await dashboard.getByLabel('Website').selectOption({ label: 'Helpful' });
+    const row = dashboard.getByRole('region', { name: 'Articles' }).getByRole('listitem').filter({ hasText: HELP_ARTICLE.title });
+    await expect(row).toContainText(/Views: [1-9]/);
+    await expect(row).toContainText('Helpful: 1 of 1');
+    await dashboard.getByRole('region', { name: 'Articles' }).getByLabel('Order').selectOption('views');
+    await expect(row).toBeVisible();
+  });
 });
 
 test('a visitor rates a resolved conversation, and the agent sees it', async ({ browser }) => {

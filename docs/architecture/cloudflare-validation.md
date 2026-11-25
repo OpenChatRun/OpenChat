@@ -848,6 +848,24 @@ A real visitor who asked about bicycles read the team's handover message, with `
 
 Not tried there: a tone that contradicts the rules outright, which the unit tests cover only as far as the prompt's order, a tone in another language, the widget itself showing a custom handover, which its unit test covers, and the dashboard's panel, which the browser test covers against a mocked API.
 
+## Help article views and "Was this helpful?" (migration 0033)
+
+On a throwaway installation, `oc-helpstats`, since deleted, with one published article at `/help/shop/en/returns`:
+
+| Checked | Result |
+|---|---|
+| Three opens by a browser (a new page, a cached page, and a 304), and one by `Googlebot` | `views` 3 |
+| The form's `POST …/feedback` with `helpful=yes` | 303 to `…/thanks`; `helpful` 1 |
+| The same address again, with `no` | 303, not counted |
+| An `Origin` of another site; `helpful=maybe` | 403; 400 |
+| The thanks page | 200, `no-store`, `noindex` |
+| The widget: two opens, then `POST /api/v1/widget/help/articles/{id}/feedback` twice with `helpful: false` | `views` 5; `notHelpful` 1, the second not counted |
+| The widget from an Origin the website does not allow; an unknown article | 403; 404 |
+| Twenty more opens of the cached page, one after another | `views` 25; median 180 ms from a laptop, with the count made after the answer |
+| Deleting the article | `help_article_stats` empty: the cascade ran |
+
+`INSERT … SELECT … ON CONFLICT (workspace_id, article_id) DO UPDATE` works on D1 as written, with a `WHERE` in the `SELECT`. The answer by the public form and the answer in the widget are told apart by the limiter, by slug and by ID, so one address can be counted once on each.
+
 ## D1 triggers on an upsert (2026-11-20)
 
 OpenChat Cloud caps AI use per organisation with a trigger on `assistant_usage`, so that the open-source counting needs no change. Checked on a throwaway remote D1 database, then deleted:

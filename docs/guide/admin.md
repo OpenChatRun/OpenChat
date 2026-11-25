@@ -111,6 +111,12 @@ The page has four tabs: **Articles**, **Collections**, **Images** and **Settings
 
 To find an article, type words of its title in **Search articles** above the list, or choose **Published** or **Draft** beside it. The list shows one language at a time, chosen at the top of the page.
 
+**Views and "Was this helpful?".** Under each published article, on the help centre and in the widget, readers are asked whether it was helpful, with **Yes** and **No**. The list shows how often each article was opened and how many readers found it helpful, and **Order** puts the most viewed, or the least helpful, first. These are counts and nothing else:
+
+- A view is counted each time an article is opened, so it is not a number of people. Search engines and other known crawlers are left out.
+- One answer is counted for each reader and article in a day. A second answer is thanked and not counted.
+- Nothing about the reader is kept with either. The counts stay through edits, and go when the article is deleted.
+
 **Draft with AI**, if your installation has Workers AI, writes drafts for you. Tick **Read the website**, add links to pages on your website, or choose files: PDF, Word, OpenDocument, HTML, Markdown or text. Then choose **Draft articles**. It writes in the language chosen at the top of the page, whatever the language of the material. It plans up to 20 articles and writes them one by one; they appear as drafts marked **Drafted by AI**, with the pages and files each came from. Check every fact before you publish: the label goes once you change the words. Only your own website's pages can be read, files are deleted when it finishes, and a workspace can start 5 runs a day. Upload your company's own material only, never customer data.
 
 **In the widget.** Once a website has a published article, its chat widget gains a **Help** tab, where visitors search and read articles in their language without leaving the page. **Still need help?** takes them to the chat, and the conversation shows which article they came from.

@@ -918,6 +918,29 @@ export const assistantChunks = sqliteTable(
   ],
 );
 
+/**
+ * How often a published help article was opened, and what readers answered to "Was this helpful?". Counts only:
+ * nothing about a reader is kept. One row per article, made by its first view, and gone with the article.
+ */
+export const helpArticleStats = sqliteTable(
+  'help_article_stats',
+  {
+    workspaceId: text('workspace_id').notNull(),
+    articleId: text('article_id').notNull(),
+    views: integer('views').notNull().default(0),
+    helpful: integer('helpful').notNull().default(0),
+    notHelpful: integer('not_helpful').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ name: 'help_article_stats_pk', columns: [t.workspaceId, t.articleId] }),
+    foreignKey({
+      name: 'help_article_stats_article_fk',
+      columns: [t.workspaceId, t.articleId],
+      foreignColumns: [helpArticles.workspaceId, helpArticles.id],
+    }).onDelete('cascade'),
+  ],
+);
+
 /** A published help article's text in pieces, for the assistant (ADR-0023 step 4). Vectorize holds the vectors. */
 export const helpArticleChunks = sqliteTable(
   'help_article_chunks',

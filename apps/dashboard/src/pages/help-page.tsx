@@ -442,9 +442,13 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
   const [status, setStatus] = useState<'all' | HelpArticleSummary['status']>('all');
   const inLanguage = help.articles.filter((a) => a.language === language);
   const words = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const articles = inLanguage.filter((a) => (status === 'all' || a.status === status) && words.every((word) => a.title.toLocaleLowerCase().includes(word)));
+  const [order, setOrder] = useState<'default' | 'views' | 'unhelpful'>('default');
+  const matching = inLanguage.filter((a) => (status === 'all' || a.status === status) && words.every((word) => a.title.toLocaleLowerCase().includes(word)));
+  // The server's order is the team's own. The other two put first what most needs a look.
+  const articles = order === 'default' ? matching : [...matching].sort((a, b) => (order === 'views' ? b.views - a.views : b.notHelpful - a.notHelpful || a.helpful - b.helpful));
   const collections = new Map(help.collections.map((c) => [c.id, c.name]));
   const date = new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' });
+  const count = new Intl.NumberFormat(intlLocale());
   return (
     <section className="card space-y-3" aria-label={t('helpArticles')}>
       <div className="flex flex-wrap items-baseline gap-2">
@@ -468,6 +472,11 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
             <option value="published">{t('helpStatusPublished')} ({inLanguage.filter((a) => a.status === 'published').length})</option>
             <option value="draft">{t('helpStatusDraft')} ({inLanguage.filter((a) => a.status === 'draft').length})</option>
           </select>
+          <select className="field mt-0 w-auto" aria-label={t('helpSort')} value={order} onChange={(event) => setOrder(event.target.value as typeof order)}>
+            <option value="default">{t('helpSortDefault')}</option>
+            <option value="views">{t('helpSortViews')}</option>
+            <option value="unhelpful">{t('helpSortUnhelpful')}</option>
+          </select>
         </div>
       )}
       {inLanguage.length === 0 && <p className="text-sm text-slate-600 dark:text-slate-400">{t('helpEmptyLanguage')}</p>}
@@ -478,7 +487,11 @@ function ArticlesCard({ workspaceId, help, language, canEdit, onOpen }: { worksp
             <button type="button" className="flex w-full flex-wrap items-center gap-2 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => onOpen(article.id)}>
               <span className="min-w-48 flex-1">
                 <span className="block font-medium break-words">{article.title}</span>
-                <span className={quiet}>{article.collectionId ? collections.get(article.collectionId) : t('helpNoCollection')} · {date.format(new Date(article.updatedAt))}</span>
+                <span className={quiet}>
+                  {article.collectionId ? collections.get(article.collectionId) : t('helpNoCollection')} · {date.format(new Date(article.updatedAt))}
+                  {article.views > 0 && <> · {t('helpViewsCount', { count: count.format(article.views) })}</>}
+                  {article.helpful + article.notHelpful > 0 && <> · {t('helpFoundHelpful', { yes: count.format(article.helpful), total: count.format(article.helpful + article.notHelpful) })}</>}
+                </span>
               </span>
               {article.aiDrafted && <AiBadge />}
               <StatusBadge status={article.status} />
