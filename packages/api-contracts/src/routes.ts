@@ -2149,6 +2149,9 @@ const helpArticleSummaryFields = {
   version: z.number().int(),
   publishedAt: z.iso.datetime().nullable(),
   aiDrafted: z.boolean().openapi({ description: 'Written by Draft with AI and not changed by a person since.' }),
+  views: z.number().int().openapi({ description: 'Times it was opened while published, on the help centre or in the widget. Not unique readers; known crawlers are left out.' }),
+  helpful: z.number().int().openapi({ description: 'Readers who answered yes to "Was this helpful?".' }),
+  notHelpful: z.number().int().openapi({ description: 'Readers who answered no.' }),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 };
@@ -2475,4 +2478,15 @@ export const widgetHelpArticleRoute = createRoute({
   security: [],
   request: { params: z.object({ articleId: z.string() }), query: z.object({ websiteKey: z.string().max(128) }) },
   responses: { 200: { description: 'Article', ...json(WidgetHelpArticleSchema) }, default: problemResponse },
+});
+
+export const widgetHelpFeedbackRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/widget/help/articles/{articleId}/feedback',
+  tags: ['widget'],
+  operationId: 'widgetHelpFeedback',
+  summary: 'Answer "Was this helpful?" for a published help article. Counted once per address and article in a day; nothing about the reader is stored. No session needed; the Origin must be allowed.',
+  security: [],
+  request: { params: z.object({ articleId: z.string().max(64) }), body: { required: true, ...json(z.strictObject({ websiteKey: z.string().max(128), helpful: z.boolean() })) } },
+  responses: { 204: { description: 'Thanked, whether or not it was counted' }, default: problemResponse },
 });

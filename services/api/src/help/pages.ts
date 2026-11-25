@@ -19,20 +19,25 @@ interface Strings {
   notFound: string;
   empty: string;
   updated: string;
+  helpful: string;
+  yes: string;
+  no: string;
+  thanks: string;
+  backToArticle: string;
 }
 
 const STRINGS: Record<HelpLanguage, Strings> = {
-  en: { helpCentre: 'Help centre', search: 'Search', searchPlaceholder: 'Search articles', resultsFor: 'Results for “{q}”', noResults: 'No articles match your search.', otherArticles: 'Other articles', alsoIn: 'Also in', allArticles: 'All articles', notFound: 'This page does not exist.', empty: 'There are no articles yet.', updated: 'Updated {date}' },
-  es: { helpCentre: 'Centro de ayuda', search: 'Buscar', searchPlaceholder: 'Buscar artículos', resultsFor: 'Resultados para «{q}»', noResults: 'Ningún artículo coincide con tu búsqueda.', otherArticles: 'Otros artículos', alsoIn: 'También en', allArticles: 'Todos los artículos', notFound: 'Esta página no existe.', empty: 'Todavía no hay artículos.', updated: 'Actualizado el {date}' },
-  fr: { helpCentre: "Centre d'aide", search: 'Rechercher', searchPlaceholder: 'Rechercher des articles', resultsFor: 'Résultats pour « {q} »', noResults: 'Aucun article ne correspond à votre recherche.', otherArticles: 'Autres articles', alsoIn: 'Aussi en', allArticles: 'Tous les articles', notFound: "Cette page n'existe pas.", empty: "Il n'y a pas encore d'articles.", updated: 'Mis à jour le {date}' },
-  de: { helpCentre: 'Hilfe-Center', search: 'Suchen', searchPlaceholder: 'Artikel durchsuchen', resultsFor: 'Ergebnisse für „{q}“', noResults: 'Keine Artikel passen zu Ihrer Suche.', otherArticles: 'Weitere Artikel', alsoIn: 'Auch verfügbar in', allArticles: 'Alle Artikel', notFound: 'Diese Seite gibt es nicht.', empty: 'Es gibt noch keine Artikel.', updated: 'Aktualisiert am {date}' },
-  it: { helpCentre: 'Centro assistenza', search: 'Cerca', searchPlaceholder: 'Cerca negli articoli', resultsFor: 'Risultati per «{q}»', noResults: 'Nessun articolo corrisponde alla ricerca.', otherArticles: 'Altri articoli', alsoIn: 'Disponibile anche in', allArticles: 'Tutti gli articoli', notFound: 'Questa pagina non esiste.', empty: 'Non ci sono ancora articoli.', updated: 'Aggiornato il {date}' },
-  pt: { helpCentre: 'Central de ajuda', search: 'Pesquisar', searchPlaceholder: 'Pesquisar artigos', resultsFor: 'Resultados para “{q}”', noResults: 'Nenhum artigo corresponde à sua pesquisa.', otherArticles: 'Outros artigos', alsoIn: 'Também em', allArticles: 'Todos os artigos', notFound: 'Esta página não existe.', empty: 'Ainda não há artigos.', updated: 'Atualizado em {date}' },
-  nl: { helpCentre: 'Helpcentrum', search: 'Zoeken', searchPlaceholder: 'Artikelen doorzoeken', resultsFor: 'Resultaten voor ‘{q}’', noResults: 'Geen artikelen gevonden.', otherArticles: 'Andere artikelen', alsoIn: 'Ook beschikbaar in', allArticles: 'Alle artikelen', notFound: 'Deze pagina bestaat niet.', empty: 'Er zijn nog geen artikelen.', updated: 'Bijgewerkt op {date}' },
-  ja: { helpCentre: 'ヘルプセンター', search: '検索', searchPlaceholder: '記事を検索', resultsFor: '「{q}」の検索結果', noResults: '検索に一致する記事はありません。', otherArticles: 'その他の記事', alsoIn: 'ほかの言語', allArticles: 'すべての記事', notFound: 'このページは存在しません。', empty: 'まだ記事がありません。', updated: '更新日: {date}' },
-  ko: { helpCentre: '도움말 센터', search: '검색', searchPlaceholder: '문서 검색', resultsFor: '‘{q}’ 검색 결과', noResults: '검색과 일치하는 문서가 없습니다.', otherArticles: '기타 문서', alsoIn: '다른 언어', allArticles: '모든 문서', notFound: '이 페이지는 존재하지 않습니다.', empty: '아직 문서가 없습니다.', updated: '업데이트: {date}' },
-  'zh-Hans': { helpCentre: '帮助中心', search: '搜索', searchPlaceholder: '搜索文章', resultsFor: '“{q}”的搜索结果', noResults: '没有与搜索匹配的文章。', otherArticles: '其他文章', alsoIn: '其他语言', allArticles: '所有文章', notFound: '此页面不存在。', empty: '还没有文章。', updated: '更新于 {date}' },
-  'zh-Hant': { helpCentre: '說明中心', search: '搜尋', searchPlaceholder: '搜尋文章', resultsFor: '「{q}」的搜尋結果', noResults: '沒有符合搜尋的文章。', otherArticles: '其他文章', alsoIn: '其他語言', allArticles: '所有文章', notFound: '此頁面不存在。', empty: '尚無文章。', updated: '更新於 {date}' },
+  en: { helpCentre: 'Help centre', search: 'Search', searchPlaceholder: 'Search articles', resultsFor: 'Results for “{q}”', noResults: 'No articles match your search.', otherArticles: 'Other articles', alsoIn: 'Also in', allArticles: 'All articles', notFound: 'This page does not exist.', empty: 'There are no articles yet.', updated: 'Updated {date}', helpful: 'Was this article helpful?', yes: 'Yes', no: 'No', thanks: 'Thanks for your feedback.', backToArticle: 'Back to the article' },
+  es: { helpCentre: 'Centro de ayuda', search: 'Buscar', searchPlaceholder: 'Buscar artículos', resultsFor: 'Resultados para «{q}»', noResults: 'Ningún artículo coincide con tu búsqueda.', otherArticles: 'Otros artículos', alsoIn: 'También en', allArticles: 'Todos los artículos', notFound: 'Esta página no existe.', empty: 'Todavía no hay artículos.', updated: 'Actualizado el {date}', helpful: '¿Te ha resultado útil este artículo?', yes: 'Sí', no: 'No', thanks: 'Gracias por tu opinión.', backToArticle: 'Volver al artículo' },
+  fr: { helpCentre: "Centre d'aide", search: 'Rechercher', searchPlaceholder: 'Rechercher des articles', resultsFor: 'Résultats pour « {q} »', noResults: 'Aucun article ne correspond à votre recherche.', otherArticles: 'Autres articles', alsoIn: 'Aussi en', allArticles: 'Tous les articles', notFound: "Cette page n'existe pas.", empty: "Il n'y a pas encore d'articles.", updated: 'Mis à jour le {date}', helpful: 'Cet article vous a-t-il été utile ?', yes: 'Oui', no: 'Non', thanks: 'Merci pour votre avis.', backToArticle: "Retour à l'article" },
+  de: { helpCentre: 'Hilfe-Center', search: 'Suchen', searchPlaceholder: 'Artikel durchsuchen', resultsFor: 'Ergebnisse für „{q}“', noResults: 'Keine Artikel passen zu Ihrer Suche.', otherArticles: 'Weitere Artikel', alsoIn: 'Auch verfügbar in', allArticles: 'Alle Artikel', notFound: 'Diese Seite gibt es nicht.', empty: 'Es gibt noch keine Artikel.', updated: 'Aktualisiert am {date}', helpful: 'War dieser Artikel hilfreich?', yes: 'Ja', no: 'Nein', thanks: 'Danke für Ihre Rückmeldung.', backToArticle: 'Zurück zum Artikel' },
+  it: { helpCentre: 'Centro assistenza', search: 'Cerca', searchPlaceholder: 'Cerca negli articoli', resultsFor: 'Risultati per «{q}»', noResults: 'Nessun articolo corrisponde alla ricerca.', otherArticles: 'Altri articoli', alsoIn: 'Disponibile anche in', allArticles: 'Tutti gli articoli', notFound: 'Questa pagina non esiste.', empty: 'Non ci sono ancora articoli.', updated: 'Aggiornato il {date}', helpful: 'Questo articolo ti è stato utile?', yes: 'Sì', no: 'No', thanks: 'Grazie per il tuo parere.', backToArticle: "Torna all'articolo" },
+  pt: { helpCentre: 'Central de ajuda', search: 'Pesquisar', searchPlaceholder: 'Pesquisar artigos', resultsFor: 'Resultados para “{q}”', noResults: 'Nenhum artigo corresponde à sua pesquisa.', otherArticles: 'Outros artigos', alsoIn: 'Também em', allArticles: 'Todos os artigos', notFound: 'Esta página não existe.', empty: 'Ainda não há artigos.', updated: 'Atualizado em {date}', helpful: 'Este artigo foi útil?', yes: 'Sim', no: 'Não', thanks: 'Obrigado pela sua opinião.', backToArticle: 'Voltar ao artigo' },
+  nl: { helpCentre: 'Helpcentrum', search: 'Zoeken', searchPlaceholder: 'Artikelen doorzoeken', resultsFor: 'Resultaten voor ‘{q}’', noResults: 'Geen artikelen gevonden.', otherArticles: 'Andere artikelen', alsoIn: 'Ook beschikbaar in', allArticles: 'Alle artikelen', notFound: 'Deze pagina bestaat niet.', empty: 'Er zijn nog geen artikelen.', updated: 'Bijgewerkt op {date}', helpful: 'Was dit artikel nuttig?', yes: 'Ja', no: 'Nee', thanks: 'Bedankt voor je feedback.', backToArticle: 'Terug naar het artikel' },
+  ja: { helpCentre: 'ヘルプセンター', search: '検索', searchPlaceholder: '記事を検索', resultsFor: '「{q}」の検索結果', noResults: '検索に一致する記事はありません。', otherArticles: 'その他の記事', alsoIn: 'ほかの言語', allArticles: 'すべての記事', notFound: 'このページは存在しません。', empty: 'まだ記事がありません。', updated: '更新日: {date}', helpful: 'この記事は役に立ちましたか？', yes: 'はい', no: 'いいえ', thanks: 'ご意見ありがとうございます。', backToArticle: '記事に戻る' },
+  ko: { helpCentre: '도움말 센터', search: '검색', searchPlaceholder: '문서 검색', resultsFor: '‘{q}’ 검색 결과', noResults: '검색과 일치하는 문서가 없습니다.', otherArticles: '기타 문서', alsoIn: '다른 언어', allArticles: '모든 문서', notFound: '이 페이지는 존재하지 않습니다.', empty: '아직 문서가 없습니다.', updated: '업데이트: {date}', helpful: '이 문서가 도움이 되었나요?', yes: '예', no: '아니요', thanks: '의견을 보내 주셔서 감사합니다.', backToArticle: '문서로 돌아가기' },
+  'zh-Hans': { helpCentre: '帮助中心', search: '搜索', searchPlaceholder: '搜索文章', resultsFor: '“{q}”的搜索结果', noResults: '没有与搜索匹配的文章。', otherArticles: '其他文章', alsoIn: '其他语言', allArticles: '所有文章', notFound: '此页面不存在。', empty: '还没有文章。', updated: '更新于 {date}', helpful: '这篇文章有帮助吗？', yes: '有', no: '没有', thanks: '感谢你的反馈。', backToArticle: '返回文章' },
+  'zh-Hant': { helpCentre: '說明中心', search: '搜尋', searchPlaceholder: '搜尋文章', resultsFor: '「{q}」的搜尋結果', noResults: '沒有符合搜尋的文章。', otherArticles: '其他文章', alsoIn: '其他語言', allArticles: '所有文章', notFound: '此頁面不存在。', empty: '尚無文章。', updated: '更新於 {date}', helpful: '這篇文章有幫助嗎？', yes: '有', no: '沒有', thanks: '感謝你的意見。', backToArticle: '返回文章' },
 };
 
 /** Each language's name in itself. */
@@ -141,6 +146,10 @@ article pre code{padding:0}
 article blockquote{margin:16px 0;padding:4px 16px;border-left:4px solid var(--line);color:var(--muted)}
 article hr{border:0;border-top:1px solid var(--line);margin:24px 0}
 .back{display:inline-block;margin-bottom:8px;font-size:14px}
+.helpful{margin-top:32px;padding-top:16px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.helpful p{margin:0 8px 0 0}
+.helpful button{padding:8px 18px;background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.helpful button:hover{background:var(--code)}
 footer{max-width:760px;margin:0 auto;padding:0 16px 32px;font-size:13px;color:var(--muted)}
 </style>
 </head>
@@ -216,7 +225,24 @@ export function articlePage(input: { site: HelpSite; language: string; languages
 <h1>${escapeHtml(article.title)}</h1>
 <p class="muted">${escapeHtml(s.updated.replace('{date}', date))}</p>
 ${article.bodyHtml}
-</article>`,
+</article>
+<form class="helpful" method="post" action="${escapeHtml(helpArticlePath(site, language, article.slug))}/feedback">
+<p id="helpful-q">${escapeHtml(s.helpful)}</p>
+<button type="submit" name="helpful" value="yes" aria-describedby="helpful-q">${escapeHtml(s.yes)}</button>
+<button type="submit" name="helpful" value="no" aria-describedby="helpful-q">${escapeHtml(s.no)}</button>
+</form>`,
+  });
+}
+
+/** Where an answer to "Was this article helpful?" lands. It says the same whether or not the answer was counted. */
+export function thanksPage(input: { site: HelpSite; language: string; languages: string[]; articleSlug: string }): string {
+  const s = helpStrings(input.language);
+  return page({
+    site: { ...input.site, helpNoindex: 1 },
+    language: input.language,
+    languages: input.languages,
+    title: `${s.helpCentre} · ${input.site.name}`,
+    body: `<p role="status">${escapeHtml(s.thanks)}</p><p><a href="${escapeHtml(helpArticlePath(input.site, input.language, input.articleSlug))}">${escapeHtml(s.backToArticle)}</a> · <a href="${escapeHtml(helpHomePath(input.site, input.language))}">${escapeHtml(s.allArticles)}</a></p>`,
   });
 }
 

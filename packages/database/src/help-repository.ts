@@ -45,6 +45,10 @@ export interface HelpArticleSummaryRow {
   version: number;
   publishedAt: number | null;
   aiDrafted: number;
+  /** Times it was opened while published, and the answers to "Was this helpful?". */
+  views: number;
+  helpful: number;
+  notHelpful: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -128,7 +132,10 @@ export const isUniqueViolation = (error: unknown) => error instanceof Error && /
 
 const COLLECTION_COLUMNS = `id, website_id AS websiteId, language, name, slug, position, created_at AS createdAt, updated_at AS updatedAt`;
 const SUMMARY_COLUMNS = `id, website_id AS websiteId, collection_id AS collectionId, translation_group_id AS translationGroupId, language, slug,
-  title, summary, status, position, version, published_at AS publishedAt, ai_drafted AS aiDrafted, created_at AS createdAt, updated_at AS updatedAt`;
+  title, summary, status, position, version, published_at AS publishedAt, ai_drafted AS aiDrafted, created_at AS createdAt, updated_at AS updatedAt,
+  COALESCE((SELECT s.views FROM help_article_stats s WHERE s.workspace_id = help_articles.workspace_id AND s.article_id = help_articles.id), 0) AS views,
+  COALESCE((SELECT s.helpful FROM help_article_stats s WHERE s.workspace_id = help_articles.workspace_id AND s.article_id = help_articles.id), 0) AS helpful,
+  COALESCE((SELECT s.not_helpful FROM help_article_stats s WHERE s.workspace_id = help_articles.workspace_id AND s.article_id = help_articles.id), 0) AS notHelpful`;
 const ARTICLE_COLUMNS = `${SUMMARY_COLUMNS}, body_markdown AS bodyMarkdown, body_html AS bodyHtml, ai_sources_json AS aiSourcesJson`;
 const RUN_COLUMNS = `r.id, r.workspace_id AS workspaceId, r.website_id AS websiteId, r.language, r.collection_id AS collectionId, r.read_website AS readWebsite,
   r.links_json AS linksJson, r.files_json AS filesJson, r.status, r.error_code AS errorCode, r.outline_json AS outlineJson, r.planned,
@@ -794,6 +801,25 @@ export function publicHelpRepository(database: Database) {
     async articleById(websiteId: string, articleId: string): Promise<PublicHelpArticlePage | null> {
       const row = await d1.prepare(`SELECT language, slug FROM help_articles WHERE ${PUBLISHED} AND id = ?2`).bind(websiteId, articleId).first<{ language: string; slug: string }>();
       return row ? this.article(websiteId, row.language, row.slug) : null;
+    },
+
+    /**
+     * Counts one view, or one answer to "Was this helpful?", of a published article of this website, named by its ID
+     * or by its language and slug. One statement: the row is made by the first count. False if there is no such
+     * published article. Nothing about the reader is stored.
+     */
+    async count(websiteId: string, article: { id: string } | { language: string; slug: string }, what: 'view' | 'helpful' | 'notHelpful'): Promise<boolean> {
+      const column = what === 'view' ? 'views' : what === 'helpful' ? 'helpful' : 'not_helpful';
+      const byId = 'id' in article;
+      const result = await d1
+        .prepare(
+          `INSERT INTO help_article_stats (workspace_id, article_id, ${column})
+           SELECT a.workspace_id, a.id, 1 FROM help_articles a WHERE a.website_id = ?1 AND a.status = 'published' AND ${byId ? 'a.id = ?2' : 'a.language = ?2 AND a.slug = ?3'}
+           ON CONFLICT (workspace_id, article_id) DO UPDATE SET ${column} = ${column} + 1`,
+        )
+        .bind(...(byId ? [websiteId, article.id] : [websiteId, article.language, article.slug]))
+        .run();
+      return result.meta.changes > 0;
     },
 
     async sitemap(websiteId: string): Promise<PublicHelpArticle[]> {

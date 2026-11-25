@@ -85,6 +85,7 @@ const CASES: Record<string, Case> = {
   createVisitorSession: { kind: 'public', reason: 'Creates a new anonymous visitor, or resumes the one holding the token' },
   widgetHelp: { kind: 'public', reason: 'Published help articles of the named website only. Covered in widget-help.test.ts' },
   widgetHelpArticle: { kind: 'public', reason: 'A published article of the named website only. Covered in widget-help.test.ts' },
+  widgetHelpFeedback: { kind: 'public', reason: 'Counts for a published article of the named website only. Covered in widget-help.test.ts' },
   updateVisitorProfile: { kind: 'visitor', body: { name: 'Taken over' }, ownerStatus: 204 },
   listVisitorConversations: { kind: 'visitor', ownerStatus: 200 },
   createVisitorConversation: { kind: 'visitor', body: { clientMessageId: 'isolation-2', content: 'New' }, ownerStatus: 201 },
@@ -180,6 +181,8 @@ const APP_ROUTES_OUTSIDE_THE_CONTRACT = [
   'GET /help/{slug}/{lang}',
   'GET /help/{slug}/{lang}/search',
   'GET /help/{slug}/{lang}/{article}',
+  'POST /help/{slug}/{lang}/{article}/feedback',
+  'GET /help/{slug}/{lang}/{article}/thanks',
   'GET /help-assets/{id}',
 ];
 

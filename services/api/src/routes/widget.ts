@@ -13,6 +13,7 @@ import {
   updateVisitorProfileRoute,
   widgetBootstrapRoute,
   widgetHelpArticleRoute,
+  widgetHelpFeedbackRoute,
   widgetHelpRoute,
   OpeningHoursSchema,
 } from '@openchat/api-contracts';
@@ -32,6 +33,10 @@ import {
   enforce,
   limitKeyForIp,
   publishedHelpLanguages,
+  acceptHelpFeedback,
+  countHelpFeedback,
+  countHelpView,
+  helpReaderIsPerson,
   websiteForWidget,
   setVisitorPage,
   rateVisitorConversation,
@@ -197,7 +202,20 @@ export function registerWidgetRoutes(app: App) {
       widgetHelpArticle(publicDatabase(c.env), websiteId, articleId, new URL(c.req.url).origin),
     );
     if (!article) throw notFound();
+    // Counted whether or not the article came from the cache. Never delays or fails the answer.
+    if (helpReaderIsPerson(c.req.header('user-agent'))) c.executionCtx.waitUntil(countHelpView(publicDatabase(c.env), websiteId, { id: articleId }));
     return c.json(article, 200);
+  });
+
+  /** "Was this helpful?" under an article in the widget. Thanked whether or not it was counted. */
+  app.openapi(widgetHelpFeedbackRoute, async (c) => {
+    const { websiteKey, helpful } = c.req.valid('json');
+    const websiteId = await helpWebsite(c, websiteKey);
+    const article = { id: c.req.valid('param').articleId };
+    if (await acceptHelpFeedback({ limiter: limiterFor(c.env), limits: readAbuseLimits(c.env) }, clientIp(c), websiteId, article)) {
+      if (!(await countHelpFeedback(publicDatabase(c.env), websiteId, article, helpful))) throw notFound();
+    }
+    return c.body(null, 204);
   });
 
   app.openapi(createVisitorSessionRoute, async (c) => {

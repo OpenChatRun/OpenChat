@@ -28,8 +28,9 @@ Both live in a Shadow DOM, so the host page's styles cannot reach them and their
 
 - **Reading needs no session.** `GET /api/v1/widget/help` (list, or search with `q`) and `GET /api/v1/widget/help/articles/{id}` take the website key, check the Origin as the bootstrap does, and are limited per IP with the public help centre (300 a minute). A visitor who only reads never becomes a visitor row or a contact.
 - **Language.** The widget asks in its own language. The server answers in that language if it has articles, else English, else the language with most.
-- **The list** is the first 100 published articles by position, grouped by collection, as on the help centre's home page; not the most read, because views are not counted. Search reaches the rest. The list and articles are cached for 30 seconds by website key, as the bootstrap is; searches are not cached.
+- **The list** is the first 100 published articles by position, grouped by collection, as on the help centre's home page; not the most read. Search reaches the rest. The list and articles are cached for 30 seconds by website key, as the bootstrap is; searches are not cached.
 - **An article is the one HTML the panel sets.** It is `body_html`, rendered from an allow-list on save, with `/help-assets/` images and `/help/` links made absolute on the installation, and help links opening in a new tab.
+- **Was this helpful?** under an article sends `POST /api/v1/widget/help/articles/{id}/feedback` with the website key and `helpful`, and thanks the visitor whatever comes back. Opening an article counts a view. Neither needs a session or sends anything about the visitor. The widget remembers which articles were answered until the page is reloaded; the server counts one answer per address and article in a day.
 - **Still need help?** switches to Chat. If the visitor has no conversation yet, the first message sends `helpArticleId`, which is kept on the conversation only if it names a published article of the same website. The inbox shows "Came from the help article …".
 - **Freshness.** The tab appears or goes with the bootstrap, which is cached for 30 seconds.
 

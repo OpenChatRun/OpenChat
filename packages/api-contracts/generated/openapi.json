@@ -4585,6 +4585,18 @@
             "type": "boolean",
             "description": "Written by Draft with AI and not changed by a person since."
           },
+          "views": {
+            "type": "integer",
+            "description": "Times it was opened while published, on the help centre or in the widget. Not unique readers; known crawlers are left out."
+          },
+          "helpful": {
+            "type": "integer",
+            "description": "Readers who answered yes to \"Was this helpful?\"."
+          },
+          "notHelpful": {
+            "type": "integer",
+            "description": "Readers who answered no."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -4607,6 +4619,9 @@
           "version",
           "publishedAt",
           "aiDrafted",
+          "views",
+          "helpful",
+          "notHelpful",
           "createdAt",
           "updatedAt"
         ]
@@ -4796,6 +4811,18 @@
             "type": "boolean",
             "description": "Written by Draft with AI and not changed by a person since."
           },
+          "views": {
+            "type": "integer",
+            "description": "Times it was opened while published, on the help centre or in the widget. Not unique readers; known crawlers are left out."
+          },
+          "helpful": {
+            "type": "integer",
+            "description": "Readers who answered yes to \"Was this helpful?\"."
+          },
+          "notHelpful": {
+            "type": "integer",
+            "description": "Readers who answered no."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -4847,6 +4874,9 @@
           "version",
           "publishedAt",
           "aiDrafted",
+          "views",
+          "helpful",
+          "notHelpful",
           "createdAt",
           "updatedAt",
           "bodyMarkdown",
@@ -13526,6 +13556,66 @@
                 }
               }
             }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widget/help/articles/{articleId}/feedback": {
+      "post": {
+        "tags": [
+          "widget"
+        ],
+        "operationId": "widgetHelpFeedback",
+        "summary": "Answer \"Was this helpful?\" for a published help article. Counted once per address and article in a day; nothing about the reader is stored. No session needed; the Origin must be allowed.",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "required": true,
+            "name": "articleId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "websiteKey": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "helpful": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "websiteKey",
+                  "helpful"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Thanked, whether or not it was counted"
           },
           "default": {
             "description": "RFC 9457 problem details",

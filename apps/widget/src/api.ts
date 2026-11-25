@@ -145,6 +145,11 @@ export function createApi(deps: ApiDeps) {
       if (!response.ok) throw await failure(response);
       return (await response.json()) as HelpArticle;
     },
+    /** "Was this helpful?" under an article. Nothing about the visitor goes with it. */
+    async helpFeedback(id: string, helpful: boolean): Promise<void> {
+      const response = await request('POST', `/api/v1/widget/help/articles/${encodeURIComponent(id)}/feedback`, null, { websiteKey: deps.websiteKey, helpful });
+      if (!response.ok) throw new Error('help feedback failed');
+    },
     async createConversation(input: { clientMessageId: string; content: string; helpArticleId?: string; language?: string }): Promise<VisitorConversation & { message: VisitorMessage }> {
       return (await (await authed('POST', '/api/v1/widget/conversations', input)).json()) as VisitorConversation & { message: VisitorMessage };
     },

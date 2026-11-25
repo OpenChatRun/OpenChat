@@ -17,7 +17,7 @@ const W = 'work_a';
 const ASSET = 'hast_01ARZ3NDEKTSV4RRFFQ69G5FAV';
 
 let counter = 0;
-async function call(method: string, path: string, options: { token?: string; body?: unknown; origin?: string | null | undefined } = {}) {
+async function call(method: string, path: string, options: { token?: string; body?: unknown; origin?: string | null | undefined; headers?: Record<string, string> } = {}) {
   const ctx = createExecutionContext();
   const origin = options.origin === undefined ? SITE : options.origin;
   const response = await worker.fetch(
@@ -28,6 +28,7 @@ async function call(method: string, path: string, options: { token?: string; bod
         ...(origin ? { origin } : {}),
         ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
+        ...options.headers,
       },
       ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
     }),
@@ -122,6 +123,39 @@ describe('the Help tab', () => {
     expect((await help('', 'https://evil.example')).status).toBe(403);
     expect((await call('GET', `/api/v1/widget/help?websiteKey=${otherKey}`)).status).toBe(403);
     expect((await call('GET', `/api/v1/widget/help?websiteKey=key_none`)).status).toBe(404);
+  });
+});
+
+describe('views and "Was this helpful?" in the widget', () => {
+  const BROWSER = { 'user-agent': 'Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Mobile Safari/604.1' };
+  const stats = async (id: string) =>
+    env.DB.prepare(`SELECT views, helpful, not_helpful AS notHelpful FROM help_article_stats WHERE article_id = ?1`).bind(id).first<{ views: number; helpful: number; notHelpful: number }>();
+  const answer = (id: string, helpful: unknown, options: { ip?: string; origin?: string; websiteKey?: string } = {}) =>
+    call('POST', `/api/v1/widget/help/articles/${id}/feedback`, { body: { websiteKey: options.websiteKey ?? key, helpful }, origin: options.origin, headers: { 'cf-connecting-ip': options.ip ?? '203.0.113.7' } });
+
+  it('counts each time a reader opens an article, though the article is cached', async () => {
+    const { id } = await article({ title: 'Returns' });
+    for (let i = 0; i < 2; i += 1) expect((await call('GET', `/api/v1/widget/help/articles/${id}?websiteKey=${key}`, { headers: BROWSER })).status).toBe(200);
+    await call('GET', `/api/v1/widget/help/articles/${id}?websiteKey=${key}`);
+    expect(await stats(id)).toEqual({ views: 2, helpful: 0, notHelpful: 0 });
+  });
+
+  it('counts one answer per reader and article, of this website only, from an allowed page only', async () => {
+    const { id } = await article({ title: 'Returns' });
+    const draft = await article({ title: 'Unfinished' }, 'draft');
+    expect((await answer(id, true)).status).toBe(204);
+    expect((await answer(id, false)).status).toBe(204);
+    expect((await answer(id, false, { ip: '203.0.113.8' })).status).toBe(204);
+    expect(await stats(id)).toEqual({ views: 0, helpful: 1, notHelpful: 1 });
+
+    expect((await answer(id, 'yes', { ip: '203.0.113.9' })).status).toBe(400);
+    expect((await answer(id, true, { ip: '203.0.113.9', origin: 'https://evil.example' })).status).toBe(403);
+    expect((await answer(draft.id, true, { ip: '203.0.113.9' })).status).toBe(404);
+    // Another website's article, named with this website's key.
+    expect((await answer('hart_b', true, { ip: '203.0.113.9' })).status).toBe(404);
+    expect(await stats(draft.id)).toBeNull();
+    expect(await stats('hart_b')).toBeNull();
+    expect(await stats(id)).toEqual({ views: 0, helpful: 1, notHelpful: 1 });
   });
 });
 

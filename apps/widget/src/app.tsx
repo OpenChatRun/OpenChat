@@ -277,6 +277,37 @@ function Composer({ controller, canAttach, maxChars }: { controller: Controller;
 }
 
 /** The Help tab: published articles of this website, searchable, read inside the panel. */
+
+/** Articles answered since the page loaded, so that one is not asked about twice. */
+const answeredArticles = new Set<string>();
+
+/** "Was this helpful?" under an article. A count goes to the server, and nothing about the visitor. */
+function HelpFeedback({ controller, articleId, S }: { controller: Controller; articleId: string; S: Strings }) {
+  const [answered, setAnswered] = useState(answeredArticles.has(articleId));
+  const answer = (helpful: boolean) => {
+    answeredArticles.add(articleId);
+    setAnswered(true);
+    // Thanked either way: a count that did not arrive is not the visitor's problem.
+    void controller.helpFeedback(articleId, helpful).catch(() => undefined);
+  };
+  if (answered) return <p class="oc-helpful" role="status">{S.rateThanks}</p>;
+  return (
+    <div class="oc-helpful">
+      <p id="oc-helpful-q">{S.helpHelpful}</p>
+      <div class="oc-thumbs" role="group" aria-labelledby="oc-helpful-q">
+        {([true, false] as const).map((helpful) => (
+          <button key={String(helpful)} type="button" class="oc-thumb" onClick={() => answer(helpful)}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style={helpful ? undefined : 'transform:rotate(180deg)'}>
+              <path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.5 2.5V9H19a2 2 0 0 1 2 2.3l-1.2 7a2 2 0 0 1-2 1.7H7" />
+            </svg>
+            {helpful ? S.helpYes : S.helpNo}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HelpView({ controller, language }: { controller: Controller; language: string }) {
   const { S } = useContext(Language);
   const [query, setQuery] = useState('');
@@ -316,6 +347,7 @@ function HelpView({ controller, language }: { controller: Controller; language: 
           <div dangerouslySetInnerHTML={{ __html: article.bodyHtml }} />
         </article>
         {article.url && <a class="oc-link oc-small" href={article.url} target="_blank" rel="noopener">{S.helpOpen}</a>}
+        <HelpFeedback key={article.id} controller={controller} articleId={article.id} S={S} />
         <div class="oc-still">
           <p>{S.helpStill}</p>
           <button type="button" class="oc-send" onClick={() => controller.needHelp(article.id)}>{S.helpChat}</button>

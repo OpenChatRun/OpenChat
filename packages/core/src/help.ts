@@ -65,6 +65,9 @@ const toSummary = (row: HelpArticleSummaryRow) => ({
   version: row.version,
   publishedAt: row.publishedAt === null ? null : toIso(row.publishedAt),
   aiDrafted: row.aiDrafted === 1,
+  views: row.views,
+  helpful: row.helpful,
+  notHelpful: row.notHelpful,
   createdAt: toIso(row.createdAt),
   updatedAt: toIso(row.updatedAt),
 });

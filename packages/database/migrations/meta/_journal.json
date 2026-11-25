@@ -232,6 +232,13 @@
       "when": 1795540581292,
       "tag": "0032_assistant_tone",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1795593076471,
+      "tag": "0033_help_article_stats",
+      "breakpoints": true
     }
   ]
 }
