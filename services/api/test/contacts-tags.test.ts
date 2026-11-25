@@ -177,8 +177,9 @@ describe('analytics', () => {
     expect(utc.days.map((day) => day.started)).toEqual([1, 0]);
     expect(utc.days[1]!.date).toBe(new Date(midnight).toISOString().slice(0, 10));
     const ahead = await get('?days=1&utcOffsetMinutes=120');
-    // Unless it is before 02:00 UTC, when their today began after it.
-    if (Date.now() - midnight >= 2 * HOUR) expect(ahead.days.map((day) => day.started)).toEqual([1]);
+    // Unless it is before 02:00 UTC, when their today began after it, or after 22:00 UTC, when their tomorrow has begun.
+    const sinceMidnight = Date.now() - midnight;
+    if (sinceMidnight >= 2 * HOUR && sinceMidnight < 22 * HOUR) expect(ahead.days.map((day) => day.started)).toEqual([1]);
     expect((await get('?days=1')).started).toBe(0);
   });
 
