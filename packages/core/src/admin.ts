@@ -97,7 +97,10 @@ export async function createWebsite(
   options: { turnstileAvailable: boolean } = { turnstileAvailable: false },
 ) {
   assertTurnstilePossible(input.settings, options.turnstileAvailable);
-  const row = await adminRepository(db, ctx).createWebsite(workspaceId, { ...input, websiteKey: `wk_${generateOpaqueToken()}` });
+  // A new website asks for an email before the first message, unless told otherwise, so the team can still reach
+  // a visitor who has left. Only on creation: a website whose setting is absent keeps never asking.
+  const settings = { collectEmail: 'required', ...input.settings };
+  const row = await adminRepository(db, ctx).createWebsite(workspaceId, { ...input, settings, websiteKey: `wk_${generateOpaqueToken()}` });
   if (!row) throw notFound();
   return row;
 }

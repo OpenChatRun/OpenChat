@@ -2313,7 +2313,8 @@
               "never",
               "optional",
               "required"
-            ]
+            ],
+            "description": "Whether the widget asks the visitor for an email: never, offered after the first message, or required before it. A website created without it gets required. Absent on an older website: never."
           },
           "requireTurnstile": {
             "type": "boolean"

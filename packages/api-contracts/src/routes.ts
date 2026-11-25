@@ -373,7 +373,7 @@ export const WidgetSettingsSchema = z
     welcomeMessage: z.string().max(500).optional(),
     primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     availabilityMode: z.enum(['auto', 'online', 'offline']).optional(),
-    collectEmail: z.enum(['never', 'optional', 'required']).optional(),
+    collectEmail: z.enum(['never', 'optional', 'required']).optional().openapi({ description: 'Whether the widget asks the visitor for an email: never, offered after the first message, or required before it. A website created without it gets required. Absent on an older website: never.' }),
     requireTurnstile: z.boolean().optional(),
     askForRating: z.boolean().optional().openapi({ description: 'Whether the widget asks the visitor to rate a conversation once it is resolved. On unless false.' }),
     showAgentNames: z.boolean().optional(),
