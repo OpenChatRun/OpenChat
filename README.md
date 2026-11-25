@@ -12,6 +12,8 @@
 <p align="center">
   <a href="https://openchat.run">Website</a> ·
   <a href="docs/operations/self-hosting.md">Self-host</a> ·
+  <a href="#why-cloudflare">Why Cloudflare</a> ·
+  <a href="#how-it-compares">Compare</a> ·
   <a href="docs/guide/README.md">User guide</a> ·
   <a href="docs/known-issues.md">Known issues</a>
 </p>
@@ -56,6 +58,37 @@ A chat button for your website, a team inbox on the web, iPhone and Android, and
 | Understand how it works, or contribute | [Documentation index](docs/README.md), [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) |
 | Use the icon, or match the colours | [Design system](docs/architecture/design-system.md) |
 | Report a vulnerability | [SECURITY.md](SECURITY.md), privately |
+
+## Why Cloudflare
+
+OpenChat is built for Cloudflare only. It does not run on your own server or on another cloud. That is a deliberate trade, and this is what it buys:
+
+- **No servers to look after.** An installation is one Worker with a D1 database, an R2 bucket for files, Durable Objects for live connections and Queues for background jobs. There is no operating system to patch, no database server to tune and no Redis to keep alive.
+- **A small bill that follows use.** The supported minimum is the [Workers Paid plan](https://developers.cloudflare.com/workers/platform/pricing/), US$5 a month when this was written, which includes a large allowance. Beyond it you pay Cloudflare for what you use. There is no fee per seat, per conversation or per website.
+- **Quiet visitors cost almost nothing.** Durable Objects hibernate while a WebSocket stays open, so visitors with the widget open and nothing to say do not keep a server busy. The widget opens no connection at all until a conversation exists.
+- **One account holds everything.** Conversations, files, email, and the AI assistant on Workers AI all run in the same Cloudflare account. Turning on the assistant or translation adds no second vendor that sees your visitors' messages.
+- **Fast for visitors everywhere.** The widget and the API are served from Cloudflare's network, near each visitor. The database lives in one location, which you choose when you deploy.
+- **Deploys are one command.** `pnpm oc deploy` creates every resource, and an upgrade can be rolled back. There is also a [deploy button](docs/operations/one-click-deploy.md) that needs no terminal.
+
+What it costs you: you depend on one provider, a D1 database holds at most 10 GB, and the free Workers plan is not enough. The limits we checked are in [Cloudflare validation](docs/architecture/cloudflare-validation.md).
+
+## How it compares
+
+A summary, checked in November 2026. Prices and plans change, so check each product's own pages.
+
+| | OpenChat | [Chatwoot](https://www.chatwoot.com), self-hosted | [Tidio](https://www.tidio.com) | [Intercom](https://www.intercom.com) | [Crisp](https://crisp.chat) |
+|---|---|---|---|---|---|
+| **Source** | Open: server AGPL-3.0, widget Apache-2.0. The apps and relay are closed | Open: MIT, with some features under a paid Enterprise licence | Closed | Closed | Closed |
+| **Where conversations are kept** | Your Cloudflare account | Your servers | Tidio's | Intercom's | Crisp's |
+| **What you run** | One Worker. No servers | A Rails app, background workers, PostgreSQL and Redis | Nothing | Nothing | Nothing |
+| **What you pay for** | Cloudflare, by use. No fee per seat | Your servers, and a paid plan for Enterprise features | A plan sized by conversations, with the AI priced separately | Each seat, and each conversation the AI resolves | Each workspace, with a set number of seats |
+| **AI that answers first** | Yes, on Workers AI in your own account | Yes, in the Enterprise edition | Yes | Yes | Yes |
+| **Channels** | Website chat | Website chat, email, WhatsApp, social networks and more | The same | The same, and phone | The same |
+| **Maturity** | Before 1.0, no independent security review | Established | Established | Established | Established |
+
+**Choose OpenChat** if you want your conversations in an account you own, a bill that does not grow with your team, and nothing to maintain.
+
+**Choose something else** if you need WhatsApp, email or social channels in the same inbox today (they are on the [roadmap](#roadmap)), if you must run on your own servers or another cloud (Chatwoot does), or if you need a vendor with security certifications.
 
 ## Roadmap
 
