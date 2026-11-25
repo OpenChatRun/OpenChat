@@ -193,6 +193,17 @@ describe('managing workspaces and websites', () => {
     expect(await auditActions()).toEqual(['workspace.updated']);
   });
 
+  it('makes a new website ask for an email before the first message, unless told otherwise', async () => {
+    const path = `${ADMIN_WORKSPACES}/work_1/websites`;
+    const plain = await call('POST', path, tokens.boss, { name: 'Plain', allowedOrigins: [] });
+    expect(((await plain.json()) as { settings: unknown }).settings).toEqual({ collectEmail: 'required' });
+    const chosen = await call('POST', path, tokens.boss, { name: 'Chosen', allowedOrigins: [], settings: { collectEmail: 'never', welcomeMessage: 'Hi' } });
+    expect(((await chosen.json()) as { settings: unknown }).settings).toEqual({ collectEmail: 'never', welcomeMessage: 'Hi' });
+    // An existing website is left as it was.
+    const old = (await (await call('GET', path, tokens.boss)).json()) as { data: { id: string; settings: unknown }[] };
+    expect(old.data.find((site) => site.id === 'site_1')?.settings).toEqual({ showAgentNames: true });
+  });
+
   it('manages websites without joining, and members see the result', async () => {
     const created = await call('POST', `${ADMIN_WORKSPACES}/work_1/websites`, tokens.boss, { name: 'Blog', allowedOrigins: ['https://blog.example.org'], settings: { welcomeMessage: 'Hi' } });
     expect(created.status).toBe(201);

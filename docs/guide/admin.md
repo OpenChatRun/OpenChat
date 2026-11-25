@@ -41,7 +41,7 @@ Choose **Settings** beside a website to open it. **Install** has the code to pas
 |---|---|
 | Welcome message | Up to 500 characters, shown as written, in any language |
 | Colour | The chat button, the panel's header, and the visitor's messages. Without one, OpenChat's blue, `#0a57f5` |
-| Ask for an email | **Never**, **Offer it, after the first message**, or **Before the first message** |
+| Ask for an email | **Never**, **Offer it, after the first message**, or **Before the first message**. A new website starts on **Before the first message** |
 | Widget language | **Automatic**, or one of eleven languages |
 | Show agents' names to visitors | Off by default, so visitors see "Support", in their language |
 | Ask visitors to rate a resolved conversation | On by default. The widget asks for a thumbs up or down, and a comment if they wish |
