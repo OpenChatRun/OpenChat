@@ -8,6 +8,8 @@ server's side of push, and the protocol it speaks to the relay, are.
 
 **Current state:** Milestone 1a is built and verified on real Cloudflare, with [items only the owner can close](docs/plan/milestones.md#m1a-status). Milestone 1b's exit criteria are met, with [limits and owner decisions listed](docs/plan/milestones.md#m1b-exit-check). Milestone 2's exit criteria, for the iOS app, are met, with [limits listed](docs/plan/milestones.md#m2-exit-check). Milestone 3's exit criteria, for relay and push, are met except for a second Apple identity, with [limits listed](docs/plan/milestones.md#m3-exit-check). Milestone 4's exit criteria, for follow-up email, are met, with [limits listed](docs/plan/milestones.md#m4-exit-check). Milestone 5, for self-hosting, was [accepted by the owner without the exit check being run](docs/plan/milestones.md#m5-exit-check). Milestone 6's first acceptance journey was [demonstrated on real Cloudflare and a real iPhone](docs/plan/milestones.md#m6-exit-check); the second, independence, was not.
 
+**Asked to install OpenChat, not to change it?** Follow [set up with an AI agent](docs/operations/agent-setup.md) instead of the rest of this file.
+
 ## Read before you change anything
 
 | If you are working on | Read |

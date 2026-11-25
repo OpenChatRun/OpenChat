@@ -96,7 +96,7 @@ Every number is about the conversations started in the period, so a reply today 
 
 The official OpenChat iPhone app does the same work: the inbox, replies and notes, files and photos, status and assignment, the contact card and tags.
 
-**The official app is not on the App Store yet.** Until it is, your team uses the dashboard. A company that builds its own branded app distributes it itself.
+Get it from the [App Store](https://apps.apple.com/app/id6833420293). There is an [Android app](https://play.google.com/store/apps/details?id=com.orangolabs.openchat) too, which works the same way.
 
 1. Open the app, and under **Connect to your team** enter your installation's address. Your administrator can give it to you. It must be `https://`.
 2. Sign in with the same email and password as the dashboard.

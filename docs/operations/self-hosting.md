@@ -14,7 +14,7 @@ The iPhone app and the relay are not open source ([ADR-0019](../architecture/dec
 
 Follow the steps in order. Each one says what you should see. If you see something else, stop and look in [When something goes wrong](#when-something-goes-wrong).
 
-The background for each step is in [deployment](deployment.md).
+The background for each step is in [deployment](deployment.md). To have a coding agent run these steps for you, see [set up with an AI agent](agent-setup.md).
 
 ## What you need
 
@@ -24,7 +24,7 @@ The background for each step is in [deployment](deployment.md).
 | Git | Getting the code | On a Mac, it comes with Xcode's command line tools |
 | Node 24 | The CLI | From [nodejs.org](https://nodejs.org), or `nvm install 24` |
 | A Cloudflare account | The backend | On the **Workers Paid** plan. The free plan cannot run password hashing |
-| An iPhone | The official app | Optional |
+| An iPhone or Android phone | The official app | Optional |
 | A website you can edit | The chat widget | Optional. Any page where you can add one line of HTML |
 
 ## 1. Get the code
@@ -118,20 +118,20 @@ pnpm oc deploy --env production --source-url https://git.company.com/openchat
 
 ## 5. Put the chat widget on your website
 
-1. In the dashboard, open **Workspaces**. Under **Workspace to manage**, choose yours.
-2. Under **Add a website**, name it, and under **Allowed origins** enter your site's address, such as `https://www.company.com`, with no path. Then **Add website**. The widget refuses to load anywhere else.
-3. Copy the snippet shown in the website's card. It looks like `<script src="https://oc-production.../widget/widget.js" data-website-key="..." async></script>`.
+1. In the dashboard, open **Websites** in the side rail.
+2. Choose **Add website**. Name it, and under **Allowed origins** enter your site's address, such as `https://www.company.com`, with no path. The widget refuses to load anywhere else.
+3. Open the website's **Install** tab, and choose **Copy code**. The code looks like `<script src="https://oc-production.../widget/widget.js" data-website-key="..." async></script>`.
 4. Paste it into your site's HTML, just before `</body>`, and publish.
 
 Open your site. You should see a chat button in the bottom corner. Send a message from it. You should see it arrive in the dashboard inbox within a second, and a reply from the dashboard appear in the widget.
 
-You now have working customer chat. Go on to step 6 for the iPhone app.
+You now have working customer chat. Go on to step 6 for the phone apps.
 
 ## 6. Push through the official app
 
 The official app, and the project's relay that sends its notifications, need nothing from you but your installation ID. Two things to know first:
 
-- **The official app is not on the App Store yet.** Until it is, your team uses the dashboard in a browser, and gets no push notifications.
+- **The official app** is on the [App Store](https://apps.apple.com/app/id6833420293) and on [Google Play](https://play.google.com/store/apps/details?id=com.orangolabs.openchat).
 - **The project's relay is open to every installation.** You do not ask for access: your backend registers itself the first time a phone turns on notifications, by proving it controls its address. There are [limits](../notification-relay/protocol.md#rate-limits) on how many installations can register, per network address and per day. If registration is paused, it is tried again later.
 
 Point your backend at the project's relay:
@@ -142,7 +142,7 @@ pnpm oc deploy --env production \
   --relay-id managed --relay-bundle-ids com.orangolabs.openchat
 ```
 
-You should see `Deployed` again. Then, in the official app on each iPhone: enter your backend's address, `oc-production.<subdomain>.workers.dev`, sign in, and allow notifications. In the app's **Settings**, you should see **Notifications** with switches. Lock the phone and send a message from your widget: a notification should arrive within a few seconds.
+You should see `Deployed` again. Then, in the official app on each phone: enter your backend's address, `oc-production.<subdomain>.workers.dev`, sign in, and allow notifications. In the app's **Settings**, you should see **Notifications** with switches. Lock the phone and send a message from your widget: a notification should arrive within a few seconds.
 
 To stop using the project's relay later, in the dashboard choose **Workspaces**, then **Disconnect and erase** under **Push notifications**. Push stops, and the relay erases what it holds about your installation. Then run `pnpm oc deploy --env production --no-relay` to take it out of your deployment.
 
