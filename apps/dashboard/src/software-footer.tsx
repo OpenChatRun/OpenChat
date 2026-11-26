@@ -3,7 +3,7 @@ import { api } from './app-context';
 import { t } from './i18n';
 
 /** Shown until discovery answers, and if it cannot. */
-const PROJECT = 'https://github.com/OrangoLabsLtd/OpenChat';
+const PROJECT = 'https://github.com/OpenChatRun/OpenChat';
 
 /**
  * The source offer that the AGPL asks a server to make to its users, and the notices for the code bundled into

@@ -7,7 +7,7 @@ test('the sign-in page and the dashboard offer the source and the notices', asyn
   await page.context().setExtraHTTPHeaders({ 'cf-connecting-ip': nextIp() });
   await page.goto('/');
   const footer = page.getByRole('contentinfo');
-  await expect(footer.getByRole('link', { name: 'Source code' })).toHaveAttribute('href', /^https:\/\/github\.com\/OrangoLabsLtd\/OpenChat/);
+  await expect(footer.getByRole('link', { name: 'Source code' })).toHaveAttribute('href', /^https:\/\/github\.com\/OpenChatRun\/OpenChat/);
   await expect(footer.getByRole('link', { name: 'Third-party licences' })).toHaveAttribute('href', '/third-party-licenses.txt');
   await signIn(page, OWNER);
   await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Source code' })).toBeVisible();
@@ -29,12 +29,12 @@ test('an admin is told of a newer release, until they dismiss it', async ({ page
   let asked = 0;
   await page.route('**/api/v1/admin/software-update', (route) => {
     asked += 1;
-    return route.fulfill({ json: { current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0' } });
+    return route.fulfill({ json: { current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0' } });
   });
   await signIn(page, OWNER);
   const notice = page.getByRole('region', { name: 'New version' });
   await expect(notice).toContainText('OpenChat 0.4.0 is available. This installation runs 0.3.0.');
-  await expect(notice.getByRole('link', { name: 'See what is new, and how to upgrade' })).toHaveAttribute('href', 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0');
+  await expect(notice.getByRole('link', { name: 'See what is new, and how to upgrade' })).toHaveAttribute('href', 'https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0');
   // The answer is kept for a day, so a reload does not ask again.
   await page.reload();
   await expect(notice).toBeVisible();

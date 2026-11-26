@@ -2,9 +2,9 @@
 
 The quickest way to get your own OpenChat. Cloudflare copies this repository into your GitHub or GitLab account, creates everything in your Cloudflare account, and deploys it. You need no terminal.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OrangoLabsLtd/OpenChat)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/OpenChatRun/OpenChat)
 
-> **Tried through Cloudflare's own button on 2026-11-17**, from a fresh account to signing in as the admin. If a step here does not match what you see, please [open an issue](https://github.com/OrangoLabsLtd/OpenChat/issues), and use the [self-hosting guide](self-hosting.md) meanwhile.
+> **Tried through Cloudflare's own button on 2026-11-17**, from a fresh account to signing in as the admin. If a step here does not match what you see, please [open an issue](https://github.com/OpenChatRun/OpenChat/issues), and use the [self-hosting guide](self-hosting.md) meanwhile.
 
 If you want to upgrade, roll back, back up and restore from the command line, use the [self-hosting guide](self-hosting.md) instead. The two ways make the same installation, but the `oc` commands only know one they made themselves ([what you do not get](#what-you-do-not-get)).
 
@@ -64,7 +64,7 @@ Your installation is already pointed at the OpenChat project's notification rela
 Your copy of the repository does not follow this one by itself. To upgrade, bring a newer release into it and push. Cloudflare then builds and deploys it, applying new migrations first.
 
 ```sh
-git remote add upstream https://github.com/OrangoLabsLtd/OpenChat.git
+git remote add upstream https://github.com/OpenChatRun/OpenChat.git
 git fetch upstream --tags
 git merge v0.3.0        # the release you want
 git push

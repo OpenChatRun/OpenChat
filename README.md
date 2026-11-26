@@ -103,7 +103,7 @@ OpenChat's apps and relay are not open source. Chatwoot's AI is in its paid Ente
 - **Routing:** teams, and rules that assign new conversations automatically, such as by website, language or turn.
 - **Webhooks and integrations**, so that other tools, such as Slack or a CRM, hear about new conversations and messages.
 
-Ideas and requests are welcome in [issues](https://github.com/OrangoLabsLtd/OpenChat/issues).
+Ideas and requests are welcome in [issues](https://github.com/OpenChatRun/OpenChat/issues).
 
 ## Licence
 

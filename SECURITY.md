@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Report it privately, through GitHub: on this repository, **Security**, then **Report a vulnerability**, or go straight to <https://github.com/OrangoLabsLtd/OpenChat/security/advisories/new>. Only the maintainers see it. If you cannot use GitHub, email security@openchat.run.
+Report it privately, through GitHub: on this repository, **Security**, then **Report a vulnerability**, or go straight to <https://github.com/OpenChatRun/OpenChat/security/advisories/new>. Only the maintainers see it. If you cannot use GitHub, email security@openchat.run.
 
 Do not open a public issue, pull request or discussion about it.
 

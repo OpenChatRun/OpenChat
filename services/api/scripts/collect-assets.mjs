@@ -21,7 +21,7 @@ function notices(component, files) {
   const sections = [...seen.values()]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((e) => `${rule}\n${e.name} ${e.version}\nLicence: ${e.identifier ?? 'not stated'}\n\n${(e.text ?? 'No licence text was found in the package.').trim()}\n`);
-  return `${component} is part of OpenChat. Source: https://github.com/OrangoLabsLtd/OpenChat\n\nIt includes the following third-party packages, under these licences.\n\n${sections.join('\n')}`;
+  return `${component} is part of OpenChat. Source: https://github.com/OpenChatRun/OpenChat\n\nIt includes the following third-party packages, under these licences.\n\n${sections.join('\n')}`;
 }
 
 const copy = (from, to) => cpSync(from, to, { recursive: true, filter: (src) => !src.includes('/.vite') });

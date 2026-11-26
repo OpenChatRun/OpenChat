@@ -1,6 +1,6 @@
 # Terms of use: OpenChat managed relay
 
-> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OrangoLabsLtd/OpenChat/blob/53ad7d6/docs/legal/relay-terms.md) applies.
+> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OpenChatRun/OpenChat/blob/53ad7d6/docs/legal/relay-terms.md) applies.
 
 Effective: 19 December 2026
 
