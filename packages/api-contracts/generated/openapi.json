@@ -3646,6 +3646,41 @@
           "subscriptions"
         ]
       },
+      "SoftwareUpdate": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The release this installation runs. Null when it was not deployed from a release."
+          },
+          "latest": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The project's newest release. Null when the check is turned off, could not be made, or there is no current version to compare."
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "releaseUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The newest release's notes. Null with `latest`."
+          }
+        },
+        "required": [
+          "current",
+          "latest",
+          "updateAvailable",
+          "releaseUrl"
+        ]
+      },
       "FailedJob": {
         "type": "object",
         "properties": {
@@ -10732,6 +10767,43 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RelayStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "RFC 9457 problem details",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/software-update": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "operationId": "getSoftwareUpdate",
+        "summary": "Whether a newer release of OpenChat exists",
+        "description": "Asks the project's repository for its newest release, unless the installation has `UPDATE_CHECK` set to `off`. Nothing about the installation is sent.",
+        "responses": {
+          "200": {
+            "description": "The running and the newest release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoftwareUpdate"
                 }
               }
             }

@@ -50,6 +50,9 @@ export const ko: Messages = {
 
   freeSoftware: 'OpenChat, AGPL 자유 소프트웨어',
   freeSoftwareVersion: 'OpenChat {version}, AGPL 자유 소프트웨어',
+  updateNotice: '새 버전',
+  updateAvailable: 'OpenChat {latest} 버전을 사용할 수 있습니다. 이 설치는 {current} 버전을 실행 중입니다.',
+  updateSeeRelease: '새로운 기능과 업그레이드 방법 보기',
   sourceCode: '소스 코드',
   thirdPartyLicences: '서드파티 라이선스',
 

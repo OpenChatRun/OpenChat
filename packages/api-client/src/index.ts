@@ -37,6 +37,7 @@ import type {
   createPersonRoute,
   listAdminWorkspacesRoute,
   getRelayStatusRoute,
+  getSoftwareUpdateRoute,
   listFailedJobsRoute,
   getRetentionRoute,
   listAuditLogRoute,
@@ -86,6 +87,7 @@ export type PersonAssignment = BodyOf<typeof assignPersonRoute>;
 export type People = Json200<typeof listPeopleRoute>;
 export type AdminWorkspaces = Json200<typeof listAdminWorkspacesRoute>;
 export type RelayStatus = Json200<typeof getRelayStatusRoute>;
+export type SoftwareUpdate = Json200<typeof getSoftwareUpdateRoute>;
 export type FailedJobPage = Json200<typeof listFailedJobsRoute>;
 export type FailedJob = FailedJobPage['data'][number];
 export type Retention = Json200<typeof getRetentionRoute>;
@@ -225,6 +227,7 @@ export function createClient(options: ClientOptions) {
     createWebsite: (workspaceId: string, input: WebsiteInput) => request<Website>('POST', `${adminWorkspace(workspaceId)}/websites`, input),
     updateWebsite: (workspaceId: string, websiteId: string, input: WebsiteUpdate) => request<Website>('PATCH', `${adminWorkspace(workspaceId)}/websites/${encodeURIComponent(websiteId)}`, input),
     getRelayStatus: () => get<RelayStatus>('/api/v1/admin/push'),
+    getSoftwareUpdate: () => get<SoftwareUpdate>('/api/v1/admin/software-update'),
     disconnectRelay: () => request<RelayStatus>('POST', '/api/v1/admin/push/disconnect'),
     reconnectRelay: () => request<RelayStatus>('POST', '/api/v1/admin/push/reconnect'),
     listFailedJobs: (input: { cursor?: string | undefined; limit?: number } = {}) => get<FailedJobPage>(`/api/v1/admin/failed-jobs${query(input)}`),

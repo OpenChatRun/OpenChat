@@ -70,6 +70,8 @@ export interface DeployOptions {
   securityPolicy?: string | undefined;
   /** Where users can get the source, for a changed release. Remembered; `none` goes back to the project's. */
   sourceUrl?: string | undefined;
+  /** `off` or `on`. Remembered. */
+  updateCheck?: string | undefined;
   /** Adds the AI assistant: Workers AI and a Vectorize index. Remembered for later deploys. */
   assistant?: boolean;
   /** Takes the assistant's bindings out. Its index is kept, so that turning it back on finds its sources. */
@@ -405,6 +407,11 @@ export function createDeployer(root: string, deps: DeployerDeps = {}) {
       if (!state.security) delete state.security;
       state.sourceUrl = mergeSourceFlag(state.sourceUrl, options.sourceUrl);
       if (!state.sourceUrl) delete state.sourceUrl;
+      if (options.updateCheck !== undefined) {
+        if (options.updateCheck !== 'off' && options.updateCheck !== 'on') throw new Error('--update-check takes off or on');
+        if (options.updateCheck === 'off') state.updateCheck = false;
+        else delete state.updateCheck;
+      }
       if (!state.initialized && !options.ownerEmail) throw new Error('A first deploy needs --owner-email');
       if (options.analytics) state.analyticsEngine = true;
       if (options.assistant && options.noAssistant) throw new Error('--assistant cannot go with --no-assistant');

@@ -72,6 +72,8 @@ git push
 
 Keep your own `wrangler.jsonc` when Git reports a conflict in it: it holds your database's ID.
 
+The dashboard tells installation admins when a newer release exists. To turn that off, set `UPDATE_CHECK` to `off` in the `vars` of your `wrangler.jsonc` ([the notice](deployment.md#the-notice-of-a-newer-release)).
+
 If an upgrade goes wrong, roll the Worker back under **Deployments** in Cloudflare's dashboard. The database keeps its new schema, which the previous release can use.
 
 If you change the code, the AGPL asks that you offer your users the source you run. Set `SOURCE_URL` in the `vars` of your `wrangler.jsonc` to where your copy is published ([licensing](licensing.md#the-source-offer)).

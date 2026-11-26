@@ -50,6 +50,9 @@ export const zhHans: Messages = {
 
   freeSoftware: 'OpenChat，遵循 AGPL 的自由软件',
   freeSoftwareVersion: 'OpenChat {version}，遵循 AGPL 的自由软件',
+  updateNotice: '新版本',
+  updateAvailable: 'OpenChat {latest} 已发布。此实例运行的是 {current}。',
+  updateSeeRelease: '查看新功能和升级方法',
   sourceCode: '源代码',
   thirdPartyLicences: '第三方许可证',
 

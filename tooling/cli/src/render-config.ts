@@ -25,6 +25,8 @@ export interface DeploymentState {
   security?: SecuritySettings | undefined;
   /** Where users can get this installation's source, for an operator who changed it. See docs/operations/licensing.md. */
   sourceUrl?: string | undefined;
+  /** False when the operator turned off the dashboard's notice of a newer release, with --update-check off. */
+  updateCheck?: boolean | undefined;
   /** The AI assistant (ADR-0022): Workers AI and a Vectorize index, oc-<name>-assistant. Opt-in, because both are billed. */
   assistant?: boolean;
   /** Push is opt-in until a managed relay exists. Its signing key is a secret, set separately. */
@@ -160,6 +162,7 @@ export function renderConfig(templateSource: string, state: DeploymentState, rel
   if (state.security) t.vars = { ...(t.vars as object | undefined), ...securityVars(state.security) };
   if (release) t.vars = { ...(t.vars as object | undefined), OPENCHAT_VERSION: release };
   if (state.sourceUrl) t.vars = { ...(t.vars as object | undefined), SOURCE_URL: state.sourceUrl };
+  if (state.updateCheck === false) t.vars = { ...(t.vars as object | undefined), UPDATE_CHECK: 'off' };
   if (state.assistant) {
     t.ai = { binding: 'AI' };
     t.vectorize = [{ binding: 'VECTORIZE', index_name: assistantIndexName(state.name) }];

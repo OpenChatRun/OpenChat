@@ -23,3 +23,25 @@ test('serves the notices for the dashboard and the widget, but not the build out
   // An unknown path gets the dashboard page, so the JSON must not come back.
   expect(await (await request.get('/.vite/license.json')).text()).not.toContain('"identifier"');
 });
+
+test('an admin is told of a newer release, until they dismiss it', async ({ page }) => {
+  // The local Worker has no release version, so it never asks the project's repository. The answer is given here.
+  let asked = 0;
+  await page.route('**/api/v1/admin/software-update', (route) => {
+    asked += 1;
+    return route.fulfill({ json: { current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0' } });
+  });
+  await signIn(page, OWNER);
+  const notice = page.getByRole('region', { name: 'New version' });
+  await expect(notice).toContainText('OpenChat 0.4.0 is available. This installation runs 0.3.0.');
+  await expect(notice.getByRole('link', { name: 'See what is new, and how to upgrade' })).toHaveAttribute('href', 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0');
+  // The answer is kept for a day, so a reload does not ask again.
+  await page.reload();
+  await expect(notice).toBeVisible();
+  expect(asked).toBe(1);
+  await notice.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(notice).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole('contentinfo')).toBeVisible();
+  await expect(notice).toBeHidden();
+});

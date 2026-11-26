@@ -50,6 +50,9 @@ export const it: Messages = {
 
   freeSoftware: 'OpenChat, software libero con licenza AGPL',
   freeSoftwareVersion: 'OpenChat {version}, software libero con licenza AGPL',
+  updateNotice: 'Nuova versione',
+  updateAvailable: 'OpenChat {latest} è disponibile. Questa installazione usa la versione {current}.',
+  updateSeeRelease: 'Scopri le novità e come aggiornare',
   sourceCode: 'Codice sorgente',
   thirdPartyLicences: 'Licenze di terze parti',
 

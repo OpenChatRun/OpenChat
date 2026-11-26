@@ -16,6 +16,7 @@ import { PeoplePage } from './people-page';
 import { WebsitesManager } from './websites';
 import { WorkspacesAdminPage } from './workspaces-admin-page';
 import { SoftwareFooter } from '../software-footer';
+import { UpdateNotice } from '../update-notice';
 import { Icon, Initials, type IconName } from '../icons';
 import { t, type MessageKey } from '../i18n';
 import { useServerLanguage } from '../language-picker';
@@ -197,6 +198,7 @@ export function WorkspaceApp() {
         </header>
         <main className={`w-full flex-1 space-y-6 px-4 py-6 md:px-6 ${width}`}>
           <Failure error={me.error} />
+          {isAdmin && <UpdateNotice />}
           {isAdmin && adminPage === 'people' && <PeoplePage myId={me.data?.id} />}
           {isAdmin && adminPage === 'workspaces' && <WorkspacesAdminPage />}
           {isAdmin && adminPage === 'jobs' && <FailedJobsPage />}

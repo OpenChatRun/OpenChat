@@ -68,6 +68,7 @@ const CASES: Record<string, Case> = {
   createWebsite: { kind: 'installation', body: { name: 'Taken over', allowedOrigins: [] } },
   updateWebsite: { kind: 'installation', body: { name: 'Taken over' } },
   getRelayStatus: { kind: 'installation' },
+  getSoftwareUpdate: { kind: 'installation' },
   disconnectRelay: { kind: 'installation' },
   reconnectRelay: { kind: 'installation' },
   listFailedJobs: { kind: 'installation' },

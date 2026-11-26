@@ -50,6 +50,9 @@ export const nl: Messages = {
 
   freeSoftware: 'OpenChat, vrije software onder de AGPL',
   freeSoftwareVersion: 'OpenChat {version}, vrije software onder de AGPL',
+  updateNotice: 'Nieuwe versie',
+  updateAvailable: 'OpenChat {latest} is beschikbaar. Deze installatie draait {current}.',
+  updateSeeRelease: 'Bekijk wat er nieuw is en hoe je bijwerkt',
   sourceCode: 'Broncode',
   thirdPartyLicences: 'Licenties van derden',
 

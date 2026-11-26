@@ -119,6 +119,11 @@ describe('the source offer', () => {
     expect(renderConfig(source, { ...state, sourceUrl: 'https://git.example.com/ours' }, '.', '0.3.0').vars).toMatchObject({ OPENCHAT_VERSION: '0.3.0', SOURCE_URL: 'https://git.example.com/ours' });
   });
 
+  it('turns the notice of a newer release off only when the operator said so', () => {
+    expect(renderConfig(source, state, '.', '0.3.0').vars).not.toHaveProperty('UPDATE_CHECK');
+    expect(renderConfig(source, { ...state, updateCheck: false }, '.', '0.3.0').vars).toMatchObject({ UPDATE_CHECK: 'off' });
+  });
+
   it('remembers --source-url, removes it with none, and refuses what is not https', () => {
     expect(mergeSourceFlag(undefined, 'https://git.example.com/ours')).toBe('https://git.example.com/ours');
     expect(mergeSourceFlag('https://git.example.com/ours', undefined)).toBe('https://git.example.com/ours');

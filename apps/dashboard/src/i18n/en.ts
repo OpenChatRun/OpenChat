@@ -55,6 +55,9 @@ export const en = {
   // The footer
   freeSoftware: 'OpenChat, free software under the AGPL',
   freeSoftwareVersion: 'OpenChat {version}, free software under the AGPL',
+  updateNotice: 'New version',
+  updateAvailable: 'OpenChat {latest} is available. This installation runs {current}.',
+  updateSeeRelease: 'See what is new, and how to upgrade',
   sourceCode: 'Source code',
   thirdPartyLicences: 'Third-party licences',
 

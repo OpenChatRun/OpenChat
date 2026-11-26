@@ -50,6 +50,9 @@ export const ja: Messages = {
 
   freeSoftware: 'OpenChat、AGPL のフリーソフトウェア',
   freeSoftwareVersion: 'OpenChat {version}、AGPL のフリーソフトウェア',
+  updateNotice: '新しいバージョン',
+  updateAvailable: 'OpenChat {latest} が利用できます。このインストールは {current} で動作しています。',
+  updateSeeRelease: '新機能とアップグレード方法を見る',
   sourceCode: 'ソースコード',
   thirdPartyLicences: 'サードパーティのライセンス',
 
