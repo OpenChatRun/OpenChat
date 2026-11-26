@@ -4,7 +4,7 @@
  */
 import { ApiError, type Conversation, type Me, type Member, type Message } from '@openchat/api-client';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, errorMessage } from '../app-context';
 import { Icon, Initials } from '../icons';
 import { SavedReplies } from './saved-replies';
@@ -690,7 +690,7 @@ function Composer(props: { workspaceId: string; conversationId: string; drafts: 
 function ContactCard({ workspaceId, contactId, onErased }: { workspaceId: string; contactId: string; onErased: () => void }) {
   const client = useQueryClient();
   const contact = useQuery({ queryKey: ['contact', workspaceId, contactId], queryFn: () => api.getContact(workspaceId, contactId) });
-  const [edits, setEdits] = useState<{ name?: string; email?: string; phone?: string }>({});
+  const [edits, setEdits] = useState<{ name?: string; phone?: string }>({});
   const save = useMutation({
     // An emptied field clears it. Only what was touched is sent.
     mutationFn: () => api.updateContact(workspaceId, contactId, Object.fromEntries(Object.entries(edits).map(([key, value]) => [key, value.trim() || null]))),
@@ -702,12 +702,14 @@ function ContactCard({ workspaceId, contactId, onErased }: { workspaceId: string
     },
   });
   const data = contact.data;
-  const field = (name: 'name' | 'email' | 'phone', title: MessageKey, type: string) => (
+  const field = (name: 'name' | 'phone', title: MessageKey, type: string) => (
     <label className="block text-xs font-medium">
       {t(title)}
-      <input className="field mt-1 font-normal" type={type} value={edits[name] ?? data?.[name] ?? ''} maxLength={name === 'phone' ? 40 : name === 'name' ? 100 : 254} onChange={(e) => setEdits({ ...edits, [name]: e.target.value })} />
+      <input className="field mt-1 font-normal" type={type} value={edits[name] ?? data?.[name] ?? ''} maxLength={name === 'phone' ? 40 : 100} onChange={(e) => setEdits({ ...edits, [name]: e.target.value })} />
     </label>
   );
+  const attributes = Object.entries(data?.attributes ?? {});
+  const muted = 'text-xs text-slate-600 dark:text-slate-400';
   return (
     <form
       className="card space-y-2"
@@ -720,12 +722,32 @@ function ContactCard({ workspaceId, contactId, onErased }: { workspaceId: string
       <h3 className="text-sm font-medium">{t('contact')}</h3>
       {contact.error ? <p className="error" role="alert">{errorMessage(contact.error)}</p> : null}
       {field('name', 'name', 'text')}
-      {field('email', 'email', 'email')}
-      {data?.email && <p className="text-xs text-slate-600 dark:text-slate-400">{t('emailNotVerified')}</p>}
+      {/* The email is the visitor's to give, in the widget, with their consent to follow-ups. Nobody here can change it. */}
+      {data && (
+        <dl className="text-xs">
+          <dt className="font-medium">{t('email')}</dt>
+          <dd className="mt-1 text-sm break-all select-all">{data.email ?? <span className={`${muted} select-none`}>{t('emailNotGiven')}</span>}</dd>
+        </dl>
+      )}
+      {data?.email && <p className={muted}>{t('emailNotVerified')}</p>}
       {field('phone', 'phone', 'tel')}
       {save.error ? <p className="error" role="alert">{errorMessage(save.error)}</p> : null}
       {Object.keys(edits).length > 0 && <button className="button-quiet" disabled={save.isPending}>{t('saveContact')}</button>}
-      {data && <p className="text-xs text-slate-600 dark:text-slate-400">{t('firstSeen', { date: new Date(data.firstSeenAt).toLocaleDateString(intlLocale()) })}</p>}
+      {attributes.length > 0 && (
+        <section className="space-y-1 border-t border-slate-200 pt-2 dark:border-slate-800" aria-label={t('websiteDetails')}>
+          <h4 className="text-xs font-medium">{t('websiteDetails')}</h4>
+          <dl className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-3 gap-y-1 text-xs">
+            {attributes.map(([name, value]) => (
+              <Fragment key={name}>
+                <dt className="break-words text-slate-600 dark:text-slate-400">{name}</dt>
+                <dd className="break-words">{typeof value === 'boolean' ? t(value ? 'attributeYes' : 'attributeNo') : typeof value === 'number' ? value.toLocaleString(intlLocale()) : value}</dd>
+              </Fragment>
+            ))}
+          </dl>
+          <p className={muted}>{t('websiteDetailsNote')}</p>
+        </section>
+      )}
+      {data && <p className={muted}>{t('firstSeen', { date: new Date(data.firstSeenAt).toLocaleDateString(intlLocale()) })}</p>}
       {data && <ContactRights workspaceId={workspaceId} contactId={contactId} label={data.name ?? data.email ?? t('thisVisitor')} onErased={onErased} />}
     </form>
   );

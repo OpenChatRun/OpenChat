@@ -7,6 +7,7 @@ import { addStyles, applyColor, colorKey, type HandoffScript } from './handoff';
 import { pageLanguages } from './locale';
 import { createStorage } from './storage';
 import { createChallenge } from './turnstile';
+import { cleanAttributes } from './attributes';
 import { CHAT_CSS } from './styles';
 
 const handoff = (document.currentScript as HandoffScript | null)?.openchat;
@@ -42,8 +43,10 @@ if (handoff) {
   const root = document.createElement('div');
   handoff.shadow.appendChild(root);
 
+  controller.setAttributes(cleanAttributes(handoff.attributes));
   handoff.chat = {
     setOpen: (open) => controller.setOpen(open),
+    setAttributes: (attributes) => controller.setAttributes(cleanAttributes(attributes)),
     grantConsent: () => {
       storage.grantConsent();
       consented = true;

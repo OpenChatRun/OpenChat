@@ -8,8 +8,8 @@ import { OPEN_LABEL, pageLanguages, pickLocale } from './locale';
 
 declare global {
   interface Window {
-    OpenChatConfig?: { websiteKey?: string; apiUrl?: string; consent?: 'pending'; locale?: string };
-    OpenChat?: { open(): void; close(): void; grantConsent(): void };
+    OpenChatConfig?: { websiteKey?: string; apiUrl?: string; consent?: 'pending'; locale?: string; attributes?: Record<string, string | number | boolean> };
+    OpenChat?: { open(): void; close(): void; grantConsent(): void; setAttributes(attributes: Record<string, string | number | boolean>): void };
   }
 }
 
@@ -30,7 +30,7 @@ const ICON =
   '<svg class="oc-shut" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.7 9.3a1 1 0 0 1 1.4 0L12 13.2l3.9-3.9a1 1 0 1 1 1.4 1.4l-4.6 4.6a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4z"/></svg>';
 const IDLE_FALLBACK_MS = 2500;
 
-function start(script: HTMLScriptElement | null, websiteKey: string, apiUrl: string, chatUrl: string, consentPending: boolean, locale: string | undefined): void {
+function start(script: HTMLScriptElement | null, websiteKey: string, apiUrl: string, chatUrl: string, consentPending: boolean, locale: string | undefined, attributes: unknown): void {
   const host = document.createElement('div');
   host.id = 'openchat-widget';
   // Beats any rule on the page, including one that hides every div. It has no box of its own, and custom properties are not reset.
@@ -49,7 +49,7 @@ function start(script: HTMLScriptElement | null, websiteKey: string, apiUrl: str
   button.innerHTML = `${ICON}<span class="oc-badge" hidden></span>`;
   shadow.appendChild(button);
 
-  const handoff: Handoff = { websiteKey, apiUrl, shadow, host, button, consentPending, openOnStart: false, ...(locale ? { locale } : {}), ...(script?.nonce ? { nonce: script.nonce } : {}) };
+  const handoff: Handoff = { websiteKey, apiUrl, shadow, host, button, consentPending, openOnStart: false, attributes, ...(locale ? { locale } : {}), ...(script?.nonce ? { nonce: script.nonce } : {}) };
   if (!consentPending) {
     try {
       applyColor(host, localStorage.getItem(colorKey(websiteKey)));
@@ -93,6 +93,11 @@ function start(script: HTMLScriptElement | null, websiteKey: string, apiUrl: str
       handoff.consentPending = false;
       handoff.chat?.grantConsent();
     },
+    // What the page knows about its visitor, for the team. The chat bundle reads it when it arrives, or now.
+    setAttributes(next) {
+      handoff.attributes = next;
+      handoff.chat?.setAttributes?.(next);
+    },
   };
 
   document.body.appendChild(host);
@@ -114,7 +119,7 @@ function start(script: HTMLScriptElement | null, websiteKey: string, apiUrl: str
   const consentPending = (script?.dataset.consent ?? config.consent) === 'pending';
   // For a page that knows its visitor's language better than the browser does.
   const locale = script?.dataset.locale ?? config.locale;
-  const begin = () => start(script, websiteKey, apiUrl, chatUrl, consentPending, locale);
+  const begin = () => start(script, websiteKey, apiUrl, chatUrl, consentPending, locale, config.attributes);
   if (document.body) begin();
   else document.addEventListener('DOMContentLoaded', begin, { once: true });
 })();

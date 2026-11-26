@@ -568,6 +568,33 @@ describe('the profile', () => {
     expect((await call('GET', `/api/v1/widget/conversations/${id}/messages`, { token: attacker.accessToken })).status).toBe(404);
   });
 
+  it('keeps what the website says about the visitor, and a later call replaces it', async () => {
+    const { accessToken: token } = await session();
+    const attributes = async () => JSON.parse(String((await rows(`SELECT attributes_json AS json FROM contacts`))[0]!.json)) as unknown;
+    const save = (body: unknown) => call('PATCH', '/api/v1/widget/me', { token, body });
+    expect((await save({ attributes: { customerId: 'C-1042', seats: 3, paying: true } })).status).toBe(204);
+    expect(await attributes()).toEqual({ customerId: 'C-1042', seats: 3, paying: true });
+    // A name alone leaves it as it was.
+    await save({ name: 'Vera' });
+    expect(await attributes()).toEqual({ customerId: 'C-1042', seats: 3, paying: true });
+    await save({ attributes: { plan: 'Pro' } });
+    expect(await attributes()).toEqual({ plan: 'Pro' });
+    expect((await save({ attributes: {} })).status).toBe(204);
+    expect(await attributes()).toEqual({});
+    expect(await contact()).toMatchObject({ name: 'Vera', email: null });
+  });
+
+  it('refuses attributes that is too much, or not text, a number, or true or false', async () => {
+    const { accessToken: token } = await session();
+    const save = (attributes: unknown) => call('PATCH', '/api/v1/widget/me', { token, body: { attributes } });
+    const many = (count: number) => Object.fromEntries(Array.from({ length: count }, (_, index) => [`k${index}`, index]));
+    expect((await save(many(20))).status).toBe(204);
+    for (const bad of [many(21), { ['k'.repeat(41)]: 1 }, { '': 1 }, { k: 'v'.repeat(256) }, { k: 'a\u0000b' }, { k: null }, { k: { nested: 1 } }, { k: [1] }, 'text', [1]]) {
+      expect((await save(bad)).status, JSON.stringify(bad).slice(0, 40)).toBe(400);
+    }
+    expect((await save({ ['k'.repeat(40)]: 'v'.repeat(255) })).status).toBe(204);
+  });
+
   it('refuses an invalid email or an empty change', async () => {
     const { accessToken: token } = await session();
     expect((await call('PATCH', '/api/v1/widget/me', { token, body: { email: 'nope' } })).status).toBe(400);

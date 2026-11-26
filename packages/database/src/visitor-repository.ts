@@ -357,8 +357,11 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
     },
 
     profile: {
-      /** Consent keeps its first timestamp while it stays on, and withdrawing clears it. It was given for one address, so a new address needs it again. */
-      async update(input: { name?: string | undefined; email?: string | undefined; followUpConsent?: boolean | undefined }): Promise<void> {
+      /**
+       * Consent keeps its first timestamp while it stays on, and withdrawing clears it. It was given for one address, so a new address needs it again.
+       * `attributes` is what the website's page says about the visitor, and replaces what it said before.
+       */
+      async update(input: { name?: string | undefined; email?: string | undefined; followUpConsent?: boolean | undefined; attributes?: Record<string, string | number | boolean> | undefined }): Promise<void> {
         const consent = input.followUpConsent === undefined ? null : input.followUpConsent ? 1 : 0;
         await d1
           .prepare(
@@ -369,10 +372,11 @@ export function visitorRepositories(database: Database, ctx: VisitorContext) {
                     follow_up_consent_source = CASE WHEN ?3 = 0 THEN NULL
                                                     WHEN ?2 IS NOT NULL AND email IS NOT ?2 THEN CASE WHEN ?3 = 1 THEN 'widget' END
                                                     WHEN ?3 = 1 THEN COALESCE(follow_up_consent_source, 'widget') ELSE follow_up_consent_source END,
+                    attributes_json = COALESCE(?6, attributes_json),
                     updated_at = ${DB_NOW_MS}
               WHERE workspace_id = ?4 AND id = ?5`,
           )
-          .bind(input.name ?? null, input.email ?? null, consent, w, ctx.contactId)
+          .bind(input.name ?? null, input.email ?? null, consent, w, ctx.contactId, input.attributes === undefined ? null : JSON.stringify(input.attributes))
           .run();
       },
     },

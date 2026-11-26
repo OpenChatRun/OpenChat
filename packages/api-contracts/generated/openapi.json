@@ -1700,6 +1700,30 @@
           }
         ]
       },
+      "VisitorAttributes": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 255,
+              "pattern": "^\\P{Cc}*$/u"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "description": "What the website's page said about this visitor, through the widget. Never verified: a visitor can send anything from their own browser. Empty when the page sent nothing.",
+        "example": {
+          "customerId": "C-1042",
+          "plan": "Pro",
+          "paying": true
+        }
+      },
       "Contact": {
         "type": "object",
         "properties": {
@@ -1717,13 +1741,16 @@
               "string",
               "null"
             ],
-            "description": "Never verified, so it proves nothing about who this is."
+            "description": "Given by the visitor in the widget. Never verified, so it proves nothing about who this is. A member cannot change it."
           },
           "phone": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/VisitorAttributes"
           },
           "firstSeenAt": {
             "type": "string"
@@ -1737,6 +1764,7 @@
           "name",
           "email",
           "phone",
+          "attributes",
           "firstSeenAt",
           "lastSeenAt"
         ]
@@ -1758,13 +1786,6 @@
               {
                 "type": "object",
                 "properties": {
-                  "attributes": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "additionalProperties": {}
-                  },
                   "followUpConsentAt": {
                     "type": [
                       "string",
@@ -1782,7 +1803,6 @@
                   }
                 },
                 "required": [
-                  "attributes",
                   "followUpConsentAt",
                   "followUpConsentSource",
                   "createdAt"
@@ -2670,7 +2690,7 @@
               "string",
               "null"
             ],
-            "description": "Given by the visitor or an agent. Never verified."
+            "description": "Given by the visitor. Never verified."
           },
           "tags": {
             "type": "array",
@@ -5254,7 +5274,8 @@
           "conversations"
         ],
         "operationId": "updateContact",
-        "summary": "Correct a name, email, or phone number",
+        "summary": "Correct a name or phone number",
+        "description": "The email is the visitor's to give, in the widget, with their consent to follow-ups. A member cannot set or change it, and a body that names it is refused with 400.",
         "security": [
           {
             "bearerAuth": []
@@ -5293,14 +5314,6 @@
                     "minLength": 1,
                     "maxLength": 100,
                     "pattern": "^\\P{Cc}*$/u"
-                  },
-                  "email": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "maxLength": 254,
-                    "format": "email"
                   },
                   "phone": {
                     "type": [
@@ -7105,8 +7118,8 @@
           "widget"
         ],
         "operationId": "updateVisitorProfile",
-        "summary": "Provide a name, email, and follow-up consent",
-        "description": "An email is unverified, and never merges with an existing contact automatically.",
+        "summary": "Provide a name, email, follow-up consent, or what the website knows about the visitor",
+        "description": "An email is unverified, and never merges with an existing contact automatically. `attributes` comes from the page the widget is on, through `OpenChatConfig.attributes` or `OpenChat.setAttributes()`. It is unverified too, and replaces what was there: an empty object clears it.",
         "security": [
           {
             "visitorAuth": []
@@ -7132,6 +7145,16 @@
                   },
                   "followUpConsent": {
                     "type": "boolean"
+                  },
+                  "attributes": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/VisitorAttributes"
+                      },
+                      {
+                        "description": "Up to 20 entries. A name has up to 40 characters, and a value is text of up to 255 characters, a number, or true or false."
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false

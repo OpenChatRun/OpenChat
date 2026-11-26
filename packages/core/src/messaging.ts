@@ -225,11 +225,28 @@ export async function markConversationRead(db: Database, ctx: WorkspaceContext, 
   return position;
 }
 
+/** Only what the widget route would have accepted is passed on, whatever the column holds. */
+function contactAttributes(json: string | null): Record<string, string | number | boolean> {
+  const attributes: Record<string, string | number | boolean> = {};
+  let stored: unknown = null;
+  try {
+    stored = JSON.parse(json ?? '{}');
+  } catch {
+    // Not written by this code. Nothing to show.
+  }
+  if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return attributes;
+  for (const [key, value] of Object.entries(stored)) {
+    if (typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) attributes[key] = value;
+  }
+  return attributes;
+}
+
 const toContact = (row: ContactRow) => ({
   id: row.id,
   name: row.name,
   email: row.email,
   phone: row.phone,
+  attributes: contactAttributes(row.attributesJson),
   firstSeenAt: toIso(row.firstSeenAt),
   lastSeenAt: toIso(row.lastSeenAt),
 });
@@ -256,7 +273,7 @@ export async function listContacts(db: Database, ctx: WorkspaceContext, input: {
   };
 }
 
-export async function updateContact(db: Database, ctx: WorkspaceContext, contactId: string, change: { name?: string | null | undefined; email?: string | null | undefined; phone?: string | null | undefined }) {
+export async function updateContact(db: Database, ctx: WorkspaceContext, contactId: string, change: { name?: string | null | undefined; phone?: string | null | undefined }) {
   requireCapability(ctx, 'conversation.reply');
   const contacts = repositories(db, ctx).contacts;
   if (!(await contacts.update(contactId, change))) throw notFound();
@@ -323,7 +340,6 @@ export async function exportContact(db: Database, ctx: WorkspaceContext, contact
     includesInternalNotes: includeNotes,
     contact: {
       ...toContact(rows.contact),
-      attributes: rows.contact.attributesJson === null ? null : (JSON.parse(rows.contact.attributesJson) as Record<string, unknown>),
       followUpConsentAt: rows.contact.followUpConsentAt === null ? null : toIso(rows.contact.followUpConsentAt),
       followUpConsentSource: rows.contact.followUpConsentSource,
       createdAt: toIso(rows.contact.createdAt),

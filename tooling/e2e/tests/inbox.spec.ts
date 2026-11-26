@@ -214,11 +214,33 @@ test('an agent corrects a contact, and the list shows the name', async ({ page }
   const contact = page.getByRole('form', { name: 'Contact' });
   const name = `Dana ${visitor.conversationId.slice(-6)}`;
   await contact.getByLabel('Name').fill(name);
-  await contact.getByLabel('Email').fill('dana@example.com');
   await contact.getByRole('button', { name: 'Save contact' }).click();
-  await expect(contact.getByText('Not verified')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Conversations' }).getByRole('button', { name: new RegExp(name) })).toBeVisible();
   await expect(page.getByRole('heading', { name })).toBeVisible();
+});
+
+test('the email is the visitor\'s own, and what the website said about them is shown, neither to be changed', async ({ page }) => {
+  const visitor = await startVisitor();
+  await signIn(page, OWNER);
+  await row(page, visitor).click();
+  const contact = page.getByRole('form', { name: 'Contact' });
+  await expect(contact.getByText('The visitor has not given one.')).toBeVisible();
+  await expect(contact.getByRole('region', { name: 'From your website' })).toHaveCount(0);
+
+  const email = `dana-${visitor.conversationId.slice(-6).toLowerCase()}@example.com`;
+  const sent = await fetch(`${BASE_URL}/api/v1/widget/me`, { method: 'PATCH', headers: visitorHeaders(visitor.token), body: JSON.stringify({ email, attributes: { customerId: 'C-1042', plan: 'Pro', paying: true } }) });
+  expect(sent.status).toBe(204);
+  await page.reload();
+  // The row is now named by the address.
+  await page.getByRole('region', { name: 'Conversations' }).getByRole('button', { name: new RegExp(email) }).click();
+  await expect(contact.getByText(email)).toBeVisible();
+  await expect(contact.getByText('Not verified. Anyone can type any address.')).toBeVisible();
+  // Name and phone are the only things to type in.
+  await expect(contact.getByRole('textbox')).toHaveCount(2);
+  const details = contact.getByRole('region', { name: 'From your website' });
+  await expect(details.getByRole('term')).toHaveText(['customerId', 'plan', 'paying']);
+  await expect(details.getByRole('definition')).toHaveText(['C-1042', 'Pro', 'Yes']);
+  await expect(details).toContainText('Not verified');
 });
 
 test('the list previews the newest message, and a search finds a contact whatever the status', async ({ page }) => {

@@ -58,19 +58,33 @@ beforeEach(async () => {
 
 describe('contacts', () => {
   it('reads, with times as dates, and shows on the conversation', async () => {
-    expect(await json(await call('GET', C, agent))).toEqual({ id: 'cont_1', name: 'Ann', email: 'ann@example.com', phone: '123', firstSeenAt: new Date(1000).toISOString(), lastSeenAt: new Date(2000).toISOString() });
+    expect(await json(await call('GET', C, agent))).toEqual({ id: 'cont_1', name: 'Ann', email: 'ann@example.com', phone: '123', attributes: {}, firstSeenAt: new Date(1000).toISOString(), lastSeenAt: new Date(2000).toISOString() });
     expect(await conversation()).toMatchObject({ contactName: 'Ann', contactEmail: 'ann@example.com', tags: [] });
   });
 
   it('changes only what is named, and null clears', async () => {
     expect(await json(await call('PATCH', C, agent, { name: 'Anna' }))).toMatchObject({ name: 'Anna', email: 'ann@example.com', phone: '123' });
-    expect(await json(await call('PATCH', C, agent, { email: null, phone: '456' }))).toMatchObject({ name: 'Anna', email: null, phone: '456' });
-    expect((await conversation()).contactName).toBe('Anna');
+    expect(await json(await call('PATCH', C, agent, { name: null, phone: '456' }))).toMatchObject({ name: null, email: 'ann@example.com', phone: '456' });
+    expect((await conversation()).contactName).toBeNull();
   });
 
-  it('refuses nothing to change, a bad email, and control characters', async () => {
+  it('does not let a member set, change, or clear the email, or write attributes', async () => {
+    for (const body of [{ email: 'other@example.com' }, { email: null }, { name: 'Anna', email: 'other@example.com' }, { attributes: { plan: 'Pro' } }]) {
+      expect((await call('PATCH', C, agent, body)).status).toBe(400);
+    }
+    expect(await json(await call('GET', C, agent))).toMatchObject({ name: 'Ann', email: 'ann@example.com', attributes: {} });
+  });
+
+  it('shows what the website said about the visitor, and nothing that is not text, a number, or true or false', async () => {
+    await env.DB.prepare(`UPDATE contacts SET attributes_json = ?1 WHERE id = 'cont_1'`).bind(JSON.stringify({ customerId: 'C-1042', seats: 3, paying: true, nested: { a: 1 }, list: [1], none: null })).run();
+    expect((await json<{ attributes: unknown }>(await call('GET', C, agent))).attributes).toEqual({ customerId: 'C-1042', seats: 3, paying: true });
+    expect((await json<{ data: { attributes: unknown }[] }>(await call('GET', `${W}/contacts`, agent))).data[0]?.attributes).toEqual({ customerId: 'C-1042', seats: 3, paying: true });
+    await env.DB.prepare(`UPDATE contacts SET attributes_json = 'not json' WHERE id = 'cont_1'`).run();
+    expect((await json<{ attributes: unknown }>(await call('GET', C, agent))).attributes).toEqual({});
+  });
+
+  it('refuses nothing to change and control characters', async () => {
     expect((await call('PATCH', C, agent, {})).status).toBe(400);
-    expect((await call('PATCH', C, agent, { email: 'not an email' })).status).toBe(400);
     expect((await call('PATCH', C, agent, { name: 'a\u0000b' })).status).toBe(400);
     expect((await call('PATCH', C, agent, { phone: 'a\nb' })).status).toBe(400);
   });

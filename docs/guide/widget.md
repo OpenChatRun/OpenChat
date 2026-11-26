@@ -65,7 +65,35 @@ On the script tag, or in `window.OpenChatConfig` before it:
 | `data-locale` | `locale` | The widget's language, such as `fr` or `zh-Hant`. For a site in several languages, set it on each page |
 | `data-consent="pending"` | `consent: 'pending'` | Stores nothing that outlives the browser tab until the page calls `window.OpenChat.grantConsent()`. For sites that ask for consent first |
 
+| | `attributes` | What your site knows about the visitor, for your team to see. See [Telling your team who the visitor is](#telling-your-team-who-the-visitor-is) |
+
 The page can also call `window.OpenChat.open()` and `window.OpenChat.close()`, for example from a "Chat with us" link.
+
+## Telling your team who the visitor is
+
+When your site knows something useful about the visitor, such as a customer number, a plan, or an order, the page can pass it on. Your team sees it on the contact card, under **From your website**, in the dashboard and in the app.
+
+Set it before the snippet:
+
+```html
+<script>
+  window.OpenChatConfig = { attributes: { customerId: 'C-1042', plan: 'Pro', seats: 12, paying: true } };
+</script>
+<script src="https://chat.company.com/widget/widget.js" data-website-key="wk_..." async></script>
+```
+
+Or at any time afterwards, for example once the visitor has signed in:
+
+```js
+window.OpenChat.setAttributes({ customerId: 'C-1042', plan: 'Pro' });
+```
+
+- **Up to 20 entries.** A name has up to 40 characters. A value is text of up to 255 characters, a number, or `true` or `false`. Anything else, such as a list or a nested object, is left out, and longer text is cut.
+- **Each call replaces the last.** Send everything you want shown each time. `setAttributes({})` clears it.
+- **It is sent only for a visitor who has written.** Someone who only looks at the button sends nothing. It is sent again when it changes.
+- **Your team cannot edit it,** and it is not shown to the visitor.
+- **It is not verified.** It comes from the visitor's browser, so someone who knows how can send anything. Treat it as a hint, as with the email address, and do not share account details because of it.
+- **It is personal data.** Send only what your team needs, and never passwords, payment details, or access tokens. It is included when a contact is exported, and deleted when they are erased; see [privacy and data](privacy.md).
 
 ## In a mobile app
 
@@ -124,6 +152,17 @@ val view = WebView(context).apply {
     loadUrl("https://www.company.com/chat")
 }
 ```
+
+**Passing what the app knows.** The app usually knows who is signed in. Add it to the chat page's address, such as `https://www.company.com/chat?customerId=C-1042&plan=Pro`, and have the chat page hand it to the widget as [attributes](#telling-your-team-who-the-visitor-is), before the widget's script:
+
+```html
+<script>
+  const query = new URLSearchParams(location.search);
+  window.OpenChatConfig = { attributes: { customerId: query.get('customerId') ?? '', plan: query.get('plan') ?? '', app: 'iOS 2.4.1' } };
+</script>
+```
+
+The widget never sends the query of the page's address to your installation by itself, so only what the page puts in `attributes` arrives. A web view can instead run `window.OpenChat.setAttributes({...})` in the page once it has loaded, with `evaluateJavaScript` on iOS, `evaluateJavascript` on Android, or `injectedJavaScript` in React Native.
 
 **What to know:**
 

@@ -67,7 +67,9 @@ When you resolve a conversation, the widget asks the visitor to rate it good or 
 
 ## Contacts and tags
 
-The contact card shows what the visitor told you: a name, and an email address if the website asked for one. **The address is not verified.** Anyone can type any address, so do not share account details because of it. You can correct the name and address and **Save contact**.
+The contact card shows what the visitor told you: a name, and an email address if the website asked for one. **The address is not verified.** Anyone can type any address, so do not share account details because of it. You can correct the name, or add a phone number, and **Save contact**. The address is the visitor's own to give, in the widget, where they also choose whether to allow follow-up emails, so nobody on the team can change it.
+
+**From your website** appears on the card when the website's page told OpenChat something about the visitor, such as a customer number or a plan ([the website widget](widget.md#telling-your-team-who-the-visitor-is)). You cannot edit it, and it is not verified either: it comes from the visitor's browser.
 
 Tags help find and group conversations. Type a tag to add it to the conversation, or choose one the workspace already uses.
 

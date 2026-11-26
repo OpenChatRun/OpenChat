@@ -36,6 +36,7 @@ Beyond the spec's entities, the schema adds what stated requirements need:
 | `email_suppressions`, `email_deliveries` | Suppression and duplicate prevention |
 | `email_unsubscribe_links` | One row per link sent, with a hash of its token. [Contact erasure](#contact-export-and-erasure) removes a contact's links |
 | `contacts.follow_up_consent_*` | Consent evidence |
+| `contacts.attributes_json` | What the website's page said about the visitor: the API's `attributes`, a flat JSON object. Written only by `PATCH /api/v1/widget/me`, which replaces it whole, and read on the contact. See [widget](widget.md#attributes) |
 | `automation_runs` | At most one follow-up per rule and quiet period |
 | `outbox`, `job_receipts`, `failed_jobs` | Reliable dispatch, consumer idempotency, durable failure records |
 | `audit_log` | §18 |
@@ -110,7 +111,7 @@ Authorisation reads happen before the batch, and that is acceptable because the 
 
 For a person's request to see, or delete, what a workspace holds about them. Both need an installation admin who is an active member of the workspace ([ADR-0016](decisions/0016-installation-admin-replaces-workspace-managers.md): managing does not include reading). Any other member gets 403, and anyone else 404.
 
-**Export** (`GET …/contacts/{id}/export`) reads in one batch, so it is one consistent view: the contact, including attributes and follow-up consent; their tags; their browsers (`visitors`); their conversations with every message; each file's name, type, and size, not its content; and the email suppression for their address. A message says only whether a visitor, a colleague, or the system wrote it, never which colleague. Internal notes are left out unless `include=notes`, because the export is usually handed to the person it is about. Reading changes nothing and is not audited.
+**Export** (`GET …/contacts/{id}/export`) reads in one batch, so it is one consistent view: the contact, including its attributes and follow-up consent; their tags; their browsers (`visitors`); their conversations with every message; each file's name, type, and size, not its content; and the email suppression for their address. A message says only whether a visitor, a colleague, or the system wrote it, never which colleague. Internal notes are left out unless `include=notes`, because the export is usually handed to the person it is about. Reading changes nothing and is not audited.
 
 **Erasure** (`DELETE …/contacts/{id}`) is one batch in [Pattern 2a](#pattern-2a-the-audit-row-as-the-guard). The audit row `contact.erased` holds IDs only. Every statement after it depends on that row:
 
