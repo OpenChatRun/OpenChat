@@ -24,7 +24,7 @@ privacy@openchat.run, security@openchat.run and support@openchat.run are routed 
 
 | Question | Decision |
 |---|---|
-| Who we are | Orango Labs Ltd, 17102914, 111 New Union Street, Coventry, CV1 2NT. It owns the code (the repository moved to `OrangoLabsLtd/OpenChat` on 2026-11-17) and runs the services |
+| Who we are | Orango Labs Ltd, 17102914, 111 New Union Street, Coventry, CV1 2NT. It owns the code (the repository moved to `OrangoLabsLtd/OpenChat` on 2026-11-17, and is now `OpenChatRun/OpenChat`) and runs the services |
 | Law | England and Wales |
 | Roles | The operator is the controller of its team's relay data, and Orango Labs its processor. Orango Labs is the controller of its own security logs and correspondence |
 | Transfers | EU–US Data Privacy Framework and its UK Extension (Cloudflare, Apple and Google are certified), with their standard contractual clauses and the UK Addendum as the fallback |
@@ -42,7 +42,7 @@ privacy@openchat.run, security@openchat.run and support@openchat.run are routed 
 ## Still to do
 
 - **Pay the ICO data protection fee**, and add the registration number to the [records](records-of-processing.md). No entry was found on the ICO register on 2026-11-17.
-- **Turn on two-factor authentication** on the Cloudflare account and require it in the `OrangoLabsLtd` GitHub organisation. The [agreement](data-processing-agreement.md#5-security-measures) promises it, and neither was on.
+- **Turn on two-factor authentication** on the Cloudflare account and require it in the `OpenChatRun` GitHub organisation. The [agreement](data-processing-agreement.md#5-security-measures) promises it, and neither was on.
 
 ## How the documents match the code
 

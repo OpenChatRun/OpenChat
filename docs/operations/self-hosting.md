@@ -30,7 +30,7 @@ The background for each step is in [deployment](deployment.md). To have a coding
 ## 1. Get the code
 
 ```bash
-git clone https://github.com/OrangoLabsLtd/OpenChat.git openchat
+git clone https://github.com/OpenChatRun/OpenChat.git openchat
 cd openchat
 git checkout $(git describe --tags --abbrev=0)
 corepack enable

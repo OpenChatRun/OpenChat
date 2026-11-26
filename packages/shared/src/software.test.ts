@@ -27,7 +27,7 @@ describe('software', () => {
 describe('the newest release', () => {
   it('is read from the address GitHub redirects to, wherever the repository lives', () => {
     expect(releaseVersionFromUrl('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0')).toBe('0.4.0');
-    expect(releaseVersionFromUrl('https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v1.12.3')).toBe('1.12.3');
+    expect(releaseVersionFromUrl('https://github.com/OpenChatRun/OpenChat/releases/tag/v1.12.3')).toBe('1.12.3');
   });
 
   it('is not read from anything else', () => {

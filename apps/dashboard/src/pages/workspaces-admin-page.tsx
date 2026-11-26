@@ -7,7 +7,7 @@ import { WebsitesManager } from './websites';
 /** The OpenChat project's own relay, whose terms an installation accepts by using it. Another relay has its own terms. */
 // The managed relay answers at both addresses; relay.openchat.run is the new one.
 const MANAGED_RELAY_URLS = new Set(['https://relay.openchat.run', 'https://openchat-relay.orangolabs.com']);
-const RELAY_TERMS_URL = 'https://github.com/OrangoLabsLtd/OpenChat/blob/main/docs/legal/relay-terms.md';
+const RELAY_TERMS_URL = 'https://github.com/OpenChatRun/OpenChat/blob/main/docs/legal/relay-terms.md';
 
 function Failure({ error }: { error: unknown }) {
   return error ? <p className="error" role="alert">{errorMessage(error)}</p> : null;

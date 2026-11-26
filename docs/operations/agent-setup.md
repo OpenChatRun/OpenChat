@@ -9,7 +9,7 @@ A coding agent, such as Claude Code, Codex or Cursor, can install OpenChat for y
 3. Paste this, with your own details:
 
 ```text
-Set up OpenChat for me. Clone https://github.com/OrangoLabsLtd/OpenChat.git
+Set up OpenChat for me. Clone https://github.com/OpenChatRun/OpenChat.git
 and follow docs/operations/agent-setup.md in it, step by step.
 
 My email: you@company.com
@@ -41,7 +41,7 @@ You are installing OpenChat on the person's own Cloudflare account. Follow these
 **2. Get the code.**
 
 ```bash
-git clone https://github.com/OrangoLabsLtd/OpenChat.git openchat
+git clone https://github.com/OpenChatRun/OpenChat.git openchat
 cd openchat
 git checkout $(git describe --tags --abbrev=0)
 corepack enable

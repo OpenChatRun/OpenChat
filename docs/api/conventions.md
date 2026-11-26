@@ -43,7 +43,7 @@ Installations upgrade on their own schedule, and the official app must cope with
   "realtime": { "protocolVersions": [1] },
   "relay": { "id": "managed", "url": "https://relay.example.org", "bundleIds": ["org.example.app"], "publicKeys": [{ "id": "k1", "alg": "Ed25519", "key": "..." }] },
   "auth": { "signup": "invite_only" },
-  "software": { "name": "OpenChat", "version": "0.3.0", "license": "AGPL-3.0-or-later", "source": "https://github.com/OrangoLabsLtd/OpenChat/tree/v0.3.0" }
+  "software": { "name": "OpenChat", "version": "0.3.0", "license": "AGPL-3.0-or-later", "source": "https://github.com/OpenChatRun/OpenChat/tree/v0.3.0" }
 }
 ```
 

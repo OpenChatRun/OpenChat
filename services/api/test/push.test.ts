@@ -159,7 +159,7 @@ describe('discovery', () => {
 
   it('names the release and offers its source, or the source the operator set', async () => {
     const atRelease = (await (await call('GET', '/.well-known/openchat.json', { env: { ...withRelay, OPENCHAT_VERSION: '0.3.0' } })).json()) as { software: unknown };
-    expect(atRelease.software).toEqual({ name: 'OpenChat', version: '0.3.0', license: 'AGPL-3.0-or-later', source: 'https://github.com/OrangoLabsLtd/OpenChat/tree/v0.3.0' });
+    expect(atRelease.software).toEqual({ name: 'OpenChat', version: '0.3.0', license: 'AGPL-3.0-or-later', source: 'https://github.com/OpenChatRun/OpenChat/tree/v0.3.0' });
     const own = (await (await call('GET', '/.well-known/openchat.json', { env: { ...withRelay, OPENCHAT_VERSION: '0.3.0', SOURCE_URL: 'https://git.example.com/our-openchat' } })).json()) as { software: { source: string } };
     expect(own.software.source).toBe('https://git.example.com/our-openchat');
   });
@@ -673,7 +673,7 @@ describe('an admin asking whether a newer release exists', () => {
   beforeEach(async () => {
     await env.DB.prepare(`UPDATE users SET is_installation_admin = 1 WHERE id = 'user_two'`).run();
   });
-  const LATEST = 'https://github.com/OrangoLabsLtd/OpenChat/releases/latest';
+  const LATEST = 'https://github.com/OpenChatRun/OpenChat/releases/latest';
   let asked: { url: string; method: string | undefined; headers: Headers }[] = [];
   const answer = (final: string | null) => {
     asked = [];
@@ -689,7 +689,7 @@ describe('an admin asking whether a newer release exists', () => {
 
   it('says so, with the release notes, and sends nothing about the installation', async () => {
     answer('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0');
-    expect(await (await update()).json()).toEqual({ current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0' });
+    expect(await (await update()).json()).toEqual({ current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0' });
     expect(asked).toHaveLength(1);
     expect(asked[0]).toMatchObject({ url: LATEST, method: 'HEAD' });
     expect([...asked[0]!.headers.keys()]).toEqual(['user-agent']);
