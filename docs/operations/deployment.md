@@ -140,6 +140,14 @@ A Worker version with a Durable Object migration that the old version lacks may 
 
 **Tested in CI.** `pnpm test:upgrade --from v0.1.0` runs the release's Worker on local D1 and writes a conversation, a reply, and an internal note. This checkout's migrations and Worker then take over the same database, and old sessions, messages, and the note's privacy are checked. Then the release's Worker runs again on the new schema, as after `oc rollback`, and reads and writes. A migration that renamed a column the code reads made it fail, as it should. `oc upgrade` and `oc rollback` themselves are tested against a fake Wrangler, since CI has no Cloudflare account.
 
+## The notice of a newer release
+
+An installation admin sees a line at the top of the dashboard when the project has a newer release than the one deployed: the two versions, and a link to the release notes, which say how to upgrade. They can dismiss it, and it returns for the release after. Nobody else sees it, and nothing upgrades by itself.
+
+To find out, the Worker asks GitHub where the project's "latest release" address leads (`GET /api/v1/admin/software-update`). It does so only when an admin has the dashboard open, and each browser asks at most once a day. The request carries no cookie, address, name or number of your installation: GitHub sees a request from Cloudflare, and nothing else. If GitHub cannot be reached, the dashboard says nothing.
+
+To turn it off, deploy with `--update-check off`, which is remembered; `--update-check on` brings it back. The Worker then makes no request. An installation from the [Deploy button](one-click-deploy.md) sets `UPDATE_CHECK` to `off` in the `vars` of its `wrangler.jsonc` instead. A Worker deployed with no release version, such as a local one, never asks.
+
 ## CI/CD
 
 | Workflow | Trigger | Does |

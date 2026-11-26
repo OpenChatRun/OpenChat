@@ -669,6 +669,59 @@ describe('when someone loses access', () => {
   });
 });
 
+describe('an admin asking whether a newer release exists', () => {
+  beforeEach(async () => {
+    await env.DB.prepare(`UPDATE users SET is_installation_admin = 1 WHERE id = 'user_two'`).run();
+  });
+  const LATEST = 'https://github.com/OrangoLabsLtd/OpenChat/releases/latest';
+  let asked: { url: string; method: string | undefined; headers: Headers }[] = [];
+  const answer = (final: string | null) => {
+    asked = [];
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push({ url: String(input), method: init?.method, headers: new Headers(init?.headers) });
+      if (final === null) throw new TypeError('network down');
+      const response = new Response(null, { status: 200 });
+      Object.defineProperty(response, 'url', { value: final });
+      return response;
+    });
+  };
+  const update = (name = 'two', vars: Partial<Env> = { OPENCHAT_VERSION: '0.3.0' }) => call('GET', '/api/v1/admin/software-update', { token: tokens[name]!, env: { ...withRelay, ...vars } as Env });
+
+  it('says so, with the release notes, and sends nothing about the installation', async () => {
+    answer('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0');
+    expect(await (await update()).json()).toEqual({ current: '0.3.0', latest: '0.4.0', updateAvailable: true, releaseUrl: 'https://github.com/OrangoLabsLtd/OpenChat/releases/tag/v0.4.0' });
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatchObject({ url: LATEST, method: 'HEAD' });
+    expect([...asked[0]!.headers.keys()]).toEqual(['user-agent']);
+  });
+
+  it('says there is none when this is the newest, or newer', async () => {
+    answer('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.3.0');
+    expect(await (await update()).json()).toMatchObject({ current: '0.3.0', latest: '0.3.0', updateAvailable: false });
+    expect(await (await update('two', { OPENCHAT_VERSION: '0.5.0' })).json()).toMatchObject({ latest: '0.3.0', updateAvailable: false });
+  });
+
+  it('does not ask when turned off, or when the installation has no version', async () => {
+    answer('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0');
+    expect(await (await update('two', { OPENCHAT_VERSION: '0.3.0', UPDATE_CHECK: 'off' })).json()).toEqual({ current: '0.3.0', latest: null, updateAvailable: false, releaseUrl: null });
+    expect(await (await update('two', {})).json()).toEqual({ current: null, latest: null, updateAvailable: false, releaseUrl: null });
+    expect(asked).toHaveLength(0);
+  });
+
+  it('answers without a newest release when the repository cannot be reached, or answers something else', async () => {
+    answer(null);
+    expect(await (await update()).json()).toEqual({ current: '0.3.0', latest: null, updateAvailable: false, releaseUrl: null });
+    answer('https://github.com/login');
+    expect(await (await update()).json()).toMatchObject({ latest: null, updateAvailable: false });
+  });
+
+  it('is for installation admins only', async () => {
+    answer('https://github.com/OpenChatRun/OpenChat/releases/tag/v0.4.0');
+    expect((await update('one')).status).toBe(404);
+    expect(asked).toHaveLength(0);
+  });
+});
+
 describe('an admin disconnecting from the relay', () => {
   beforeEach(async () => {
     await env.DB.prepare(`UPDATE users SET is_installation_admin = 1 WHERE id = 'user_two'`).run();

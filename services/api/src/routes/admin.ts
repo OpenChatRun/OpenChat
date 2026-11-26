@@ -8,6 +8,7 @@ import {
   dismissFailedJobRoute,
   getRelayStatusRoute,
   getRetentionRoute,
+  getSoftwareUpdateRoute,
   listAuditLogRoute,
   listFailedJobsRoute,
   replayFailedJobRoute,
@@ -48,7 +49,7 @@ import {
   updateWebsite,
   updateWorkspace,
 } from '@openchat/core';
-import { AppError, createLogger } from '@openchat/shared';
+import { AppError, createLogger, isNewerRelease, LATEST_RELEASE_URL, PROJECT_REPOSITORY_URL, releaseVersionFromUrl, software } from '@openchat/shared';
 import type { Context } from 'hono';
 import { authDeps, type App, type AppEnv } from '../context';
 import type { Env } from '../env';
@@ -71,6 +72,25 @@ async function relayStatus(c: Context<AppEnv>, db: Awaited<ReturnType<typeof aut
     registered: relay !== null && state.registeredId === relay.id,
     subscriptions: state.subscriptions,
   };
+}
+
+/**
+ * The project's newest release, read from where GitHub redirects its "latest release" address. The request says
+ * nothing about this installation. Null when it cannot be read: a notice is not worth an error.
+ */
+async function latestRelease(): Promise<string | null> {
+  try {
+    const response = await fetch(LATEST_RELEASE_URL, { method: 'HEAD', redirect: 'follow', headers: { 'User-Agent': 'OpenChat' }, signal: AbortSignal.timeout(5000) });
+    return response.ok ? releaseVersionFromUrl(response.url) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function softwareUpdate(env: Env) {
+  const current = software({ version: env.OPENCHAT_VERSION, sourceUrl: undefined }).version;
+  const latest = current === null || env.UPDATE_CHECK === 'off' ? null : await latestRelease();
+  return { current, latest, updateAvailable: latest !== null && current !== null && isNewerRelease(latest, current), releaseUrl: latest === null ? null : `${PROJECT_REPOSITORY_URL}/releases/tag/v${latest}` };
 }
 
 function replayQueue(env: Env, queue: ReplayQueue): Queue {
@@ -142,6 +162,11 @@ export function registerAdminRoutes(app: App) {
   app.openapi(getRelayStatusRoute, async (c) => {
     const { deps, ctx } = await admin(c);
     return c.json(await relayStatus(c, deps.db, ctx), 200);
+  });
+
+  app.openapi(getSoftwareUpdateRoute, async (c) => {
+    await admin(c);
+    return c.json(await softwareUpdate(c.env), 200);
   });
 
   app.openapi(disconnectRelayRoute, async (c) => {

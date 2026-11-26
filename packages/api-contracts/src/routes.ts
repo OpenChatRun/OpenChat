@@ -1626,6 +1626,25 @@ export const getRelayStatusRoute = createRoute({
   responses: { 200: { description: 'Relay status', ...json(RelayStatusSchema) }, default: problemResponse },
 });
 
+export const SoftwareUpdateSchema = z
+  .object({
+    current: z.string().nullable().openapi({ description: 'The release this installation runs. Null when it was not deployed from a release.' }),
+    latest: z.string().nullable().openapi({ description: "The project's newest release. Null when the check is turned off, could not be made, or there is no current version to compare." }),
+    updateAvailable: z.boolean(),
+    releaseUrl: z.string().nullable().openapi({ description: "The newest release's notes. Null with `latest`." }),
+  })
+  .openapi('SoftwareUpdate');
+
+export const getSoftwareUpdateRoute = createRoute({
+  ...adminRoute,
+  method: 'get',
+  path: '/api/v1/admin/software-update',
+  operationId: 'getSoftwareUpdate',
+  summary: 'Whether a newer release of OpenChat exists',
+  description: "Asks the project's repository for its newest release, unless the installation has `UPDATE_CHECK` set to `off`. Nothing about the installation is sent.",
+  responses: { 200: { description: 'The running and the newest release', ...json(SoftwareUpdateSchema) }, default: problemResponse },
+});
+
 export const disconnectRelayRoute = createRoute({
   ...adminRoute,
   method: 'post',

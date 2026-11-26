@@ -150,7 +150,7 @@ Keep it up to date with [step 7](#7-keep-it-up-to-date).
 
 ## 7. Keep it up to date
 
-When a new release comes out, read its notes, then:
+The dashboard tells installation admins when a newer release exists, with a link to its notes ([how](deployment.md#the-notice-of-a-newer-release)). When one comes out, read its notes, then:
 
 ```bash
 git fetch --tags

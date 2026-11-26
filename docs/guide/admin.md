@@ -144,3 +144,5 @@ Upgrades, backups, health checks and alerts are run from the computer you deploy
 - [Monitoring](../operations/monitoring.md): `pnpm oc health`, and what to alert on.
 - [Backup and restore](../operations/backup-and-restore.md): `pnpm oc backup` and `pnpm oc restore`.
 - [Upgrades](../operations/self-hosting.md#7-keep-it-up-to-date): `pnpm oc upgrade`, and `pnpm oc rollback`.
+
+When a newer release of OpenChat exists, installation admins see a line at the top of the dashboard with a link to what is new. Dismiss it to hide it until the release after. Whoever operates the installation can [turn it off](../operations/deployment.md#the-notice-of-a-newer-release).

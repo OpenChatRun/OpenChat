@@ -35,6 +35,8 @@ export interface Env {
   SECURITY_POLICY?: string;
   /** Set by `oc deploy` to the release it deployed. Published in the discovery document. */
   OPENCHAT_VERSION?: string;
+  /** 'off' stops installation admins being told of a newer release, and the request to the project's repository that finds it. */
+  UPDATE_CHECK?: string;
   /** Where users can get this installation's source, as the AGPL asks. Without it, the project's at OPENCHAT_VERSION. */
   SOURCE_URL?: string;
   /**

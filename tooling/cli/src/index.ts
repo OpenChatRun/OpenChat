@@ -17,6 +17,7 @@ function usage(): never {
                  [--public-url <https origin>] [--location <hint>] [--analytics] [--cloudflare-email] [--email-from <address>]
                  [--security-contact <mailto:...|https://...>[,...] | none] [--security-policy <https://...>]
                  [--source-url <https://...> | none]   where users get your source, if you changed the code
+                 [--update-check off | on]             whether admins are told of a newer release; on unless turned off
                  [--assistant | --no-assistant]   the AI assistant, on Workers AI and Vectorize (ADR-0022)
   pnpm oc upgrade --env <name>      after checking out a newer release
   pnpm oc rollback --env <name>     puts back the Worker from before the last upgrade
@@ -100,6 +101,7 @@ async function main(name: string) {
       securityContact: flag('security-contact'),
       securityPolicy: flag('security-policy'),
       sourceUrl: flag('source-url'),
+      updateCheck: flag('update-check'),
       cloudflareEmail: rest.includes('--cloudflare-email'),
     });
     return;
