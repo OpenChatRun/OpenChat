@@ -149,6 +149,6 @@
     "RELAY_URL": "https://openchat-relay.orangolabs.com",
     "RELAY_ID": "managed",
     "RELAY_BUNDLE_IDS": "com.orangolabs.openchat",
-    "OPENCHAT_VERSION": "0.2.1"
+    "OPENCHAT_VERSION": "0.3.0"
   }
 }
