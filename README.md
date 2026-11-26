@@ -77,14 +77,17 @@ What it costs you: you depend on one provider, a D1 database holds at most 10 GB
 A summary, checked in November 2026. Prices and plans change, so check each product's own pages.
 
 | | OpenChat | [Chatwoot](https://www.chatwoot.com), self-hosted | [Tidio](https://www.tidio.com) | [Intercom](https://www.intercom.com) | [Crisp](https://crisp.chat) |
-|---|---|---|---|---|---|
-| **Source** | Open: server AGPL-3.0, widget Apache-2.0. The apps and relay are closed | Open: MIT, with some features under a paid Enterprise licence | Closed | Closed | Closed |
-| **Where conversations are kept** | Your Cloudflare account | Your servers | Tidio's | Intercom's | Crisp's |
-| **What you run** | One Worker. No servers | A Rails app, background workers, PostgreSQL and Redis | Nothing | Nothing | Nothing |
-| **What you pay for** | Cloudflare, by use. No fee per seat | Your servers, and a paid plan for Enterprise features | A plan sized by conversations, with the AI priced separately | Each seat, and each conversation the AI resolves | Each workspace, with a set number of seats |
-| **AI that answers first** | Yes, on Workers AI in your own account | Yes, in the Enterprise edition | Yes | Yes | Yes |
-| **Channels** | Website chat | Website chat, email, WhatsApp, social networks and more | The same | The same, and phone | The same |
-| **Maturity** | Before 1.0, no independent security review | Established | Established | Established | Established |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Open source** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Conversations kept in your own account** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **No servers to run** | ✅ | ❌ | ✅ | ✅ | ✅ |
+| **No fee per seat** | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **AI that answers first** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Website chat** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Email, WhatsApp and social channels** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Past version 1.0** | ❌ | ✅ | ✅ | ✅ | ✅ |
+
+OpenChat's apps and relay are not open source. Chatwoot's AI is in its paid Enterprise edition.
 
 **Choose OpenChat** if you want your conversations in an account you own, a bill that does not grow with your team, and nothing to maintain.
 
