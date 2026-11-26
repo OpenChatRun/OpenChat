@@ -1,6 +1,6 @@
 # Data processing agreement: OpenChat managed relay
 
-> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OpenChatRun/OpenChat/blob/53ad7d6/docs/legal/data-processing-agreement.md) applies.
+> Version 2, published on 19 November 2026 and in force from 20 November 2026, when the Android app was released. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Before that, [version 1](https://github.com/OpenChatRun/OpenChat/blob/53ad7d6/docs/legal/data-processing-agreement.md) applied.
 
 This agreement forms part of the [relay terms](relay-terms.md). It is between the organisation operating an OpenChat installation (the "controller") and Orango Labs Ltd, company number 17102914, registered at 111 New Union Street, Coventry, England, CV1 2NT (the "processor"). It meets Article 28 of the UK GDPR and the EU GDPR.
 

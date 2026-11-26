@@ -14,7 +14,9 @@ These cover the **managed relay** (`openchat-relay.orangolabs.com`) and the **of
 
 ## Version 2
 
-Published on 19 November 2026, in force from 19 December 2026, 30 days later, as the notice rule below requires for a new subprocessor. It adds the Android app ([ADR-0021](../architecture/decisions/0021-android-app-and-fcm.md)), and Google LLC, whose Firebase Cloud Messaging delivers notifications to Android phones. Google can no more read them than Apple can. Nothing else changes.
+Published on 19 November 2026, and in force from 20 November 2026. It adds the Android app ([ADR-0021](../architecture/decisions/0021-android-app-and-fcm.md)), and Google LLC, whose Firebase Cloud Messaging delivers notifications to Android phones. Google can no more read them than Apple can. Nothing else changes.
+
+Version 2 was first published as in force from 19 December 2026, 30 days later, as the notice rule below asks for a new subprocessor. The Android app was released on Google Play on 20 November 2026, and Google has delivered its notifications from that day, so the notice given was one day and not 30. On 26 November 2026 the owner decided that the documents should say what happened. Only people who install the Android app are affected: an installation whose team uses no Android phone sends nothing to Google. An operator who objects can disconnect from the relay, which erases what it holds.
 
 ## Contact
 

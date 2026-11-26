@@ -1,6 +1,6 @@
 # Records of processing: Orango Labs Ltd
 
-> Version 2, in force from 19 December 2026, 30 days after it was published on 19 November 2026. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Until then, [version 1](https://github.com/OpenChatRun/OpenChat/blob/53ad7d6/docs/legal/records-of-processing.md) applies.
+> Version 2, published on 19 November 2026 and in force from 20 November 2026, when the Android app was released. Adopted by Orango Labs Ltd. Version 2 adds the Android app, and Google LLC, which delivers its notifications. Before that, [version 1](https://github.com/OpenChatRun/OpenChat/blob/53ad7d6/docs/legal/records-of-processing.md) applied.
 
 Organisation: Orango Labs Ltd, 111 New Union Street, Coventry, England, CV1 2NT. Contact: privacy@openchat.run. We have not appointed a representative in the EU under Article 27 of the EU GDPR, relying on the exemption in Article 27(2) for occasional processing that is unlikely to result in a risk to people's rights.. ICO data protection fee: not yet paid, to be paid before launch, and its registration number added here. No data protection officer appointed.
 
