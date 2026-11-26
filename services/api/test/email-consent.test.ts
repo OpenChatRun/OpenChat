@@ -190,12 +190,11 @@ describe('consent in the widget', () => {
     expect((await mine()).at).toBeGreaterThan(0);
   });
 
-  it('a member changing the address clears consent, and correcting only its capitals does not', async () => {
-    const patch = (email: string) => call('PATCH', `/api/v1/workspaces/${W}/contacts/c_a`, { token: tokens.boss!, body: { email } });
-    expect((await patch('VERA@example.com')).status).toBe(200);
+  it('a member cannot change the address, so consent stays with the one the visitor gave', async () => {
+    const patch = (body: unknown) => call('PATCH', `/api/v1/workspaces/${W}/contacts/c_a`, { token: tokens.boss!, body });
+    expect((await patch({ email: 'new@example.com' })).status).toBe(400);
+    expect((await patch({ name: 'Vera B' })).status).toBe(200);
     expect((await consent('c_a')).at).toBe(5);
-    await patch('new@example.com');
-    expect(await consent('c_a')).toEqual({ at: null, source: null });
   });
 
   it('ticking again does not lift an unsubscribe, because an address here is unverified', async () => {

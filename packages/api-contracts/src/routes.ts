@@ -86,6 +86,17 @@ export const API_MINOR_VERSION = 3;
 
 export const SafeName = z.string().trim().min(1).max(100).regex(/^\P{Cc}*$/u, 'Must not contain control characters');
 const Email = z.string().trim().max(320).pipe(z.email());
+
+/** What a website says about its visitor, such as a customer number or a plan. See docs/architecture/widget.md. */
+export const VISITOR_ATTRIBUTE_LIMITS = { entries: 20, keyChars: 40, valueChars: 255 } as const;
+const NoControl = /^\P{Cc}*$/u;
+export const VisitorAttributesSchema = z
+  .record(
+    z.string().min(1).max(VISITOR_ATTRIBUTE_LIMITS.keyChars).regex(NoControl, 'Must not contain control characters'),
+    z.union([z.string().max(VISITOR_ATTRIBUTE_LIMITS.valueChars).regex(NoControl, 'Must not contain control characters'), z.number(), z.boolean()]),
+  )
+  .refine((value) => Object.keys(value).length <= VISITOR_ATTRIBUTE_LIMITS.entries, `At most ${VISITOR_ATTRIBUTE_LIMITS.entries} entries`)
+  .openapi('VisitorAttributes', { description: 'Up to 20 entries. A name has up to 40 characters, and a value is text of up to 255 characters, a number, or true or false.', example: { customerId: 'C-1042', plan: 'Pro', paying: true } });
 const bearer = [{ bearerAuth: [] }];
 const json = <T extends z.ZodType>(schema: T) => ({ content: { 'application/json': { schema } } });
 
@@ -709,7 +720,7 @@ export const ConversationSchema = z
     websiteId: z.string(),
     contactId: z.string(),
     contactName: z.string().nullable(),
-    contactEmail: z.string().nullable().openapi({ description: 'Given by the visitor or an agent. Never verified.' }),
+    contactEmail: z.string().nullable().openapi({ description: 'Given by the visitor. Never verified.' }),
     tags: z.array(TagSchema),
     assignedMemberId: z.string().nullable(),
     status: ConversationStatusSchema,
@@ -1006,16 +1017,16 @@ export const updateVisitorProfileRoute = createRoute({
   path: '/api/v1/widget/me',
   tags: ['widget'],
   operationId: 'updateVisitorProfile',
-  summary: 'Provide a name, email, and follow-up consent',
-  description: 'An email is unverified, and never merges with an existing contact automatically.',
+  summary: 'Provide a name, email, follow-up consent, or what the website knows about the visitor',
+  description: 'An email is unverified, and never merges with an existing contact automatically. `attributes` comes from the page the widget is on, through `OpenChatConfig.attributes` or `OpenChat.setAttributes()`. It is unverified too, and replaces what was there: an empty object clears it.',
   security: visitor,
   request: {
     body: {
       required: true,
       ...json(
         z
-          .strictObject({ name: SafeName.optional(), email: z.email().max(254).optional(), followUpConsent: z.boolean().optional() })
-          .refine((b) => b.name !== undefined || b.email !== undefined || b.followUpConsent !== undefined, 'Nothing to change'),
+          .strictObject({ name: SafeName.optional(), email: z.email().max(254).optional(), followUpConsent: z.boolean().optional(), attributes: VisitorAttributesSchema.optional() })
+          .refine((b) => b.name !== undefined || b.email !== undefined || b.followUpConsent !== undefined || b.attributes !== undefined, 'Nothing to change'),
       ),
     },
   },
@@ -1173,8 +1184,9 @@ export const ContactSchema = z
   .object({
     id: z.string(),
     name: z.string().nullable(),
-    email: z.string().nullable().openapi({ description: 'Never verified, so it proves nothing about who this is.' }),
+    email: z.string().nullable().openapi({ description: 'Given by the visitor in the widget. Never verified, so it proves nothing about who this is. A member cannot change it.' }),
     phone: z.string().nullable(),
+    attributes: VisitorAttributesSchema.openapi({ description: "What the website's page said about this visitor, through the widget. Never verified: a visitor can send anything from their own browser. Empty when the page sent nothing." }),
     firstSeenAt: z.string(),
     lastSeenAt: z.string(),
   })
@@ -1261,7 +1273,8 @@ export const updateContactRoute = createRoute({
   path: '/api/v1/workspaces/{workspaceId}/contacts/{contactId}',
   tags: ['conversations'],
   operationId: 'updateContact',
-  summary: 'Correct a name, email, or phone number',
+  summary: 'Correct a name or phone number',
+  description: "The email is the visitor's to give, in the widget, with their consent to follow-ups. A member cannot set or change it, and a body that names it is refused with 400.",
   security: bearer,
   request: {
     params: contactParams,
@@ -1271,10 +1284,9 @@ export const updateContactRoute = createRoute({
         z
           .strictObject({
             name: SafeName.nullable().optional(),
-            email: z.email().max(254).nullable().optional(),
             phone: z.string().trim().max(40).regex(/^\P{Cc}*$/u, 'Must not contain control characters').nullable().optional(),
           })
-          .refine((b) => b.name !== undefined || b.email !== undefined || b.phone !== undefined, 'Nothing to change'),
+          .refine((b) => b.name !== undefined || b.phone !== undefined, 'Nothing to change'),
       ),
     },
   },
@@ -1286,7 +1298,6 @@ export const ContactExportSchema = z
     exportedAt: z.string(),
     includesInternalNotes: z.boolean(),
     contact: ContactSchema.extend({
-      attributes: z.record(z.string(), z.unknown()).nullable(),
       followUpConsentAt: z.string().nullable(),
       followUpConsentSource: z.string().nullable(),
       createdAt: z.string(),

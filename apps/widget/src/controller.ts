@@ -7,6 +7,7 @@ import { createRealtime, type Realtime, type RealtimeDeps, type RealtimeStatus, 
 import { ChallengeFailed } from './turnstile';
 import { ApiError, type Api, type Bootstrap, type VisitorConversation, type VisitorMessage } from './api';
 import { hasOlder, lastSeq, mergeMessages, newClientMessageId, pendingMessage, retryDelayMs, unreadCount, type ChatMessage } from './state';
+import type { Attributes } from './attributes';
 import type { WidgetStorage } from './storage';
 
 const PAGE_SIZE = 50;
@@ -100,10 +101,25 @@ export function createController(deps: ControllerDeps) {
     deps.api.setPage(conversationId, page).catch(() => undefined);
   };
 
+  // What the page says about its visitor, for the team. Like the page, it waits for a conversation, so that a page
+  // view alone never makes a visitor on the installation, and it is sent again only when it changes.
+  let attributes: Attributes | null = null;
+  let sentAttributes: string | null = null;
+  const attributesMaybeChanged = () => {
+    if (!attributes || !state.conversation) return;
+    const json = JSON.stringify(attributes);
+    if (json === sentAttributes) return;
+    sentAttributes = json;
+    deps.api.updateProfile({ attributes }).catch(() => undefined);
+  };
+
   const update = (change: Partial<ChatState>) => {
     state = { ...state, ...change };
     for (const listener of listeners) listener();
-    if (change.conversation) pageMaybeChanged();
+    if (change.conversation) {
+      pageMaybeChanged();
+      attributesMaybeChanged();
+    }
   };
 
   let realtime: Realtime | null = null;
@@ -336,6 +352,12 @@ export function createController(deps: ControllerDeps) {
     getState: () => state,
     /** Call when the page's address may have changed, as a single-page site does without loading anything. */
     pageMaybeChanged,
+    /** Null is a page that said nothing, or nothing usable, and changes nothing. */
+    setAttributes(next: Attributes | null) {
+      if (!next) return;
+      attributes = next;
+      attributesMaybeChanged();
+    },
     subscribe(listener: () => void) {
       listeners.add(listener);
       return () => listeners.delete(listener);

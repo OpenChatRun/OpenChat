@@ -138,6 +138,8 @@ export interface ContactRow {
   name: string | null;
   email: string | null;
   phone: string | null;
+  /** What the website's page said about the visitor: a JSON object, as the widget route validated it. */
+  attributesJson: string;
   firstSeenAt: number;
   lastSeenAt: number;
 }
@@ -150,7 +152,7 @@ export interface ContactListRow extends ContactRow {
 }
 
 export interface ContactExportRows {
-  contact: ContactRow & { attributesJson: string | null; followUpConsentAt: number | null; followUpConsentSource: string | null; createdAt: number };
+  contact: ContactRow & { followUpConsentAt: number | null; followUpConsentSource: string | null; createdAt: number };
   tags: string[];
   browsers: { id: string; websiteId: string; firstSeenAt: number; lastSeenAt: number }[];
   conversations: { id: string; websiteId: string; status: string; subject: string | null; createdAt: number; visitorPageUrl: string | null; visitorPageAt: number | null; visitorRating: 'good' | 'bad' | null; visitorRatingComment: string | null; visitorRatedAt: number | null }[];
@@ -257,7 +259,7 @@ export const MESSAGE_SELECT = `SELECT m.id, m.workspace_id AS workspaceId, ${ATT
   LEFT JOIN assistant_settings asst ON m.assistant_id IS NOT NULL AND asst.workspace_id = m.workspace_id AND asst.id = m.assistant_id`;
 
 /** ?1 is the calling member, for their read position. */
-const CONTACT_SELECT = `SELECT id, name, email, phone, first_seen_at AS firstSeenAt, last_seen_at AS lastSeenAt FROM contacts`;
+const CONTACT_SELECT = `SELECT id, name, email, phone, attributes_json AS attributesJson, first_seen_at AS firstSeenAt, last_seen_at AS lastSeenAt FROM contacts`;
 const MAX_TAGS = 500;
 
 /** The member is an installation admin, and active here. ADR-0016: managing does not include reading, so both are needed. */
@@ -317,7 +319,7 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
         const q = filter.q ? `AND (instr(lower(COALESCE(k.name, '')), ?5) > 0 OR instr(lower(COALESCE(k.email, '')), ?5) > 0)` : '';
         const { results } = await d1
           .prepare(
-            `SELECT k.id, k.name, k.email, k.phone, k.first_seen_at AS firstSeenAt, k.last_seen_at AS lastSeenAt,
+            `SELECT k.id, k.name, k.email, k.phone, k.attributes_json AS attributesJson, k.first_seen_at AS firstSeenAt, k.last_seen_at AS lastSeenAt,
                     c.id AS lastConversationId, c.updated_at AS lastActivityAt,
                     (SELECT COUNT(*) FROM conversations n WHERE n.workspace_id = c.workspace_id AND n.contact_id = c.contact_id) AS conversationCount
                FROM conversations c
@@ -331,20 +333,19 @@ export function repositories(database: Database, ctx: WorkspaceContext) {
           .all<ContactListRow>();
         return results;
       },
-      /** Undefined leaves a field alone, and null clears it. Consent was given for one address, so a different one loses it. */
-      async update(contactId: string, change: { name?: string | null | undefined; email?: string | null | undefined; phone?: string | null | undefined }): Promise<boolean> {
+      /**
+       * Undefined leaves a field alone, and null clears it. There is no email here: it is the visitor's to give, with
+       * their consent to follow-ups, and a member cannot change it.
+       */
+      async update(contactId: string, change: { name?: string | null | undefined; phone?: string | null | undefined }): Promise<boolean> {
         const field = (value: string | null | undefined) => [value === undefined ? 0 : 1, value ?? null];
         const result = await d1
           .prepare(
             `UPDATE contacts
-                SET name = CASE WHEN ?1 THEN ?2 ELSE name END, email = CASE WHEN ?3 THEN ?4 ELSE email END,
-                    phone = CASE WHEN ?5 THEN ?6 ELSE phone END,
-                    follow_up_consent_at = CASE WHEN ?3 AND email IS NOT ?4 THEN NULL ELSE follow_up_consent_at END,
-                    follow_up_consent_source = CASE WHEN ?3 AND email IS NOT ?4 THEN NULL ELSE follow_up_consent_source END,
-                    updated_at = ${DB_NOW_MS}
-              WHERE workspace_id = ?7 AND id = ?8`,
+                SET name = CASE WHEN ?1 THEN ?2 ELSE name END, phone = CASE WHEN ?3 THEN ?4 ELSE phone END, updated_at = ${DB_NOW_MS}
+              WHERE workspace_id = ?5 AND id = ?6`,
           )
-          .bind(...field(change.name), ...field(change.email), ...field(change.phone), w, contactId)
+          .bind(...field(change.name), ...field(change.phone), w, contactId)
           .run();
         return result.meta.changes === 1;
       },

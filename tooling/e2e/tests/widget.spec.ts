@@ -147,6 +147,39 @@ test('the agent sees which page the visitor is on, without what the address carr
   await expect(link).toHaveAttribute('href', 'https://shop.example/checkout/pay');
 });
 
+test('the agent sees what the page says about its visitor, once they write, and when the page says more', async ({ browser }) => {
+  const agent = await openInbox(browser);
+  const context = await visitorContext(browser);
+  await context.addInitScript(() => {
+    window.OpenChatConfig = { attributes: { customerId: 'C-1042', plan: 'Pro', nested: { dropped: true } } };
+  });
+  const profiles: string[] = [];
+  context.on('request', (request) => {
+    if (request.url().endsWith('/api/v1/widget/me')) profiles.push(request.postData() ?? '');
+  });
+  const page = await shop(context);
+  watch(page);
+  // Nothing is sent about someone who has not written.
+  await page.waitForResponse((r) => r.url().includes('/widget/bootstrap'));
+  expect(profiles).toEqual([]);
+  const conversationId = await startChat(page, 'Can I change my plan?');
+  await inboxRow(agent, conversationId).click();
+  const details = agent.getByRole('form', { name: 'Contact' }).getByRole('region', { name: 'From your website' });
+  await expect(details.getByRole('term')).toHaveText(['customerId', 'plan']);
+  await expect(details.getByRole('definition')).toHaveText(['C-1042', 'Pro']);
+
+  // The visitor signs in, say, and the page knows more. The same again sends nothing.
+  await page.evaluate(() => window.OpenChat!.setAttributes({ customerId: 'C-1042', plan: 'Business', seats: 12 }));
+  await page.evaluate(() => window.OpenChat!.setAttributes({ customerId: 'C-1042', plan: 'Business', seats: 12 }));
+  await expect.poll(() => profiles.length).toBe(2);
+  await agent.reload();
+  await inboxRow(agent, conversationId).click();
+  await expect(details.getByRole('definition')).toHaveText(['C-1042', 'Business', '12']);
+  await page.waitForTimeout(500);
+  expect(profiles).toHaveLength(2);
+  await context.close();
+});
+
 test('a visitor and an agent talk in real time, with status, typing, and unread', async ({ browser }) => {
   const agent = await openInbox(browser);
   const context = await visitorContext(browser);
@@ -602,7 +635,8 @@ test('fills a phone screen, and closes back to the button', async ({ browser }) 
 
 declare global {
   interface Window {
-    OpenChat?: { open(): void; close(): void; grantConsent(): void };
+    OpenChatConfig?: { attributes?: Record<string, unknown> };
+    OpenChat?: { open(): void; close(): void; grantConsent(): void; setAttributes(attributes: Record<string, unknown>): void };
   }
 }
 

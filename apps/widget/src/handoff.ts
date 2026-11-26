@@ -13,8 +13,10 @@ export interface Handoff {
   locale?: string;
   /** The visitor clicked before the bundle arrived, or the host page called open(). */
   openOnStart: boolean;
-  /** Set by the chat bundle. */
-  chat?: { setOpen(open: boolean): void; grantConsent(): void };
+  /** What the page says about its visitor, as the page gave it: not yet checked. */
+  attributes?: unknown;
+  /** Set by the chat bundle. An older one has no setAttributes. */
+  chat?: { setOpen(open: boolean): void; grantConsent(): void; setAttributes?(attributes: unknown): void };
 }
 
 export type HandoffScript = HTMLScriptElement & { openchat?: Handoff };

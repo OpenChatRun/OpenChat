@@ -20,7 +20,27 @@ Both live in a Shadow DOM, so the host page's styles cannot reach them and their
 | `data-locale` | `locale` | The widget's language, such as `fr` or `zh-Hant`. See [Languages](#languages) |
 | | `apiUrl` | The API, if not where `widget.js` came from. For local development |
 
-`window.OpenChat` also has `open()` and `close()`.
+| | `attributes` | What the page knows about its visitor. See [Attributes](#attributes) |
+
+`window.OpenChat` also has `open()`, `close()`, and `setAttributes()`.
+
+## Attributes
+
+A page can tell the team what it knows about its visitor, such as a customer number or a plan, with `OpenChatConfig.attributes` or `window.OpenChat.setAttributes({...})`. The team sees it on the contact, read-only, as `attributes`.
+
+- **Shape.** A flat object of at most 20 entries. A name has 1 to 40 characters; a value is a string of at most 255, a finite number, or a boolean; no control characters. `VISITOR_ATTRIBUTE_LIMITS` in the contract holds the numbers, and `apps/widget/src/attributes.ts` repeats them, because the bundle cannot import the contract.
+- **The widget cleans it; the API refuses.** `PATCH /api/v1/widget/me` answers 400 for one bad entry. So that a page's mistake with one value does not lose the rest, the chat bundle leaves out what would be refused and cuts what is too long.
+- **Sent only once there is a conversation,** as the visitor's page is, so a page view still makes no session and no contact. It is sent again when it changes, and once on each page load after that. A failure is not retried: the next page sends it.
+- **Replaces, never merges.** The page states what it knows now. An empty object clears it. A profile update without `attributes` leaves it alone.
+- **Stored on the contact,** in `contacts.attributes_json`, so two browsers of one contact write over each other. Merging contacts is not built.
+- **Its own limit.** An update that carries only `attributes` counts against the per-website limit on page reports, not the one for other visitor writes, since both are sent by the widget itself on each page.
+- **Unverified.** It comes from the visitor's browser with the visitor's token, so a visitor can send anything about themselves. The dashboard and the app say so. A signed form, where the website's server vouches for the values, is not built.
+- **Not consent-gated.** `data-consent="pending"` is about what the widget stores in the browser. Attributes are not stored there, and leave only for a visitor who has started a conversation.
+- **Version skew.** The loader keeps the page's value on the handoff, and calls the chat bundle's `setAttributes` only if it has one.
+
+## The contact's email
+
+The email on a contact comes only from the visitor, through the widget's own form, with their choice about follow-up emails. `PATCH …/contacts/{id}` takes a name and a phone number, and refuses a body that names `email` with 400. Until this change a member could set or change it, which cleared the consent, and let a member point a contact at an address its owner never gave.
 
 ## The Help tab
 

@@ -131,8 +131,11 @@ async function limitMessage(deps: Pick<AuthDeps, 'limiter' | 'limits'>, ctx: Vis
   }
 }
 
-export async function updateVisitorProfile(deps: Pick<AuthDeps, 'db' | 'limiter'>, ctx: VisitorContext, input: { name?: string | undefined; email?: string | undefined; followUpConsent?: boolean | undefined }) {
-  await enforce(deps.limiter, await limitKey('website-visitor-writes', ctx.websiteId), LIMITS.websiteVisitorWrites);
+export async function updateVisitorProfile(deps: Pick<AuthDeps, 'db' | 'limiter'>, ctx: VisitorContext, input: { name?: string | undefined; email?: string | undefined; followUpConsent?: boolean | undefined; attributes?: Record<string, string | number | boolean> | undefined }) {
+  // Attributes alone is what the widget sends by itself on each page, as it does the page's address, so it shares that bucket.
+  const fromThePage = input.attributes !== undefined && input.name === undefined && input.email === undefined && input.followUpConsent === undefined;
+  if (fromThePage) await enforce(deps.limiter, await limitKey('website-visitor-pages', ctx.websiteId), LIMITS.websiteVisitorPages);
+  else await enforce(deps.limiter, await limitKey('website-visitor-writes', ctx.websiteId), LIMITS.websiteVisitorWrites);
   await visitorRepositories(deps.db, ctx).profile.update(input);
 }
 
