@@ -1,6 +1,6 @@
 # Known issues
 
-What does not work yet, what has not been tested, and what still needs a decision, as of release 0.2.1 and the work after it. OpenChat is before 1.0. Each item links to where it is recorded in more detail.
+What does not work yet, what has not been tested, and what still needs a decision, as of release 0.3.0. OpenChat is before 1.0. Each item links to where it is recorded in more detail.
 
 To report a new problem, [open an issue](https://github.com/OrangoLabsLtd/OpenChat/issues/new). For a vulnerability, follow [SECURITY.md](../SECURITY.md) instead.
 

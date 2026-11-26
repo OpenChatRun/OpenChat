@@ -115,7 +115,7 @@ The [abuse limits](abuse-limits.md) have defaults that suit most installations. 
 A migration and a deploy are not atomic. Safety relies on the [expand/contract rule](../architecture/data-model.md#migration-strategy): every migration must work with the Worker before it.
 
 ```bash
-git fetch --tags && git checkout v0.2.0
+git fetch --tags && git checkout v0.3.0
 pnpm install --frozen-lockfile
 pnpm oc upgrade --env production
 ```
